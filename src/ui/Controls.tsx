@@ -1,0 +1,20 @@
+const CONTROLS: readonly (readonly [string, string])[] = [
+  ['WASD', 'Move'],
+  ['Left mouse', 'Throw (hold to keep throwing)'],
+  ['Right mouse / Space', 'Whistle workers back'],
+  ['Q', 'Dismiss the squad'],
+  ['Wheel', 'Zoom'],
+];
+
+export function Controls() {
+  return (
+    <dl className="controls">
+      {CONTROLS.map(([key, action]) => (
+        <div key={key}>
+          <dt>{key}</dt>
+          <dd>{action}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}

@@ -1,0 +1,147 @@
+import { beforeAll, describe, expect, it } from 'vitest';
+import { NO_INPUT, type InputState } from '../commands/input';
+import { NO_ENTITY, type Entity } from '../core/ecs';
+import { evaluateDay } from '../dandori/scoring';
+import { createMover, steerTo } from '../navigation/steering';
+import { initPhysics } from '../simulation/physics';
+import { Simulation } from '../simulation/Simulation';
+import { LEVELS } from './level';
+
+const THROW_DISTANCE = 6;
+
+const SAFE_DISTANCE = 9;
+const FULL_SQUAD = 6;
+
+/** Workers a haul still needs before it moves. */
+function shortfall(sim: Simulation, entity: Entity): number {
+  const carryable = sim.carryables.require(entity);
+  return Math.max(0, carryable.weight - carryable.claimed.length);
+}
+
+/** True while a live enemy's home is close enough that it would hunt workers at this spot. */
+function guarded(sim: Simulation, x: number, z: number): boolean {
+  for (const [, enemy] of sim.enemies.entries()) {
+    if (Math.hypot(enemy.homeX - x, enemy.homeZ - z) < SAFE_DISTANCE) return true;
+  }
+  return false;
+}
+
+function unfinished(sim: Simulation, job: Entity): boolean {
+  if (sim.enemies.has(job)) return true;
+  return sim.carryables.has(job) && shortfall(sim, job) > 0;
+}
+
+/** Nearest job the squad can fully staff: an unguarded haul, else an enemy when at full strength. */
+function chooseJob(sim: Simulation, squad: number, total: number): Entity {
+  const from = sim.captainTransform;
+  const nearest = (candidates: Entity[]): Entity => {
+    let best: Entity = NO_ENTITY;
+    let bestDist = Infinity;
+    for (const entity of candidates) {
+      const at = sim.transforms.require(entity);
+      const dist = Math.hypot(at.x - from.x, at.z - from.z);
+      if (dist < bestDist) {
+        best = entity;
+        bestDist = dist;
+      }
+    }
+    return best;
+  };
+  const hauls: Entity[] = [];
+  for (const [entity] of sim.carryables.entries()) {
+    const at = sim.transforms.require(entity);
+    const needed = shortfall(sim, entity);
+    if (needed > 0 && squad >= needed && !guarded(sim, at.x, at.z)) hauls.push(entity);
+  }
+  if (hauls.length > 0) return nearest(hauls);
+  if (squad < Math.min(FULL_SQUAD, total)) return NO_ENTITY;
+  return nearest([...sim.enemies.entries()].map(([entity]) => entity));
+}
+
+function nearestIdle(sim: Simulation): Entity {
+  const from = sim.captainTransform;
+  let best: Entity = NO_ENTITY;
+  let bestDist = Infinity;
+  for (const [entity, worker] of sim.workers.entries()) {
+    if (worker.state !== 'idle') continue;
+    const at = sim.transforms.require(entity);
+    const dist = Math.hypot(at.x - from.x, at.z - from.z);
+    if (dist < bestDist) {
+      best = entity;
+      bestDist = dist;
+    }
+  }
+  return best;
+}
+
+/**
+ * A plain greedy player: commit to the nearest job the squad can staff, throw workers
+ * at it until it is staffed or dead, and otherwise walk to idle workers and whistle
+ * them back. It never dodges, plans routes or splits the squad.
+ */
+function playGreedy(sim: Simulation): void {
+  const mover = createMover();
+  const dir = { x: 0, z: 0 };
+  let job: Entity = NO_ENTITY;
+  for (let tick = 0; tick < 60 * 600 && !sim.ended; tick++) {
+    const from = sim.captainTransform;
+    const { squad, total } = sim.countWorkers();
+    if (!unfinished(sim, job) || (squad === 0 && sim.carryables.has(job))) {
+      job = chooseJob(sim, squad, total);
+    }
+    const input: InputState = { ...NO_INPUT, cursorX: from.x, cursorZ: from.z };
+    const goal = job !== NO_ENTITY ? job : nearestIdle(sim);
+    if (goal !== NO_ENTITY) {
+      const at = sim.transforms.require(goal);
+      const dist = Math.hypot(at.x - from.x, at.z - from.z);
+      input.cursorX = at.x;
+      input.cursorZ = at.z;
+      if (dist > THROW_DISTANCE || !sim.nav.lineOfSight(from.x, from.z, at.x, at.z)) {
+        steerTo(sim.nav, mover, sim.anchor, at.x, at.z, 1 / 60, dir);
+        input.moveX = dir.x;
+        input.moveZ = dir.z;
+      } else if (job !== NO_ENTITY) {
+        input.throwHeld = true;
+      } else {
+        // Tapping keeps the call circle small, so nearby carriers stay on the job.
+        input.whistleHeld = tick % 2 === 0;
+      }
+    }
+    sim.step(input);
+  }
+}
+
+beforeAll(async () => {
+  await initPhysics();
+});
+
+describe.each(LEVELS)('$name', (level) => {
+  it('has every spawn on walkable ground', () => {
+    const sim = new Simulation(level);
+    for (const spot of [level.captain, level.kiln, ...level.treasures, ...level.enemies]) {
+      expect(sim.nav.isWalkable(spot.x, spot.z)).toBe(true);
+      expect(Number.isFinite(sim.kilnField.dist[sim.nav.cellIndexAt(spot.x, spot.z)])).toBe(true);
+    }
+    sim.dispose();
+  });
+
+  it('can be cleared by a simple greedy player, with room left to do better', () => {
+    const sim = new Simulation(level);
+    playGreedy(sim);
+    const score = evaluateDay(
+      {
+        treasureValue: sim.stats.treasureValue,
+        treasuresCollected: sim.stats.treasuresCollected.length,
+        treasuresTotal: sim.stats.treasuresTotal,
+        timeLeft: sim.timeLeft,
+        workersAlive: sim.workers.size,
+        workersLost: sim.stats.workersLost,
+      },
+      level.parScore,
+    );
+    expect(sim.ended).toBe('allCollected');
+    expect(score.rank).not.toBe('Bronze');
+    expect(score.total).toBeLessThan(level.parScore);
+    sim.dispose();
+  });
+});
