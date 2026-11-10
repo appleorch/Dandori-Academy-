@@ -1,18 +1,24 @@
 import { useGameStore } from '../game/core/gameStore';
+import type { LevelDefinition } from '../game/world/level';
 
 function formatTime(seconds: number): string {
   const whole = Math.ceil(seconds);
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
 }
 
-/** In-day overlay: clock, treasure progress and where the workforce is. */
-export function Hud() {
+/** In-day overlay: clock, treasure progress, where the workforce is, and the way out. */
+export function Hud({ level }: { level: LevelDefinition }) {
   const hud = useGameStore((state) => state.hud);
+  const phase = useGameStore((state) => state.phase);
+  const toMenu = useGameStore((state) => state.toMenu);
   if (!hud) return null;
 
   return (
     <div className="hud">
       <div className="hud-row">
+        <div className="chip">
+          {level.stage}. {level.name}
+        </div>
         <div className={hud.timeLeft <= 30 ? 'chip clock urgent' : 'chip clock'}>
           {formatTime(hud.timeLeft)}
         </div>
@@ -20,8 +26,13 @@ export function Hud() {
           Sunshards {hud.treasuresCollected}/{hud.treasuresTotal} · {hud.treasureValue} pts
         </div>
         <div className="chip" aria-label={`Warden health ${hud.captainHp}`}>
-          {'♥'.repeat(hud.captainHp) || '—'}
+          {'♥'.repeat(hud.captainHp) || '0'}
         </div>
+        {phase === 'playing' && (
+          <button type="button" className="chip quit" onClick={toMenu}>
+            Quit lesson
+          </button>
+        )}
       </div>
       <div className="hud-row bottom">
         <div className="chip">

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { emptySave, loadSave, recordDay, writeSave, type SaveStorage } from './saveManager';
+import {
+  bestRank,
+  emptySave,
+  loadSave,
+  recordDay,
+  writeSave,
+  type SaveData,
+  type SaveStorage,
+} from './saveManager';
 
 function memoryStorage(initial?: string): SaveStorage & { value: string | null } {
   return {
@@ -36,6 +44,14 @@ describe('save manager', () => {
     expect(loadSave(memoryStorage('{"version":"0"}'))).toEqual(emptySave());
   });
 
+  it('loads saves written before bestScores existed', () => {
+    const legacy: Partial<SaveData> = recordDay(emptySave(), day);
+    delete legacy.bestScores;
+    const loaded = loadSave(memoryStorage(JSON.stringify(legacy)));
+    expect(loaded.bestRanks['lesson-1']).toBe('Gold');
+    expect(loaded.bestScores).toEqual({});
+  });
+
   it('keeps the best results across days', () => {
     const first = recordDay(emptySave(), day);
     const worse = recordDay(first, {
@@ -46,7 +62,7 @@ describe('save manager', () => {
       treasureIds: ['shard-2', 'shard-3'],
     });
     expect(worse.score).toBe(2500);
-    expect(worse.bestRanks['lesson-1']).toBe('Gold');
+    expect(bestRank(worse, 'lesson-1')).toBe('Gold');
     expect(worse.workerCounts.ember).toBe(18);
     expect(worse.treasuresCollected).toEqual([
       'lesson-1:shard-1',
@@ -54,7 +70,23 @@ describe('save manager', () => {
       'lesson-1:shard-3',
     ]);
     const better = recordDay(worse, { ...day, rank: 'Platinum', score: 3100 });
-    expect(better.bestRanks['lesson-1']).toBe('Platinum');
+    expect(bestRank(better, 'lesson-1')).toBe('Platinum');
     expect(better.score).toBe(3100);
+  });
+
+  it('totals the best score of every lesson', () => {
+    const one = recordDay(emptySave(), day);
+    const two = recordDay(one, { ...day, levelId: 'lesson-2', stage: 2, score: 1000 });
+    expect(two.bestScores).toEqual({ 'lesson-1': 2500, 'lesson-2': 1000 });
+    expect(two.score).toBe(3500);
+  });
+
+  it('unlocks the next lesson at Silver or better, never below', () => {
+    expect(bestRank(emptySave(), 'lesson-1')).toBeNull();
+    expect(recordDay(emptySave(), { ...day, rank: 'Bronze' }).stage).toBe(1);
+    const silver = recordDay(emptySave(), { ...day, rank: 'Silver' });
+    expect(silver.stage).toBe(2);
+    expect(recordDay(silver, { ...day, rank: 'Bronze' }).stage).toBe(2);
+    expect(recordDay(silver, { ...day, levelId: 'lesson-2', stage: 2 }).stage).toBe(3);
   });
 });

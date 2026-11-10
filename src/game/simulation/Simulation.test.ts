@@ -1,11 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { NO_INPUT, type InputState } from '../commands/input';
-import { LESSON_1, type LevelDefinition } from '../world/level';
+import { LEVELS, type LevelDefinition } from '../world/level';
+
+const FIRST_LIGHT = LEVELS[3];
 import { initPhysics } from './physics';
 import { Simulation } from './Simulation';
 
 const OPEN_FIELD: LevelDefinition = {
-  ...LESSON_1,
+  ...FIRST_LIGHT,
   id: 'test',
   width: 40,
   depth: 20,
@@ -100,7 +102,7 @@ describe('Simulation', () => {
 
   it('ends on time up and is deterministic', () => {
     const play = (): Simulation => {
-      const sim = new Simulation(LESSON_1);
+      const sim = new Simulation(FIRST_LIGHT);
       for (let i = 0; i < 60 * 30; i++) {
         sim.step({
           ...NO_INPUT,

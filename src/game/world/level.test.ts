@@ -11,6 +11,7 @@ const THROW_DISTANCE = 6;
 
 const SAFE_DISTANCE = 9;
 const FULL_SQUAD = 6;
+const THREAT_DISTANCE = 6.5;
 
 /** Workers a haul still needs before it moves. */
 function shortfall(sim: Simulation, entity: Entity): number {
@@ -58,6 +59,21 @@ function chooseJob(sim: Simulation, squad: number, total: number): Entity {
   return nearest([...sim.enemies.entries()].map(([entity]) => entity));
 }
 
+function nearestEnemy(sim: Simulation): Entity {
+  const from = sim.captainTransform;
+  let best: Entity = NO_ENTITY;
+  let bestDist = Infinity;
+  for (const [entity] of sim.enemies.entries()) {
+    const at = sim.transforms.require(entity);
+    const dist = Math.hypot(at.x - from.x, at.z - from.z);
+    if (dist < bestDist) {
+      best = entity;
+      bestDist = dist;
+    }
+  }
+  return best;
+}
+
 function nearestIdle(sim: Simulation): Entity {
   const from = sim.captainTransform;
   let best: Entity = NO_ENTITY;
@@ -77,7 +93,7 @@ function nearestIdle(sim: Simulation): Entity {
 /**
  * A plain greedy player: commit to the nearest job the squad can staff, throw workers
  * at it until it is staffed or dead, and otherwise walk to idle workers and whistle
- * them back. It never dodges, plans routes or splits the squad.
+ * them back. An enemy that gets close is fought with a squad and avoided without one.
  */
 function playGreedy(sim: Simulation): void {
   const mover = createMover();
@@ -86,8 +102,16 @@ function playGreedy(sim: Simulation): void {
   for (let tick = 0; tick < 60 * 600 && !sim.ended; tick++) {
     const from = sim.captainTransform;
     const { squad, total } = sim.countWorkers();
-    if (!unfinished(sim, job) || (squad === 0 && sim.carryables.has(job))) {
+    if (!unfinished(sim, job) || squad === 0) {
       job = chooseJob(sim, squad, total);
+    }
+    // An enemy this close is dealt with first: fought with a squad, avoided without one.
+    const threat = nearestEnemy(sim);
+    let threatDist = Infinity;
+    if (threat !== NO_ENTITY) {
+      const at = sim.transforms.require(threat);
+      threatDist = Math.hypot(at.x - from.x, at.z - from.z);
+      if (threatDist < THREAT_DISTANCE && squad > 0) job = threat;
     }
     const input: InputState = { ...NO_INPUT, cursorX: from.x, cursorZ: from.z };
     const goal = job !== NO_ENTITY ? job : nearestIdle(sim);
@@ -106,6 +130,11 @@ function playGreedy(sim: Simulation): void {
         // Tapping keeps the call circle small, so nearby carriers stay on the job.
         input.whistleHeld = tick % 2 === 0;
       }
+    }
+    if (threatDist < THREAT_DISTANCE && squad === 0) {
+      const at = sim.transforms.require(threat);
+      input.moveX = (from.x - at.x) / threatDist;
+      input.moveZ = (from.z - at.z) / threatDist;
     }
     sim.step(input);
   }

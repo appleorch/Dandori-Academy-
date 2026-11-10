@@ -221,3 +221,100 @@ tr.total td {
 .dot.idle {
   background: #d9a79c;
 }
+
+.panel.wide {
+  width: min(640px, 100%);
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid rgba(255, 246, 220, 0.4);
+}
+
+button.secondary:hover,
+button.secondary:focus-visible {
+  background: rgba(255, 246, 220, 0.12);
+}
+
+.lessons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+button.lesson {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  background: rgba(255, 246, 220, 0.08);
+  color: var(--ink);
+  border: 1px solid rgba(255, 179, 71, 0.35);
+  font-weight: 400;
+}
+
+button.lesson:hover:enabled,
+button.lesson:focus-visible {
+  background: rgba(255, 179, 71, 0.2);
+}
+
+button.lesson:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lesson-number {
+  flex: 0 0 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #2a1a08;
+  font-weight: 700;
+}
+
+.lesson-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.lesson-text strong {
+  font-size: 1.02rem;
+}
+
+.badge {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: end;
+  font-weight: 700;
+}
+
+.badge small {
+  font-weight: 400;
+  color: var(--ink);
+  opacity: 0.8;
+}
+
+button.chip.quit {
+  width: auto;
+  margin: 0;
+  pointer-events: auto;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid rgba(255, 246, 220, 0.4);
+  cursor: pointer;
+}
+
+button.chip.quit:hover,
+button.chip.quit:focus-visible {
+  background: #a3271b;
+}

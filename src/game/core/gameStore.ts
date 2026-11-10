@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import { evaluateDay, type ScoreBreakdown } from '../dandori/scoring';
 import { emptySave, loadSave, recordDay, writeSave, type SaveData } from '../save/saveManager';
 import type { DayEnd, Simulation } from '../simulation/Simulation';
+import { LEVELS } from '../world/level';
 
-export type GamePhase = 'title' | 'playing' | 'results';
+export type GamePhase = 'menu' | 'playing' | 'results';
 
 /** Low-frequency copy of simulation state for the HUD. */
 export interface HudSnapshot {
@@ -24,10 +25,14 @@ export interface DayResult {
   treasuresCollected: number;
   treasuresTotal: number;
   isBestScore: boolean;
+  /** True when this day opened the next lesson for the first time. */
+  unlockedNext: boolean;
 }
 
 interface GameStore {
   phase: GamePhase;
+  /** Id of the lesson being played or last played. */
+  levelId: string;
   /** Incremented for every new day so the scene builds a fresh simulation. */
   runId: number;
   hud: HudSnapshot | null;
@@ -35,7 +40,8 @@ interface GameStore {
   entityVersion: number;
   result: DayResult | null;
   save: SaveData;
-  startDay: () => void;
+  startDay: (levelId: string) => void;
+  toMenu: () => void;
   publish: (sim: Simulation) => void;
   finishDay: (sim: Simulation, reason: DayEnd) => void;
 }
@@ -66,15 +72,24 @@ function snapshot(sim: Simulation): HudSnapshot {
 export const useGameStore = create<GameStore>((set, get) => {
   const storage = browserStorage();
   return {
-    phase: 'title',
+    phase: 'menu',
+    levelId: LEVELS[0].id,
     runId: 0,
     hud: null,
     entityVersion: 0,
     result: null,
     save: storage ? loadSave(storage) : emptySave(),
 
-    startDay: () =>
-      set((state) => ({ phase: 'playing', runId: state.runId + 1, hud: null, result: null })),
+    startDay: (levelId) =>
+      set((state) => ({
+        phase: 'playing',
+        levelId,
+        runId: state.runId + 1,
+        hud: null,
+        result: null,
+      })),
+
+    toMenu: () => set({ phase: 'menu', hud: null, result: null }),
 
     publish: (sim) => set({ hud: snapshot(sim), entityVersion: sim.entityVersion }),
 
@@ -111,7 +126,8 @@ export const useGameStore = create<GameStore>((set, get) => {
           score,
           treasuresCollected: stats.treasuresCollected.length,
           treasuresTotal: stats.treasuresTotal,
-          isBestScore: score.total > previous.score,
+          isBestScore: score.total > (previous.bestScores[level.id] ?? 0),
+          unlockedNext: save.stage > previous.stage && level.stage < LEVELS.length,
         },
       });
     },

@@ -4,9 +4,10 @@ A browser RTS about dandori: planning work so that nobody stands idle. You lead 
 small workers, throw them at jobs, and move on while they finish on their own. The day is
 scored on how much you brought home and how quickly.
 
-This repository implements the MVP defined in the project handoff document: one worker type,
+This repository implements the MVP defined in the project handoff document (one worker type,
 one captain, one home base, one enemy type, one treasure type, throwing, whistling, carrying,
-treasure delivery, a day timer and dandori scoring.
+treasure delivery, a day timer and dandori scoring) plus the academy around it: five lessons,
+ranks, and progression from one lesson to the next.
 
 ## Run it
 
@@ -40,6 +41,21 @@ npm run build
 - The day ends when every Sunshard is home, time runs out, the Warden is down, or no
   Emberlings remain. Leftover time only scores if everything was collected.
 
+## Lessons and progression
+
+| #   | Lesson        | Teaches                                                    |
+| --- | ------------- | ---------------------------------------------------------- |
+| 1   | Many Hands    | Staffing: give each haul exactly the carriers it needs     |
+| 2   | Over the Wall | Throwing over walls while hauls take the long way home     |
+| 3   | The Guard     | Fighting a Mossback and growing the squad from its carcass |
+| 4   | First Light   | Three lanes and three guards: choosing an order            |
+| 5   | Long Haul     | A large field where the walk home dominates                |
+
+Each day is ranked Bronze, Silver, Gold or Platinum against the lesson's par score. Silver or
+better unlocks the next lesson. Best rank and best score per lesson are saved in the browser.
+Par scores are set so that the plain greedy bot in `src/game/world/level.test.ts` earns Gold on
+every lesson without reaching par; that test also proves every lesson can be cleared.
+
 ## Architecture
 
 ```text
@@ -63,7 +79,7 @@ src/
     save/         save data, validation and persistence
     camera/       camera rig
     rendering/    React Three Fiber scene
-  ui/             title, HUD and results screens
+  ui/             lesson select, HUD and results screens
 ```
 
 The simulation is plain TypeScript with no rendering or DOM dependencies. It advances in
@@ -84,7 +100,8 @@ Each of these is deliberate.
    the Warden, the Kiln, Mossbacks and Sunshards. Folder names follow: `workers/` instead of
    `pikmin/`, `kiln/` instead of `onion/`.
 2. **Save format.** `SaveData` matches the handoff field for field, except `pikminCounts` is
-   named `workerCounts`.
+   named `workerCounts`, and a `bestScores` map was added for per-lesson bests. Saves without
+   `bestScores` still load.
 3. **Only folders with code exist.** Folders for later phases (caves, bosses, weather, replay,
    multiplayer and so on) are created when their phase starts, in line with "no dead code".
 4. **Rapier's role.** Rapier owns the static level geometry and the captain's character

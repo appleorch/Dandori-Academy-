@@ -1,5 +1,7 @@
 import { useGameStore } from '../game/core/gameStore';
+import { UNLOCK_RANK } from '../game/save/saveManager';
 import type { DayEnd } from '../game/simulation/Simulation';
+import { LEVELS, type LevelDefinition } from '../game/world/level';
 
 const HEADLINES: Record<DayEnd, string> = {
   allCollected: 'Every Sunshard is home',
@@ -8,11 +10,15 @@ const HEADLINES: Record<DayEnd, string> = {
   wipedOut: 'No Emberlings remain',
 };
 
-export function ResultsScreen() {
+export function ResultsScreen({ level }: { level: LevelDefinition }) {
   const result = useGameStore((state) => state.result);
+  const save = useGameStore((state) => state.save);
   const startDay = useGameStore((state) => state.startDay);
+  const toMenu = useGameStore((state) => state.toMenu);
   if (!result) return null;
   const { score } = result;
+  const next = LEVELS.find((candidate) => candidate.stage === level.stage + 1);
+  const nextUnlocked = next !== undefined && next.stage <= save.stage;
 
   return (
     <div className="screen overlay">
@@ -46,8 +52,28 @@ export function ResultsScreen() {
           </tbody>
         </table>
         {result.isBestScore && <p className="best">New best score</p>}
-        <button type="button" onClick={startDay} autoFocus>
+        {result.unlockedNext && next && <p className="best">Unlocked: {next.name}</p>}
+        {next && !nextUnlocked && (
+          <p>
+            Earn {UNLOCK_RANK} or better to open the next lesson. Par for this one is{' '}
+            {level.parScore} pts.
+          </p>
+        )}
+        {next && nextUnlocked && (
+          <button type="button" onClick={() => startDay(next.id)} autoFocus>
+            Next lesson: {next.name}
+          </button>
+        )}
+        <button
+          type="button"
+          className={nextUnlocked ? 'secondary' : undefined}
+          onClick={() => startDay(level.id)}
+          autoFocus={!nextUnlocked}
+        >
           Try again
+        </button>
+        <button type="button" className="secondary" onClick={toMenu}>
+          All lessons
         </button>
       </div>
     </div>
