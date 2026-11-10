@@ -20,6 +20,12 @@ npm run lint
 npm run build
 ```
 
+## Play without installing anything
+
+`docs/` holds a ready-to-serve build. With GitHub Pages enabled (Settings, Pages, Deploy from a
+branch, folder `/docs`) the game runs at `https://<owner>.github.io/Dandori-Academy-/`. Rebuild
+it after changes with `npm run build:docs`.
+
 ## How to play
 
 | Input               | Action                                               |
