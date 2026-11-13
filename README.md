@@ -6,7 +6,7 @@ scored on how much you brought home and how quickly.
 
 This repository implements the MVP defined in the project handoff document (one worker type,
 one captain, one home base, one enemy type, one treasure type, throwing, whistling, carrying,
-treasure delivery, a day timer and dandori scoring) plus the academy around it: five lessons,
+treasure delivery, a day timer and dandori scoring) plus the academy around it: ten lessons,
 ranks, and progression from one lesson to the next.
 
 ## Run it
@@ -49,13 +49,18 @@ it after changes with `npm run build:docs`.
 
 ## Lessons and progression
 
-| #   | Lesson        | Teaches                                                    |
-| --- | ------------- | ---------------------------------------------------------- |
-| 1   | Many Hands    | Staffing: give each haul exactly the carriers it needs     |
-| 2   | Over the Wall | Throwing over walls while hauls take the long way home     |
-| 3   | The Guard     | Fighting a Mossback and growing the squad from its carcass |
-| 4   | First Light   | Three lanes and three guards: choosing an order            |
-| 5   | Long Haul     | A large field where the walk home dominates                |
+| #   | Lesson             | Teaches                                                    |
+| --- | ------------------ | ---------------------------------------------------------- |
+| 1   | Many Hands         | Staffing: give each haul exactly the carriers it needs     |
+| 2   | Over the Wall      | Throwing over walls while hauls take the long way home     |
+| 3   | The Guard          | Fighting a Mossback and growing the squad from its carcass |
+| 4   | First Light        | Three lanes and three guards: choosing an order            |
+| 5   | Long Haul          | A large field where the walk home dominates                |
+| 6   | Divide and Conquer | Splitting the squad across many jobs at once               |
+| 7   | The Gauntlet       | Clearing a corridor of guards, then hauling through it     |
+| 8   | Growing Pains      | Starting small and growing the squad from carcasses        |
+| 9   | Switchbacks        | Long zigzag hauls past walls you can throw over            |
+| 10  | Final Exam         | Ten shards, six guards, walls everywhere                   |
 
 Each day is ranked Bronze, Silver, Gold or Platinum against the lesson's par score. Silver or
 better unlocks the next lesson. Best rank and best score per lesson are saved in the browser.

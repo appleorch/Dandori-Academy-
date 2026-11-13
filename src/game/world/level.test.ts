@@ -99,7 +99,7 @@ function playGreedy(sim: Simulation): void {
   const mover = createMover();
   const dir = { x: 0, z: 0 };
   let job: Entity = NO_ENTITY;
-  for (let tick = 0; tick < 60 * 600 && !sim.ended; tick++) {
+  for (let tick = 0; tick < 60 * 1200 && !sim.ended; tick++) {
     const from = sim.captainTransform;
     const { squad, total } = sim.countWorkers();
     if (!unfinished(sim, job) || squad === 0) {
