@@ -34,6 +34,7 @@ it after changes with `npm run build:docs`.
 | Left mouse (hold)   | Throw squad members at the cursor                    |
 | Right mouse / Space | Whistle: call every worker in the circle back to you |
 | Q                   | Dismiss the squad                                    |
+| Esc                 | Pause (resume, restart, settings, quit)              |
 | Mouse wheel         | Zoom                                                 |
 
 - **Emberlings** are your workers. Thrown next to a job, they start it by themselves. Idle
@@ -67,12 +68,24 @@ better unlocks the next lesson. Best rank and best score per lesson are saved in
 Par scores are set so that the plain greedy bot in `src/game/world/level.test.ts` earns Gold on
 every lesson without reaching par; that test also proves every lesson can be cleared.
 
+## Settings, save files and achievements
+
+- **Settings** (main menu, or the pause menu during a day): shadows, carrier counts, enemy
+  health bars, pause when the window loses focus, and zoom speed. They apply immediately and
+  are remembered per browser.
+- **Save files**: progress saves to the browser after every day. Settings & save offers
+  _Download save file_ (a JSON file) and _Load save file_, which shows what the file contains
+  and asks before replacing current progress. _Erase all progress_ also asks first.
+- **Achievements**: 15 of them, from First Delivery to Dandori Master (Platinum in every
+  lesson). Counter achievements show progress bars. New ones are announced on the results
+  screen, and an older save is granted anything it already qualifies for when it loads.
+
 ## Architecture
 
 ```text
 src/
   game/
-    core/         ECS, fixed-step clock, seeded RNG, tuning config, Zustand store
+    core/         ECS, fixed-step clock, seeded RNG, tuning config, settings, Zustand store
     simulation/   Simulation (state + step order), components, Rapier physics world
     world/        level definitions and entity spawners
     navigation/   nav grid, steering and obstacle sliding
@@ -87,10 +100,11 @@ src/
     kiln/         worker production
     enemies/      enemy behaviour and combat
     dandori/      scoring and ranks
-    save/         save data, validation and persistence
+    progression/  achievements
+    save/         save data, validation, persistence and save files
     camera/       camera rig
     rendering/    React Three Fiber scene
-  ui/             lesson select, HUD and results screens
+  ui/             menus, HUD, pause, results, achievements and settings screens
 ```
 
 The simulation is plain TypeScript with no rendering or DOM dependencies. It advances in
@@ -111,8 +125,9 @@ Each of these is deliberate.
    the Warden, the Kiln, Mossbacks and Sunshards. Folder names follow: `workers/` instead of
    `pikmin/`, `kiln/` instead of `onion/`.
 2. **Save format.** `SaveData` matches the handoff field for field, except `pikminCounts` is
-   named `workerCounts`, and a `bestScores` map was added for per-lesson bests. Saves without
-   `bestScores` still load.
+   named `workerCounts`, and three fields were added: `bestScores` (per-lesson bests),
+   `achievements` (earned ids with dates) and `totals` (days, treasures, enemies, losses).
+   Saves without them still load.
 3. **Only folders with code exist.** Folders for later phases (caves, bosses, weather, replay,
    multiplayer and so on) are created when their phase starts, in line with "no dead code".
 4. **Rapier's role.** Rapier owns the static level geometry and the captain's character
