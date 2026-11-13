@@ -11,7 +11,7 @@ type ToggleKey = 'shadows' | 'carrierCounts' | 'healthBars' | 'pauseOnBlur';
 const TOGGLES: readonly (readonly [ToggleKey, string, string])[] = [
   ['shadows', 'Shadows', 'Turn off for a smoother frame rate on slower computers.'],
   ['carrierCounts', 'Carrier counts', 'Show carriers held and needed above each Sunshard.'],
-  ['healthBars', 'Health bars', 'Show a wounded Mossback’s health.'],
+  ['healthBars', 'Health bars', 'Show a wounded enemy’s health.'],
   ['pauseOnBlur', 'Pause when away', 'Pause the day when you switch to another tab or window.'],
 ];
 
