@@ -3,9 +3,10 @@ import { useGameStore } from '../game/core/gameStore';
 import { ACHIEVEMENTS } from '../game/progression/achievements';
 import {
   MAX_SAVE_FILE_BYTES,
-  parseSaveFile,
+  readSaveFile,
+  SAVE_FILE_EXTENSION,
   saveFileName,
-  serializeSaveFile,
+  writeSaveFile,
 } from '../game/save/saveFile';
 import { emptySave, type SaveData } from '../game/save/saveManager';
 import { LEVELS } from '../game/world/level';
@@ -29,7 +30,9 @@ export function SaveFilePanel() {
 
   const download = (): void => {
     const now = new Date();
-    const blob = new Blob([serializeSaveFile(save, now)], { type: 'application/json' });
+    const nonce = crypto.getRandomValues(new Uint8Array(16));
+    const bytes = writeSaveFile(save, now, nonce);
+    const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -50,7 +53,7 @@ export function SaveFilePanel() {
       setStatus({ kind: 'error', text: 'That file is too large to be a save file.' });
       return;
     }
-    const result = parseSaveFile(await file.text());
+    const result = readSaveFile(new Uint8Array(await file.arrayBuffer()));
     if (result.ok) {
       setStatus(null);
       setPending({ kind: 'load', save: result.save, fileName: file.name });
@@ -75,8 +78,9 @@ export function SaveFilePanel() {
     <section className="save-file" aria-labelledby="save-heading">
       <h2 id="save-heading">Save file</h2>
       <p>
-        Progress saves in this browser after every day. Download it as a file to keep a backup or
-        move it to another computer.
+        Progress saves in this browser after every day. Download it as a {SAVE_FILE_EXTENSION} file
+        to keep a backup or move it to another computer. Save files are sealed: one that has been
+        edited is refused.
       </p>
       <p className="save-summary">Current progress: {describe(save)}.</p>
       <div className="button-row">
@@ -90,7 +94,7 @@ export function SaveFilePanel() {
           ref={fileInput}
           id="save-file-input"
           type="file"
-          accept=".json,application/json"
+          accept={SAVE_FILE_EXTENSION}
           hidden
           onChange={(event) => void choose(event)}
         />

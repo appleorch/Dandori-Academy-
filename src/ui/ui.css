@@ -647,3 +647,75 @@ progress {
   color: var(--ink);
   opacity: 0.8;
 }
+
+.version-callout {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 179, 71, 0.5);
+  background: rgba(255, 179, 71, 0.1);
+  font-size: 0.88rem;
+}
+
+.version-line {
+  margin: 0 0 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.version-line strong {
+  color: var(--accent);
+  font-size: 1rem;
+}
+
+.version-line span,
+.release-date {
+  opacity: 0.75;
+  font-size: 0.85rem;
+}
+
+.version-callout ul,
+.revision-log ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 2px;
+  line-height: 1.4;
+}
+
+.revision-log {
+  display: grid;
+  gap: 6px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 246, 220, 0.15);
+  font-size: 0.88rem;
+}
+
+.revision-log details {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 246, 220, 0.05);
+}
+
+.revision-log summary {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  cursor: pointer;
+}
+
+.revision-log summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.release-version {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.revision-log details[open] summary {
+  margin-bottom: 6px;
+}

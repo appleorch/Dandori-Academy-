@@ -78,8 +78,14 @@ requires the bot to earn Platinum on every lesson, so every rank is always reach
   health bars, pause when the window loses focus, and zoom speed. They apply immediately and
   are remembered per browser.
 - **Save files**: progress saves to the browser after every day. Settings & save offers
-  _Download save file_ (a JSON file) and _Load save file_, which shows what the file contains
-  and asks before replacing current progress. _Erase all progress_ also asks first.
+  _Download save file_ and _Load save file_, which shows what the file contains and asks before
+  replacing current progress. _Erase all progress_ also asks first. Files use the binary
+  `.dandori` format (`src/game/save/saveFile.ts`): the save data is scrambled with a
+  SHA-256 keystream and sealed with HMAC-SHA-256, so a text editor shows noise and any edited
+  byte makes the file refuse to load. The keys ship with the game, so this deters casual
+  editing, not someone reading the source. Progress kept in the browser is still plain JSON.
+- **Version and revision history**: shown on Settings & save, from `src/game/core/changelog.ts`.
+  A test keeps its newest entry equal to the version in `package.json`.
 - **Achievements**: 15 of them, from First Delivery to Dandori Master (Platinum in every
   lesson). Counter achievements show progress bars. New ones are announced on the results
   screen, and an older save is granted anything it already qualifies for when it loads.
