@@ -1,4 +1,5 @@
 import { useGameStore } from '../game/core/gameStore';
+import { findAchievement } from '../game/progression/achievements';
 import { UNLOCK_RANK } from '../game/save/saveManager';
 import type { DayEnd } from '../game/simulation/Simulation';
 import { LEVELS, type LevelDefinition } from '../game/world/level';
@@ -14,7 +15,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
   const result = useGameStore((state) => state.result);
   const save = useGameStore((state) => state.save);
   const startDay = useGameStore((state) => state.startDay);
-  const toMenu = useGameStore((state) => state.toMenu);
+  const showScreen = useGameStore((state) => state.showScreen);
   if (!result) return null;
   const { score } = result;
   const next = LEVELS.find((candidate) => candidate.stage === level.stage + 1);
@@ -53,6 +54,27 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
         </table>
         {result.isBestScore && <p className="best">New best score</p>}
         {result.unlockedNext && next && <p className="best">Unlocked: {next.name}</p>}
+        {result.achievements.length > 0 && (
+          <div className="unlocks">
+            <p className="eyebrow">
+              {result.achievements.length === 1
+                ? 'Achievement unlocked'
+                : `${result.achievements.length} achievements unlocked`}
+            </p>
+            <ul>
+              {result.achievements.map((id) => {
+                const achievement = findAchievement(id);
+                return (
+                  achievement && (
+                    <li key={id}>
+                      <strong>{achievement.name}</strong> {achievement.description}
+                    </li>
+                  )
+                );
+              })}
+            </ul>
+          </div>
+        )}
         {next && !nextUnlocked && (
           <p>
             Earn {UNLOCK_RANK} or better to open the next lesson. Par for this one is{' '}
@@ -72,7 +94,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
         >
           Try again
         </button>
-        <button type="button" className="secondary" onClick={toMenu}>
+        <button type="button" className="secondary" onClick={() => showScreen('menu')}>
           All lessons
         </button>
       </div>

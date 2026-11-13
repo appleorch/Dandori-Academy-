@@ -6,11 +6,11 @@ function formatTime(seconds: number): string {
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
 }
 
-/** In-day overlay: clock, treasure progress, where the workforce is, and the way out. */
+/** In-day overlay: clock, treasure progress, where the workforce is, and the pause button. */
 export function Hud({ level }: { level: LevelDefinition }) {
   const hud = useGameStore((state) => state.hud);
   const phase = useGameStore((state) => state.phase);
-  const toMenu = useGameStore((state) => state.toMenu);
+  const pause = useGameStore((state) => state.pause);
   if (!hud) return null;
 
   return (
@@ -29,8 +29,8 @@ export function Hud({ level }: { level: LevelDefinition }) {
           {'♥'.repeat(hud.captainHp) || '0'}
         </div>
         {phase === 'playing' && (
-          <button type="button" className="chip quit" onClick={toMenu}>
-            Quit lesson
+          <button type="button" className="chip quit" onClick={pause}>
+            Pause <kbd>Esc</kbd>
           </button>
         )}
       </div>

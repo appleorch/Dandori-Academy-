@@ -21,6 +21,7 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
   const bar = useRef<Sprite>(null);
   const barGroup = useRef<Group>(null);
   const r = enemy.radius;
+  const showHealth = useGameStore((state) => state.settings.healthBars);
 
   useFrame(({ clock }) => {
     const node = group.current;
@@ -34,7 +35,7 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
     const shaking = enemy.latched.length > 0 ? Math.sin(clock.elapsedTime * 30) * 0.04 : 0;
     body.current.position.x = shaking;
     const health = Math.max(0, enemy.hp / enemy.maxHp);
-    barGroup.current.visible = health < 1;
+    barGroup.current.visible = showHealth && health < 1;
     bar.current.scale.set(BAR_WIDTH * health, 0.22, 1);
   });
 

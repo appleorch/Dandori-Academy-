@@ -6,10 +6,18 @@ const STORAGE_KEY = 'dandori-academy-save';
 /** Lowest rank that unlocks the next lesson. */
 export const UNLOCK_RANK: Rank = 'Silver';
 
+/** Running totals across every day ever played. */
+export interface SaveTotals {
+  days: number;
+  treasures: number;
+  enemies: number;
+  workersLost: number;
+}
+
 /**
  * Persistent progress. Field layout follows the project handoff document, with
- * `workerCounts` in place of its `pikminCounts`, plus `bestScores`. Saves written
- * before `bestScores` existed still load.
+ * `workerCounts` in place of its `pikminCounts`, plus `bestScores`, `achievements`
+ * and `totals`. Saves written before those fields existed still load.
  */
 export interface SaveData {
   version: string;
@@ -25,6 +33,9 @@ export interface SaveData {
   bestRanks: Record<string, string>;
   /** Best score per level id. */
   bestScores: Record<string, number>;
+  /** Unlocked achievement ids, each with the ISO time it was earned. */
+  achievements: Record<string, string>;
+  totals: SaveTotals;
 }
 
 export interface DayRecord {
@@ -33,7 +44,15 @@ export interface DayRecord {
   score: number;
   rank: Rank;
   workersAlive: number;
+  workersLost: number;
   treasureIds: readonly string[];
+  treasuresTotal: number;
+  enemiesDefeated: number;
+  enemiesTotal: number;
+  /** Hits the Warden took during the day. */
+  captainHits: number;
+  timeLeft: number;
+  dayLength: number;
 }
 
 /** The subset of the Web Storage API the save manager needs. */
@@ -48,10 +67,12 @@ export function emptySave(): SaveData {
     treasuresCollected: [],
     bestRanks: {},
     bestScores: {},
+    achievements: {},
+    totals: { days: 0, treasures: 0, enemies: 0, workersLost: 0 },
   };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -59,12 +80,28 @@ function isNumberRecord(value: unknown): value is Record<string, number> {
   return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'number');
 }
 
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'string');
+}
+
+function parseTotals(value: unknown): SaveTotals {
+  const totals = emptySave().totals;
+  if (!isRecord(value)) return totals;
+  for (const key of Object.keys(totals) as (keyof SaveTotals)[]) {
+    const entry = value[key];
+    if (typeof entry === 'number' && Number.isFinite(entry) && entry >= 0) totals[key] = entry;
+  }
+  return totals;
+}
+
 /** Validates parsed JSON and fills in fields added after version 1 first shipped. */
-function parseSave(value: unknown): SaveData | null {
+export function parseSave(value: unknown): SaveData | null {
   if (
     !isRecord(value) ||
     value.version !== SAVE_VERSION ||
     typeof value.stage !== 'number' ||
+    !Number.isInteger(value.stage) ||
+    value.stage < 1 ||
     typeof value.score !== 'number' ||
     !isNumberRecord(value.workerCounts) ||
     !Array.isArray(value.treasuresCollected) ||
@@ -82,6 +119,8 @@ function parseSave(value: unknown): SaveData | null {
     treasuresCollected: value.treasuresCollected as string[],
     bestRanks: value.bestRanks as Record<string, string>,
     bestScores: isNumberRecord(value.bestScores) ? value.bestScores : {},
+    achievements: isStringRecord(value.achievements) ? value.achievements : {},
+    totals: parseTotals(value.totals),
   };
 }
 
@@ -136,5 +175,12 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
     treasuresCollected: [...new Set([...save.treasuresCollected, ...ids])],
     bestRanks: { ...save.bestRanks, [day.levelId]: improved ? day.rank : previous },
     bestScores,
+    achievements: save.achievements,
+    totals: {
+      days: save.totals.days + 1,
+      treasures: save.totals.treasures + day.treasureIds.length,
+      enemies: save.totals.enemies + day.enemiesDefeated,
+      workersLost: save.totals.workersLost + day.workersLost,
+    },
   };
 }

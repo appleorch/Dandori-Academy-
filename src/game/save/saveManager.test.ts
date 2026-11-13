@@ -27,7 +27,14 @@ const day = {
   score: 2500,
   rank: 'Gold',
   workersAlive: 18,
+  workersLost: 1,
   treasureIds: ['shard-1', 'shard-2'],
+  treasuresTotal: 5,
+  enemiesDefeated: 1,
+  enemiesTotal: 2,
+  captainHits: 0,
+  timeLeft: 0,
+  dayLength: 120,
 } as const;
 
 describe('save manager', () => {
@@ -44,12 +51,26 @@ describe('save manager', () => {
     expect(loadSave(memoryStorage('{"version":"0"}'))).toEqual(emptySave());
   });
 
-  it('loads saves written before bestScores existed', () => {
+  it('loads saves written before bestScores, achievements and totals existed', () => {
     const legacy: Partial<SaveData> = recordDay(emptySave(), day);
     delete legacy.bestScores;
+    delete legacy.achievements;
+    delete legacy.totals;
     const loaded = loadSave(memoryStorage(JSON.stringify(legacy)));
     expect(loaded.bestRanks['lesson-1']).toBe('Gold');
     expect(loaded.bestScores).toEqual({});
+    expect(loaded.achievements).toEqual({});
+    expect(loaded.totals).toEqual(emptySave().totals);
+  });
+
+  it('rejects a save with an impossible stage', () => {
+    const bad = { ...emptySave(), stage: 0 };
+    expect(loadSave(memoryStorage(JSON.stringify(bad)))).toEqual(emptySave());
+  });
+
+  it('adds every day to the running totals', () => {
+    const two = recordDay(recordDay(emptySave(), day), day);
+    expect(two.totals).toEqual({ days: 2, treasures: 4, enemies: 2, workersLost: 2 });
   });
 
   it('keeps the best results across days', () => {

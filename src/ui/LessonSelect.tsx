@@ -2,6 +2,7 @@ import { useGameStore } from '../game/core/gameStore';
 import { bestRank, UNLOCK_RANK } from '../game/save/saveManager';
 import { LEVELS } from '../game/world/level';
 import { Controls } from './Controls';
+import { MenuNav } from './MenuNav';
 
 /** Front page: how to play, the list of lessons and the player's best result on each. */
 export function LessonSelect() {
@@ -12,7 +13,7 @@ export function LessonSelect() {
   return (
     <main className="screen">
       <div className="panel wide">
-        <p className="eyebrow">Dandori Academy</p>
+        <MenuNav />
         <h1>Choose a lesson</h1>
         <p>
           Bring every Sunshard back to the Kiln before the day ends. Throw Emberlings at work, then

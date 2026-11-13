@@ -17,6 +17,7 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
   const group = useRef<Group>(null);
   const body = useRef<Mesh>(null);
   const { radius, kind } = carryable;
+  const showCount = useGameStore((state) => state.settings.carrierCounts);
 
   useFrame(({ clock }) => {
     const node = group.current;
@@ -51,10 +52,12 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
           <meshStandardMaterial color="#6d6a58" roughness={1} />
         </mesh>
       )}
-      <TextSprite
-        y={radius * 2 + 1.3}
-        getText={() => `${carryable.carriers.length}/${carryable.weight}`}
-      />
+      {showCount && (
+        <TextSprite
+          y={radius * 2 + 1.3}
+          getText={() => `${carryable.carriers.length}/${carryable.weight}`}
+        />
+      )}
     </group>
   );
 }

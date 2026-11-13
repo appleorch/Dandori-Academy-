@@ -318,3 +318,264 @@ button.chip.quit:hover,
 button.chip.quit:focus-visible {
   background: #a3271b;
 }
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+
+kbd {
+  padding: 0 5px;
+  border: 1px solid rgba(255, 246, 220, 0.5);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+button.small {
+  width: auto;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+}
+
+button.danger {
+  background: #c8432f;
+  color: var(--ink);
+}
+
+button.danger:hover,
+button.danger:focus-visible {
+  background: #e05a44;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.menu-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+
+.menu-head .eyebrow {
+  margin: 0;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+button.tab {
+  width: auto;
+  margin: 0;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+button.tab:hover,
+button.tab:focus-visible {
+  background: rgba(255, 246, 220, 0.12);
+}
+
+button.tab.active {
+  background: var(--accent);
+  color: #2a1a08;
+}
+
+.tab-count {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.achievements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 8px;
+}
+
+.achievement {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 246, 220, 0.15);
+  color: rgba(255, 246, 220, 0.75);
+}
+
+.achievement.done {
+  border-color: rgba(255, 179, 71, 0.6);
+  background: rgba(255, 179, 71, 0.1);
+  color: var(--ink);
+}
+
+.medal {
+  flex: 0 0 auto;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: rgba(255, 246, 220, 0.4);
+}
+
+.achievement.done .medal {
+  color: var(--accent);
+}
+
+.achievement-text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.achievement-text strong {
+  font-size: 1rem;
+}
+
+.achievement-text small {
+  opacity: 0.8;
+}
+
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+progress {
+  flex: 1;
+  height: 8px;
+  accent-color: var(--accent);
+}
+
+.settings,
+.save-file {
+  display: grid;
+  gap: 10px;
+  padding: 16px 0;
+  border-top: 1px solid rgba(255, 246, 220, 0.15);
+}
+
+.settings:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.save-file p {
+  margin: 0;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+}
+
+.setting-text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.setting-text small {
+  opacity: 0.75;
+}
+
+.setting input[type='checkbox'] {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.range {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.range input {
+  width: 120px;
+  accent-color: var(--accent);
+}
+
+.range output {
+  min-width: 3.2em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button-row button {
+  width: auto;
+  flex: 1 1 180px;
+  margin: 0;
+}
+
+.save-summary {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.confirm {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: rgba(255, 179, 71, 0.1);
+}
+
+.status {
+  color: var(--accent);
+}
+
+.status.error {
+  color: #ff8f7a;
+}
+
+.unlocks {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(255, 179, 71, 0.12);
+}
+
+.unlocks ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.overlay .panel {
+  max-height: calc(100% - 32px);
+  overflow: auto;
+}

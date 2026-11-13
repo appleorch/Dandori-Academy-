@@ -28,6 +28,8 @@ export class InputController {
   pointerX = 0;
   pointerY = 0;
   zoom = 26;
+  /** Multiplier on wheel zoom, from the player's settings. */
+  zoomSpeed = 1;
   private readonly keys = new Set<string>();
   private leftDown = false;
   private rightDown = false;
@@ -58,7 +60,10 @@ export class InputController {
       if (event.button === 2) this.rightDown = false;
     };
     const onWheel = (event: WheelEvent): void => {
-      this.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, this.zoom + event.deltaY * 0.02));
+      this.zoom = Math.min(
+        MAX_ZOOM,
+        Math.max(MIN_ZOOM, this.zoom + event.deltaY * 0.02 * this.zoomSpeed),
+      );
     };
     const onContextMenu = (event: Event): void => event.preventDefault();
     const onBlur = (): void => {

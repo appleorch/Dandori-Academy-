@@ -18,13 +18,15 @@ interface GameLoopProps {
 /**
  * The main loop. Each rendered frame it projects the pointer onto the ground, runs
  * the fixed simulation steps that are due, and forwards state to the HUD store.
+ * While the game is paused no steps run and no time accumulates.
  * It runs before every other frame callback so meshes read fresh state.
  */
 export function GameLoop({ sim, input }: GameLoopProps): null {
   const element = useThree((state) => state.gl.domElement);
   const [clock] = useState(() => new FixedClock(SIM_DT));
   const frame = useRef(0);
-  const finished = useRef(false);
+  // Starts true if the scene remounts after the day already ended (a settings change).
+  const finished = useRef(sim.ended !== null);
 
   useEffect(() => input.attach(element), [input, element]);
 
@@ -34,10 +36,11 @@ export function GameLoop({ sim, input }: GameLoopProps): null {
     const cursorX = camera.position.x + probe.x * t;
     const cursorZ = camera.position.z + probe.z * t;
 
+    const store = useGameStore.getState();
+    if (store.paused) return;
     const steps = clock.advance(delta);
     for (let i = 0; i < steps; i++) sim.step(input.sample(cursorX, cursorZ));
 
-    const store = useGameStore.getState();
     if (sim.ended) {
       if (!finished.current) {
         finished.current = true;
