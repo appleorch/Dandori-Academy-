@@ -579,3 +579,71 @@ progress {
   max-height: calc(100% - 32px);
   overflow: auto;
 }
+
+.targets {
+  margin: 12px 0;
+  display: grid;
+  gap: 6px;
+}
+
+.targets table {
+  font-size: 0.9rem;
+}
+
+.targets caption {
+  text-align: left;
+  padding-bottom: 4px;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.targets thead th {
+  font-size: 0.78rem;
+  opacity: 0.7;
+  padding-bottom: 2px;
+}
+
+.targets thead th:not(:first-child) {
+  text-align: right;
+}
+
+.targets tbody th {
+  font-weight: 700;
+}
+
+.targets tbody tr {
+  border-top: 1px solid rgba(255, 246, 220, 0.12);
+}
+
+.targets tr.met td {
+  color: var(--ink);
+}
+
+.targets tr:not(.met) td {
+  opacity: 0.85;
+}
+
+.targets .note {
+  margin: 0;
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.targets-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin-top: 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.targets-line small {
+  font-weight: 400;
+  color: var(--ink);
+  opacity: 0.8;
+}

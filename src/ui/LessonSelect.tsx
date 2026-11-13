@@ -3,6 +3,7 @@ import { bestRank, UNLOCK_RANK } from '../game/save/saveManager';
 import { LEVELS } from '../game/world/level';
 import { Controls } from './Controls';
 import { MenuNav } from './MenuNav';
+import { RankTargetsLine } from './RankTargets';
 
 /** Front page: how to play, the list of lessons and the player's best result on each. */
 export function LessonSelect() {
@@ -42,6 +43,7 @@ export function LessonSelect() {
                         ? level.brief
                         : `Locked. Earn ${UNLOCK_RANK} in lesson ${level.stage - 1}.`}
                     </span>
+                    {unlocked && <RankTargetsLine level={level} />}
                   </span>
                   {rank && (
                     <span className={`badge rank-${rank.toLowerCase()}`}>

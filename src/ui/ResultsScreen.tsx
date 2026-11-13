@@ -3,6 +3,7 @@ import { findAchievement } from '../game/progression/achievements';
 import { UNLOCK_RANK } from '../game/save/saveManager';
 import type { DayEnd } from '../game/simulation/Simulation';
 import { LEVELS, type LevelDefinition } from '../game/world/level';
+import { RankTargets } from './RankTargets';
 
 const HEADLINES: Record<DayEnd, string> = {
   allCollected: 'Every Sunshard is home',
@@ -75,12 +76,8 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
             </ul>
           </div>
         )}
-        {next && !nextUnlocked && (
-          <p>
-            Earn {UNLOCK_RANK} or better to open the next lesson. Par for this one is{' '}
-            {level.parScore} pts.
-          </p>
-        )}
+        <RankTargets level={level} earned={score.rank} />
+        {next && !nextUnlocked && <p>Earn {UNLOCK_RANK} or better to open the next lesson.</p>}
         {next && nextUnlocked && (
           <button type="button" onClick={() => startDay(next.id)} autoFocus>
             Next lesson: {next.name}

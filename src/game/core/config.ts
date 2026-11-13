@@ -34,6 +34,9 @@ export const WHISTLE = {
   growth: 8,
 } as const;
 
+/** Score for delivering a Sunshard, per point of weight. */
+export const SHARD_VALUE_PER_WEIGHT = 100;
+
 export const CARRY = {
   baseSpeed: 2.2,
   bonusSpeed: 1.6,

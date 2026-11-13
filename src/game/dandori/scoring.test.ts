@@ -5,7 +5,7 @@ const base: DayStats = {
   treasureValue: 2300,
   treasuresCollected: 6,
   treasuresTotal: 6,
-  timeLeft: 60.9,
+  timeLeft: 59.2,
   workersAlive: 20,
   workersLost: 0,
 };

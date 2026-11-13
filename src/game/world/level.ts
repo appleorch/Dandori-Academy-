@@ -1,3 +1,5 @@
+import { SHARD_VALUE_PER_WEIGHT } from '../core/config';
+import { POINTS_PER_SECOND, POINTS_PER_WORKER } from '../dandori/scoring';
 import type { Box, Point } from '../navigation/NavGrid';
 
 export interface TreasureSpawn extends Point {
@@ -15,7 +17,12 @@ export interface LevelDefinition {
   width: number;
   depth: number;
   dayLength: number;
-  /** Score that earns the top rank. Tuned so a plain greedy player lands around Gold. */
+  /**
+   * Seconds into the day by which every Sunshard must be home, with no Emberlings
+   * lost, to earn Platinum. Set comfortably slower than the greedy test bot.
+   */
+  platinumTime: number;
+  /** Score that earns Platinum. Derived from `platinumTime`; see `withPar`. */
   parScore: number;
   seed: number;
   startingWorkers: number;
@@ -26,7 +33,7 @@ export interface LevelDefinition {
   enemies: Point[];
 }
 
-const MANY_HANDS: LevelDefinition = {
+const MANY_HANDS: LevelSpec = {
   id: 'many-hands',
   stage: 1,
   name: 'Many Hands',
@@ -35,7 +42,7 @@ const MANY_HANDS: LevelDefinition = {
   width: 40,
   depth: 26,
   dayLength: 60,
-  parScore: 1650,
+  platinumTime: 30,
   seed: 1,
   startingWorkers: 10,
   captain: { x: -11, z: 1 },
@@ -51,7 +58,7 @@ const MANY_HANDS: LevelDefinition = {
   enemies: [],
 };
 
-const OVER_THE_WALL: LevelDefinition = {
+const OVER_THE_WALL: LevelSpec = {
   id: 'over-the-wall',
   stage: 2,
   name: 'Over the Wall',
@@ -60,7 +67,7 @@ const OVER_THE_WALL: LevelDefinition = {
   width: 50,
   depth: 30,
   dayLength: 90,
-  parScore: 1900,
+  platinumTime: 60,
   seed: 2,
   startingWorkers: 12,
   captain: { x: -17, z: 2 },
@@ -79,7 +86,7 @@ const OVER_THE_WALL: LevelDefinition = {
   enemies: [],
 };
 
-const THE_GUARD: LevelDefinition = {
+const THE_GUARD: LevelSpec = {
   id: 'the-guard',
   stage: 3,
   name: 'The Guard',
@@ -88,7 +95,7 @@ const THE_GUARD: LevelDefinition = {
   width: 50,
   depth: 30,
   dayLength: 120,
-  parScore: 2750,
+  platinumTime: 65,
   seed: 3,
   startingWorkers: 9,
   captain: { x: -17, z: 2 },
@@ -106,7 +113,7 @@ const THE_GUARD: LevelDefinition = {
   enemies: [{ x: 4, z: 0 }],
 };
 
-const FIRST_LIGHT: LevelDefinition = {
+const FIRST_LIGHT: LevelSpec = {
   id: 'first-light',
   stage: 4,
   name: 'First Light',
@@ -115,7 +122,7 @@ const FIRST_LIGHT: LevelDefinition = {
   width: 60,
   depth: 40,
   dayLength: 180,
-  parScore: 3500,
+  platinumTime: 125,
   seed: 4,
   startingWorkers: 10,
   captain: { x: -15, z: 2 },
@@ -141,7 +148,7 @@ const FIRST_LIGHT: LevelDefinition = {
   ],
 };
 
-const LONG_HAUL: LevelDefinition = {
+const LONG_HAUL: LevelSpec = {
   id: 'long-haul',
   stage: 5,
   name: 'Long Haul',
@@ -150,7 +157,7 @@ const LONG_HAUL: LevelDefinition = {
   width: 80,
   depth: 50,
   dayLength: 300,
-  parScore: 5400,
+  platinumTime: 270,
   seed: 5,
   startingWorkers: 15,
   captain: { x: -29, z: 2 },
@@ -180,7 +187,7 @@ const LONG_HAUL: LevelDefinition = {
   ],
 };
 
-const DIVIDE_AND_CONQUER: LevelDefinition = {
+const DIVIDE_AND_CONQUER: LevelSpec = {
   id: 'divide-and-conquer',
   stage: 6,
   name: 'Divide and Conquer',
@@ -189,7 +196,7 @@ const DIVIDE_AND_CONQUER: LevelDefinition = {
   width: 64,
   depth: 36,
   dayLength: 120,
-  parScore: 2950,
+  platinumTime: 90,
   seed: 6,
   startingWorkers: 14,
   captain: { x: -26, z: 2 },
@@ -211,7 +218,7 @@ const DIVIDE_AND_CONQUER: LevelDefinition = {
   enemies: [],
 };
 
-const THE_GAUNTLET: LevelDefinition = {
+const THE_GAUNTLET: LevelSpec = {
   id: 'the-gauntlet',
   stage: 7,
   name: 'The Gauntlet',
@@ -220,7 +227,7 @@ const THE_GAUNTLET: LevelDefinition = {
   width: 80,
   depth: 30,
   dayLength: 170,
-  parScore: 2900,
+  platinumTime: 120,
   seed: 7,
   startingWorkers: 14,
   captain: { x: -33, z: 2 },
@@ -242,7 +249,7 @@ const THE_GAUNTLET: LevelDefinition = {
   ],
 };
 
-const GROWING_PAINS: LevelDefinition = {
+const GROWING_PAINS: LevelSpec = {
   id: 'growing-pains',
   stage: 8,
   name: 'Growing Pains',
@@ -251,7 +258,7 @@ const GROWING_PAINS: LevelDefinition = {
   width: 70,
   depth: 40,
   dayLength: 400,
-  parScore: 5400,
+  platinumTime: 290,
   seed: 8,
   startingWorkers: 6,
   captain: { x: -29, z: 2 },
@@ -276,7 +283,7 @@ const GROWING_PAINS: LevelDefinition = {
   ],
 };
 
-const SWITCHBACKS: LevelDefinition = {
+const SWITCHBACKS: LevelSpec = {
   id: 'switchbacks',
   stage: 9,
   name: 'Switchbacks',
@@ -285,7 +292,7 @@ const SWITCHBACKS: LevelDefinition = {
   width: 80,
   depth: 50,
   dayLength: 390,
-  parScore: 4800,
+  platinumTime: 285,
   seed: 9,
   startingWorkers: 16,
   captain: { x: -35, z: 2 },
@@ -306,7 +313,7 @@ const SWITCHBACKS: LevelDefinition = {
   enemies: [{ x: 22, z: 12 }],
 };
 
-const FINAL_EXAM: LevelDefinition = {
+const FINAL_EXAM: LevelSpec = {
   id: 'final-exam',
   stage: 10,
   name: 'Final Exam',
@@ -315,7 +322,7 @@ const FINAL_EXAM: LevelDefinition = {
   width: 90,
   depth: 56,
   dayLength: 520,
-  parScore: 9300,
+  platinumTime: 375,
   seed: 10,
   startingWorkers: 20,
   captain: { x: -40, z: 2 },
@@ -350,6 +357,27 @@ const FINAL_EXAM: LevelDefinition = {
   ],
 };
 
+/** A lesson as written, before its par score is derived. */
+type LevelSpec = Omit<LevelDefinition, 'parScore'>;
+
+/** Total value of every Sunshard in a lesson. */
+export function treasureTotal(level: Pick<LevelDefinition, 'treasures'>): number {
+  return level.treasures.reduce((sum, t) => sum + t.weight * SHARD_VALUE_PER_WEIGHT, 0);
+}
+
+/**
+ * Par is exactly the score of a Platinum-pace day: every Sunshard home at
+ * `platinumTime`, with the starting squad alive and nobody lost.
+ */
+function withPar(spec: LevelSpec): LevelDefinition {
+  const timeLeft = spec.dayLength - spec.platinumTime;
+  return {
+    ...spec,
+    parScore:
+      treasureTotal(spec) + spec.startingWorkers * POINTS_PER_WORKER + timeLeft * POINTS_PER_SECOND,
+  };
+}
+
 /** The academy's lessons in play order. */
 export const LEVELS: readonly LevelDefinition[] = [
   MANY_HANDS,
@@ -362,4 +390,4 @@ export const LEVELS: readonly LevelDefinition[] = [
   GROWING_PAINS,
   SWITCHBACKS,
   FINAL_EXAM,
-];
+].map(withPar);

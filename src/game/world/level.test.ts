@@ -154,7 +154,7 @@ describe.each(LEVELS)('$name', (level) => {
     sim.dispose();
   });
 
-  it('can be cleared by a simple greedy player, with room left to do better', () => {
+  it('can be cleared at Platinum pace by a simple greedy player', () => {
     const sim = new Simulation(level);
     playGreedy(sim);
     const score = evaluateDay(
@@ -169,8 +169,8 @@ describe.each(LEVELS)('$name', (level) => {
       level.parScore,
     );
     expect(sim.ended).toBe('allCollected');
-    expect(score.rank).not.toBe('Bronze');
-    expect(score.total).toBeLessThan(level.parScore);
+    // The bot is quick but clumsy; Platinum is set slower than it, so it must reach it.
+    expect(score.rank).toBe('Platinum');
     sim.dispose();
   });
 });

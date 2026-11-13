@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGameStore } from '../game/core/gameStore';
 import type { LevelDefinition } from '../game/world/level';
+import { RankTargets } from './RankTargets';
 import { SettingsPanel } from './SettingsPanel';
 
 /** Shown over a paused day: resume, restart, change settings or leave the lesson. */
@@ -19,6 +20,7 @@ export function PauseMenu({ level }: { level: LevelDefinition }) {
             <h1>
               {level.stage}. {level.name}
             </h1>
+            <RankTargets level={level} />
             <button type="button" onClick={resume} autoFocus>
               Resume
             </button>

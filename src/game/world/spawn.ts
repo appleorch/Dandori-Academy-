@@ -1,3 +1,4 @@
+import { SHARD_VALUE_PER_WEIGHT } from '../core/config';
 import type { Entity } from '../core/ecs';
 import { NO_ENTITY } from '../core/ecs';
 import { createMover } from '../navigation/steering';
@@ -38,7 +39,7 @@ export function spawnTreasure(sim: Simulation, spawn: TreasureSpawn): Entity {
     kind: 'treasure',
     weight: spawn.weight,
     maxCarriers: spawn.weight * 2,
-    value: spawn.weight * 100,
+    value: spawn.weight * SHARD_VALUE_PER_WEIGHT,
     workerYield: 0,
     radius: 0.5 + 0.1 * spawn.weight,
     carriers: [],

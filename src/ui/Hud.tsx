@@ -1,10 +1,6 @@
 import { useGameStore } from '../game/core/gameStore';
+import { formatTime } from './format';
 import type { LevelDefinition } from '../game/world/level';
-
-function formatTime(seconds: number): string {
-  const whole = Math.ceil(seconds);
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
-}
 
 /** In-day overlay: clock, treasure progress, where the workforce is, and the pause button. */
 export function Hud({ level }: { level: LevelDefinition }) {

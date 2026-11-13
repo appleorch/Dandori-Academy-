@@ -65,8 +65,12 @@ it after changes with `npm run build:docs`.
 
 Each day is ranked Bronze, Silver, Gold or Platinum against the lesson's par score. Silver or
 better unlocks the next lesson. Best rank and best score per lesson are saved in the browser.
-Par scores are set so that the plain greedy bot in `src/game/world/level.test.ts` earns Gold on
-every lesson without reaching par; that test also proves every lesson can be cleared.
+Each lesson sets a Platinum time (`platinumTime` in `src/game/world/level.ts`): bring every
+Sunshard home by then without losing an Emberling and the day is Platinum. The par score is
+derived from that time, and Gold and Silver need 80% and 55% of par. The lesson list, the pause
+menu and the results screen show every rank's score and the clock time it needs. Platinum times
+are about 1.3 times slower than the greedy bot in `src/game/world/level.test.ts`, and that test
+requires the bot to earn Platinum on every lesson, so every rank is always reachable.
 
 ## Settings, save files and achievements
 
