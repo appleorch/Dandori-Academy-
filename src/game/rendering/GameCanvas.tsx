@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { audio } from '../audio/audioManager';
 import { useGameStore } from '../core/gameStore';
 import { CameraRig } from '../camera/CameraRig';
-import { InputController } from '../commands/input';
+import type { InputController } from '../commands/input';
 import { Simulation } from '../simulation/Simulation';
 import type { LevelDefinition } from '../world/level';
 import { AimArc } from './AimArc';
@@ -25,9 +25,13 @@ import { WorkerInstances } from './WorkerInstances';
  * Owns one day's simulation and renders it. Remount (change `key`) to start a new day.
  * Turning shadows on or off rebuilds the 3D scene but keeps the simulation.
  */
-export function GameCanvas({ level }: { level: LevelDefinition }) {
+interface GameCanvasProps {
+  level: LevelDefinition;
+  input: InputController;
+}
+
+export function GameCanvas({ level, input }: GameCanvasProps) {
   const [sim, setSim] = useState<Simulation | null>(null);
-  const [input] = useState(() => new InputController());
   const [fx] = useState(() => new Feedback());
   const playing = useGameStore((state) => state.phase === 'playing' && !state.paused);
 

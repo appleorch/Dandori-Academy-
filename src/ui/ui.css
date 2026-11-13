@@ -21,6 +21,7 @@ body,
   margin: 0;
   background: #1b2a22;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .game {
@@ -28,6 +29,10 @@ body,
   height: 100%;
   cursor: crosshair;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  /* The game handles every touch itself: no scrolling, pinch-zoom or double-tap zoom. */
+  touch-action: none;
 }
 
 .screen {
@@ -163,7 +168,8 @@ tr.total td {
 .hud {
   position: absolute;
   inset: 0;
-  padding: 12px;
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px))
+    max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -770,4 +776,126 @@ progress {
   width: 2px;
   height: 12px;
   background: currentColor;
+}
+
+/* Touch layout: worker counts move to the top, leaving the bottom for the controls. */
+.hud.touch .hud-spacer {
+  order: 1;
+}
+
+@media (max-width: 640px), (max-height: 480px) {
+  .hud {
+    gap: 6px;
+  }
+
+  .hud-row {
+    gap: 5px;
+  }
+
+  .chip {
+    padding: 4px 9px;
+    font-size: 0.78rem;
+  }
+
+  .chip.clock {
+    min-width: 56px;
+    font-size: 1rem;
+  }
+
+  .hud-level {
+    display: none;
+  }
+
+  .daybar {
+    margin-bottom: 12px;
+  }
+}
+
+.touch-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.stick {
+  position: absolute;
+  left: max(18px, env(safe-area-inset-left, 0px));
+  bottom: max(26px, env(safe-area-inset-bottom, 0px));
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(28, 20, 16, 0.45);
+  border: 2px solid rgba(255, 246, 220, 0.35);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.stick-knob {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(255, 246, 220, 0.75);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.touch-buttons {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: max(22px, env(safe-area-inset-bottom, 0px));
+  width: 176px;
+  height: 176px;
+}
+
+button.touch-button {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-content: center;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 246, 220, 0.5);
+  background: rgba(28, 20, 16, 0.6);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+button.touch-button:active {
+  background: rgba(255, 179, 71, 0.55);
+}
+
+button.touch-button.whistle {
+  right: 0;
+  bottom: 0;
+  width: 98px;
+  height: 98px;
+  border-color: #7fe3ff;
+  font-size: 0.95rem;
+}
+
+button.touch-button.whistle small {
+  font-size: 0.62rem;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+button.touch-button.charge {
+  right: 108px;
+  bottom: 4px;
+  width: 66px;
+  height: 66px;
+  border-color: var(--accent);
+}
+
+button.touch-button.dismiss {
+  right: 6px;
+  bottom: 108px;
+  width: 66px;
+  height: 66px;
 }

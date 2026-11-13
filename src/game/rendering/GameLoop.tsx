@@ -39,8 +39,10 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
   useFrame(({ camera }, delta) => {
     probe.set(input.pointerX, input.pointerY, 0.5).unproject(camera).sub(camera.position);
     const t = -camera.position.y / probe.y;
-    const cursorX = camera.position.x + probe.x * t;
-    const cursorZ = camera.position.z + probe.z * t;
+    // Dragging the on-screen whistle button aims relative to the captain instead.
+    const aim = input.aimOffset;
+    const cursorX = aim ? sim.captainTransform.x + aim.x : camera.position.x + probe.x * t;
+    const cursorZ = aim ? sim.captainTransform.z + aim.z : camera.position.z + probe.z * t;
 
     const store = useGameStore.getState();
     if (store.paused) {

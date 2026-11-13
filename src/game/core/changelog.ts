@@ -8,6 +8,15 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.8.0',
+    date: '2026-11-13',
+    changes: [
+      'Touch controls for phones and tablets: a joystick to move, touch the field to throw, and Whistle, Charge and Dismiss buttons.',
+      'Hold the Whistle button and drag to move the call circle. Pinch with two fingers to zoom.',
+      'The HUD is compact on small screens and keeps clear of notches, and tall screens start zoomed further out.',
+    ],
+  },
+  {
     version: '0.7.0',
     date: '2026-11-13',
     changes: [

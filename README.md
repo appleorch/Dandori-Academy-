@@ -38,6 +38,16 @@ it after changes with `npm run build:docs`.
 | Esc                 | Pause (resume, restart, settings, quit)              |
 | Mouse wheel         | Zoom                                                 |
 
+On a phone or tablet the game shows touch controls instead:
+
+| Touch                    | Action                                                |
+| ------------------------ | ----------------------------------------------------- |
+| Joystick (bottom left)   | Move the Warden                                       |
+| Touch the field (hold)   | Throw squad members at that spot                      |
+| Whistle button (hold)    | Call workers around the Warden; drag to move the call |
+| Charge / Dismiss buttons | Send the squad to where you last aimed / dismiss it   |
+| Two-finger pinch         | Zoom                                                  |
+
 - **Emberlings** are your workers. Thrown next to a job, they start it by themselves. Idle
   ones (pale, with a cold tip) pick up any work within a few steps.
 - **Sunshards** show `carriers / needed`. Once staffed they walk home to the **Kiln**; extra

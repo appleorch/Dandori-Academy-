@@ -5,7 +5,7 @@ import type { LevelDefinition } from '../game/world/level';
 
 /** In-day overlay: clock, treasure progress, a day bar marked with each rank's deadline, where
  * the workforce is, and the pause button. */
-export function Hud({ level }: { level: LevelDefinition }) {
+export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }) {
   const hud = useGameStore((state) => state.hud);
   const phase = useGameStore((state) => state.phase);
   const pause = useGameStore((state) => state.pause);
@@ -13,9 +13,9 @@ export function Hud({ level }: { level: LevelDefinition }) {
   const elapsed = 1 - hud.timeLeft / level.dayLength;
 
   return (
-    <div className="hud">
+    <div className={touch ? 'hud touch' : 'hud'}>
       <div className="hud-row">
-        <div className="chip">
+        <div className="chip hud-level">
           {level.stage}. {level.name}
         </div>
         <div className={hud.timeLeft <= 30 ? 'chip clock urgent' : 'chip clock'}>
@@ -29,7 +29,7 @@ export function Hud({ level }: { level: LevelDefinition }) {
         </div>
         {phase === 'playing' && (
           <button type="button" className="chip quit" onClick={pause}>
-            Pause <kbd>Esc</kbd>
+            Pause {!touch && <kbd>Esc</kbd>}
           </button>
         )}
       </div>
