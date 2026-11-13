@@ -6,6 +6,7 @@ export const CAPTAIN = {
   radius: 0.45,
   maxHp: 3,
   invulnTime: 2.5,
+  knockback: 2.5,
   cursorRange: 10,
 } as const;
 
@@ -17,6 +18,8 @@ export const WORKER = {
   scanRange: 3.5,
   attackDps: 2,
   impactDamage: 3,
+  rushTimeout: 4,
+  rushScanRange: 1.8,
 } as const;
 
 export const THROW = {
@@ -26,6 +29,8 @@ export const THROW = {
   minDuration: 0.3,
   arcHeight: 3.5,
   scatter: 0.35,
+  /** A throw aimed this close to an enemy homes in on it. */
+  aimAssist: 2.2,
 } as const;
 
 export const WHISTLE = {
@@ -43,21 +48,10 @@ export const CARRY = {
   deliverRange: 1.5,
 } as const;
 
+/** A pod is a light haul that is worth new workers instead of score. */
+export const POD = { weight: 1, maxCarriers: 2, workerYield: 2, radius: 0.45 } as const;
+
 export const KILN = {
   spawnInterval: 0.25,
   spawnRing: 2.2,
-} as const;
-
-export const ENEMY = {
-  speed: 3,
-  wanderSpeed: 1.2,
-  wanderRange: 3,
-  aggroRange: 5.5,
-  territory: 11,
-  biteRange: 1.4,
-  biteVictims: 2,
-  windup: 0.9,
-  recover: 2,
-  shakeInterval: 4.5,
-  shakeStun: 1,
 } as const;

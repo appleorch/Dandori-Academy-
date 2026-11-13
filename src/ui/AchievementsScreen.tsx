@@ -20,7 +20,7 @@ export function AchievementsScreen() {
         <h1>Achievements</h1>
         <p>
           {earned} of {ACHIEVEMENTS.length} earned. Days played: {save.totals.days} · Sunshards
-          delivered: {save.totals.treasures} · Mossbacks defeated: {save.totals.enemies}
+          delivered: {save.totals.treasures} · Enemies defeated: {save.totals.enemies}
         </p>
         <ul className="achievements">
           {ACHIEVEMENTS.map((achievement) => {

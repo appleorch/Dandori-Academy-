@@ -7,6 +7,7 @@ import type { Simulation } from '../simulation/Simulation';
 import { assignTask, findTask, latchOn, setIdle } from './squad';
 
 const LANDING_SCAN_RANGE = 2.5;
+const RUSH_SCAN_INTERVAL = 0.15;
 const dir = { x: 0, z: 0 };
 
 function walkToward(
@@ -49,12 +50,13 @@ function land(sim: Simulation, entity: Entity, worker: Worker, transform: Transf
   transform.y = 0;
   for (const [enemyEntity, enemy] of sim.enemies.entries()) {
     const at = sim.transforms.require(enemyEntity);
-    if (enemy.hp > 0 && Math.hypot(at.x - transform.x, at.z - transform.z) <= enemy.radius + 0.6) {
+    if (enemy.hp > 0 && Math.hypot(at.x - transform.x, at.z - transform.z) <= enemy.radius + 1) {
       enemy.hp -= WORKER.impactDamage;
       latchOn(sim, entity, worker, enemyEntity, enemy);
       return;
     }
   }
+  sim.emit('land', transform.x, transform.z);
   worker.state = 'idle';
   worker.scan = WORKER.scanInterval;
   const task = findTask(sim, transform.x, transform.z, LANDING_SCAN_RANGE);
@@ -107,12 +109,29 @@ export function updateWorkers(sim: Simulation, dt: number): void {
       case 'follow':
         follow(sim, worker, transform, dt);
         break;
+      case 'rush': {
+        worker.rushTime -= dt;
+        worker.scan -= dt;
+        if (worker.scan <= 0) {
+          worker.scan = RUSH_SCAN_INTERVAL;
+          const task = findTask(sim, transform.x, transform.z, WORKER.rushScanRange);
+          if (task !== NO_ENTITY) {
+            assignTask(sim, entity, worker, task);
+            break;
+          }
+        }
+        const arrived = Math.hypot(worker.rushX - transform.x, worker.rushZ - transform.z) < 0.7;
+        if (arrived || worker.rushTime <= 0) setIdle(sim, entity, worker);
+        else walkToward(sim, worker, transform, worker.rushX, worker.rushZ, dt);
+        break;
+      }
       case 'toCarry': {
         const carryable = sim.carryables.require(worker.target);
         const at = sim.transforms.require(worker.target);
         if (Math.hypot(at.x - transform.x, at.z - transform.z) <= carryable.radius + 0.35) {
           worker.state = 'carrying';
           carryable.carriers.push(entity);
+          sim.emit('grab', at.x, at.z);
         } else {
           walkToward(sim, worker, transform, at.x, at.z, dt);
         }

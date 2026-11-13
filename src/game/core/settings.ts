@@ -6,6 +6,10 @@ export interface Settings {
   /** Multiplier on mouse-wheel zoom. */
   zoomSpeed: number;
   pauseOnBlur: boolean;
+  /** Sound effect volume, 0 to 1. */
+  sfxVolume: number;
+  /** Music volume, 0 to 1. */
+  musicVolume: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -14,6 +18,8 @@ export const DEFAULT_SETTINGS: Settings = {
   healthBars: true,
   zoomSpeed: 1,
   pauseOnBlur: true,
+  sfxVolume: 0.7,
+  musicVolume: 0.35,
 };
 
 export const ZOOM_SPEED_MIN = 0.25;
@@ -33,6 +39,12 @@ export function parseSettings(value: unknown): Settings {
   }
   if (typeof raw.zoomSpeed === 'number' && Number.isFinite(raw.zoomSpeed)) {
     settings.zoomSpeed = Math.min(ZOOM_SPEED_MAX, Math.max(ZOOM_SPEED_MIN, raw.zoomSpeed));
+  }
+  for (const key of ['sfxVolume', 'musicVolume'] as const) {
+    const volume = raw[key];
+    if (typeof volume === 'number' && Number.isFinite(volume)) {
+      settings[key] = Math.min(1, Math.max(0, volume));
+    }
   }
   return settings;
 }

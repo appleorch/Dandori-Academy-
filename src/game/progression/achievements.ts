@@ -75,17 +75,17 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     'Collect every Sunshard without losing an Emberling.',
     (day) => cleared(day) && day.workersLost === 0,
   ),
-  counter('first-hunt', 'First Hunt', 'Defeat a Mossback.', 1, (s) => s.totals.enemies),
+  counter('first-hunt', 'First Hunt', 'Defeat an enemy.', 1, (s) => s.totals.enemies),
   feat(
     'pest-control',
     'Pest Control',
-    'Defeat every Mossback in a lesson that has them.',
+    'Defeat every enemy in a lesson that has them.',
     (day) => day.enemiesTotal > 0 && day.enemiesDefeated === day.enemiesTotal,
   ),
   feat(
     'untouchable',
     'Untouchable',
-    'Collect every Sunshard in a lesson with Mossbacks without the Warden being hit.',
+    'Collect every Sunshard in a lesson with enemies without the Warden being hit.',
     (day) => cleared(day) && day.enemiesTotal > 0 && day.captainHits === 0,
   ),
   feat(
@@ -103,8 +103,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   counter('hauler', 'Hauler', 'Bring 50 Sunshards home in total.', 50, (s) => s.totals.treasures),
   counter(
     'mossback-hunter',
-    'Mossback Hunter',
-    'Defeat 25 Mossbacks in total.',
+    'Monster Hunter',
+    'Defeat 25 enemies in total.',
     25,
     (s) => s.totals.enemies,
   ),

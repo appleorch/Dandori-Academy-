@@ -7,6 +7,8 @@ export interface InputState {
   throwHeld: boolean;
   whistleHeld: boolean;
   dismiss: boolean;
+  /** Send the whole squad running to the cursor. */
+  rush: boolean;
 }
 
 export const NO_INPUT: InputState = {
@@ -17,6 +19,7 @@ export const NO_INPUT: InputState = {
   throwHeld: false,
   whistleHeld: false,
   dismiss: false,
+  rush: false,
 };
 
 const MIN_ZOOM = 14;
@@ -34,11 +37,13 @@ export class InputController {
   private leftDown = false;
   private rightDown = false;
   private dismissQueued = false;
+  private rushQueued = false;
 
   /** Starts listening. Returns a function that removes every listener. */
   attach(element: HTMLElement): () => void {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.code === 'KeyQ' && !event.repeat) this.dismissQueued = true;
+      if (event.code === 'KeyF' && !event.repeat) this.rushQueued = true;
       if (event.code === 'Space') event.preventDefault();
       this.keys.add(event.code);
     };
@@ -54,6 +59,10 @@ export class InputController {
       onPointerMove(event);
       if (event.button === 0) this.leftDown = true;
       if (event.button === 2) this.rightDown = true;
+      if (event.button === 1) {
+        event.preventDefault();
+        this.rushQueued = true;
+      }
     };
     const onPointerUp = (event: PointerEvent): void => {
       if (event.button === 0) this.leftDown = false;
@@ -92,7 +101,7 @@ export class InputController {
     };
   }
 
-  /** Builds the commands for one step. The dismiss press is consumed by the first step that reads it. */
+  /** Builds the commands for one step. One-shot presses (dismiss, rush) are consumed by the first step that reads them. */
   sample(cursorX: number, cursorZ: number): InputState {
     const { keys } = this;
     const right = keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0;
@@ -100,7 +109,9 @@ export class InputController {
     const down = keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0;
     const up = keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0;
     const dismiss = this.dismissQueued;
+    const rush = this.rushQueued;
     this.dismissQueued = false;
+    this.rushQueued = false;
     return {
       moveX: right - left,
       moveZ: down - up,
@@ -109,6 +120,7 @@ export class InputController {
       throwHeld: this.leftDown,
       whistleHeld: this.rightDown || keys.has('Space'),
       dismiss,
+      rush,
     };
   }
 }

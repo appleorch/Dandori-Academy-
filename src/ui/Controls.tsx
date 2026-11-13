@@ -2,6 +2,7 @@ const CONTROLS: readonly (readonly [string, string])[] = [
   ['WASD', 'Move'],
   ['Left mouse', 'Throw (hold to keep throwing)'],
   ['Right mouse / Space', 'Whistle workers back'],
+  ['F / Middle mouse', 'Charge: send the whole squad to the cursor'],
   ['Q', 'Dismiss the squad'],
   ['Esc', 'Pause'],
   ['Wheel', 'Zoom'],

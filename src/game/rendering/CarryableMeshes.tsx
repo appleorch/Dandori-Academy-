@@ -46,6 +46,11 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
             flatShading
           />
         </mesh>
+      ) : kind === 'pod' ? (
+        <mesh ref={body} scale={[1, 1.3, 1]} castShadow>
+          <sphereGeometry args={[radius, 14, 10]} />
+          <meshStandardMaterial color="#ff8a3d" emissive="#ff5a1a" emissiveIntensity={0.9} />
+        </mesh>
       ) : (
         <mesh ref={body} scale={[1, 0.55, 1]} castShadow>
           <sphereGeometry args={[radius, 16, 12]} />
@@ -62,7 +67,7 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
   );
 }
 
-/** One mesh per Sunshard and carcass, each labelled with carriers held / carriers needed. */
+/** One mesh per Sunshard, Emberpod and carcass, each labelled with carriers held / carriers needed. */
 export function CarryableMeshes({ sim }: { sim: Simulation }) {
   useGameStore((state) => state.entityVersion);
   return (

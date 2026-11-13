@@ -6,13 +6,18 @@ import type { Simulation } from '../simulation/Simulation';
 /** The Warden. Blinks while invulnerable after a hit. */
 export function CaptainMesh({ sim }: { sim: Simulation }) {
   const group = useRef<Group>(null);
+  const stride = useRef(0);
 
   useFrame(() => {
     const node = group.current;
     if (!node) return;
     const { x, z, facing } = sim.captainTransform;
-    node.position.set(x, 0, z);
-    node.rotation.y = facing;
+    // Walking shows as a bob and a forward lean, driven by distance covered.
+    const moved = Math.hypot(x - node.position.x, z - node.position.z);
+    stride.current += Math.min(moved, 0.5) * 2.4;
+    const walking = moved > 0.01;
+    node.position.set(x, walking ? Math.abs(Math.sin(stride.current)) * 0.14 : 0, z);
+    node.rotation.set(walking ? 0.12 : 0, facing, 0, 'YXZ');
     node.visible = Math.floor(sim.captainState.invuln * 12) % 2 === 0;
   });
 

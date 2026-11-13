@@ -18,7 +18,11 @@ function stressLevel(): LevelDefinition {
     obstacles: [],
     startingWorkers: 100,
     treasures: Array.from({ length: 50 }, (_, i) => ({ id: `t${i}`, weight: 1, ...spot() })),
-    enemies: Array.from({ length: 20 }, spot),
+    pods: [],
+    enemies: Array.from({ length: 20 }, (_, i) => ({
+      ...spot(),
+      kind: (['mossback', 'ramhorn', 'spitter'] as const)[i % 3],
+    })),
   };
 }
 

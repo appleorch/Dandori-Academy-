@@ -8,6 +8,21 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.7.0',
+    date: '2026-11-13',
+    changes: [
+      'Enemies fight back. A Mossback shakes attackers off sooner and bites the dazed: whistle them clear in time.',
+      'Two new enemies: the Ramhorn, which charges through the squad and then stands winded, and the Bogspitter, which lobs globs from range.',
+      'Every attack is telegraphed, and a hit knocks the Warden back.',
+      'Charge order (F or middle mouse) sends the whole squad at the cursor. Throws aimed near an enemy home in on it.',
+      'Emberpods: light hauls that hatch into two new Emberlings.',
+      'Sound effects and music, with volume sliders in Settings.',
+      'Particles, camera shake, score popups, a throw arc, scenery, and light that turns to sunset as the day runs out.',
+      'The HUD shows a day bar marked with the Gold and Platinum deadlines.',
+      'Lessons 3 to 10 are rebalanced for the new enemies. Earlier best scores are kept.',
+    ],
+  },
+  {
     version: '0.6.0',
     date: '2026-11-13',
     changes: [

@@ -166,7 +166,7 @@ tr.total td {
   padding: 12px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 8px;
   pointer-events: none;
   font-variant-numeric: tabular-nums;
 }
@@ -718,4 +718,56 @@ progress {
 
 .revision-log details[open] summary {
   margin-bottom: 6px;
+}
+
+.hud-spacer {
+  flex: 1;
+}
+
+.daybar {
+  position: relative;
+  align-self: center;
+  width: min(520px, 100%);
+  height: 10px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 246, 220, 0.25);
+}
+
+.daybar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffd9a8, #fff6e6 40%, #ffab66 80%, #e8573a);
+  transition: width 0.12s linear;
+}
+
+.daybar-sun {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffd257;
+  box-shadow: 0 0 10px 2px rgba(255, 210, 87, 0.8);
+  transform: translate(-50%, -50%);
+  transition: left 0.12s linear;
+}
+
+.daybar-mark {
+  position: absolute;
+  top: 12px;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #000;
+}
+
+.daybar-mark::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -13px;
+  width: 2px;
+  height: 12px;
+  background: currentColor;
 }

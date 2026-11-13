@@ -18,11 +18,16 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable): void {
   for (const worker of [...carryable.claimed]) {
     setIdle(sim, worker, sim.workers.require(worker));
   }
+  const { kiln } = sim.level;
   if (carryable.kind === 'treasure') {
     sim.stats.treasureValue += carryable.value;
     sim.stats.treasuresCollected.push(carryable.id);
+    sim.emit('deliver', kiln.x, kiln.z, carryable.value);
   }
-  sim.kiln.queue += carryable.workerYield;
+  if (carryable.workerYield > 0) {
+    sim.kiln.queue += carryable.workerYield;
+    sim.emit('grow', kiln.x, kiln.z, carryable.workerYield);
+  }
   sim.ecs.destroy(entity);
   sim.entityVersion++;
 }

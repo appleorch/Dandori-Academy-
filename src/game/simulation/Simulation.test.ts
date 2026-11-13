@@ -17,6 +17,7 @@ const OPEN_FIELD: LevelDefinition = {
   kiln: { x: -8, z: 0 },
   obstacles: [],
   treasures: [{ id: 'near', x: 6, z: 0, weight: 2 }],
+  pods: [],
   enemies: [],
 };
 
@@ -90,7 +91,7 @@ describe('Simulation', () => {
       ...OPEN_FIELD,
       startingWorkers: 12,
       treasures: [{ id: 'unreachable-in-time', x: 18, z: 8, weight: 30 }],
-      enemies: [{ x: 9, z: 0 }],
+      enemies: [{ x: 9, z: 0, kind: 'mossback' }],
     });
     run(sim, 60 * 40, { cursorX: 9, cursorZ: 0, throwHeld: true });
     expect(sim.stats.enemiesDefeated).toBe(1);

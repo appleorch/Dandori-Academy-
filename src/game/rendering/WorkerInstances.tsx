@@ -21,13 +21,14 @@ const IDLE_TIP = new Color('#8fa3ad');
 const dummy = new Object3D();
 
 function bodyColor(state: WorkerState): Color {
-  if (state === 'follow' || state === 'thrown') return SQUAD_BODY;
+  if (state === 'follow' || state === 'thrown' || state === 'rush') return SQUAD_BODY;
   return state === 'idle' ? IDLE_BODY : WORKING_BODY;
 }
 
 /**
  * Draws every Emberling with two instanced meshes (body and ember tip), so a full
- * field of workers costs two draw calls. Idle workers are pale with a cold tip.
+ * field of workers costs two draw calls. Idle workers are pale with a cold tip,
+ * and dazed ones lie on the ground.
  */
 export function WorkerInstances({ sim }: { sim: Simulation }) {
   const bodies = useRef<InstancedMesh>(null);
@@ -48,14 +49,25 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
     let index = 0;
     for (const [entity, worker] of sim.workers.entries()) {
       const { x, y, z, facing } = sim.transforms.require(entity);
-      const moving = worker.state !== 'idle' && worker.state !== 'attacking';
-      const hop = moving ? Math.abs(Math.sin(clock.elapsedTime * 12 + entity)) * 0.08 : 0;
-      dummy.position.set(x, y + hop, z);
-      dummy.rotation.set(0, facing, 0);
+      const time = clock.elapsedTime;
+      const dazed = worker.stun > 0;
+      let hop = 0;
+      if (worker.state === 'attacking') hop = Math.sin(time * 38 + entity) * 0.05;
+      else if (worker.state !== 'idle') hop = Math.abs(Math.sin(time * 12 + entity)) * 0.08;
+      else if (!dazed) hop = Math.abs(Math.sin(time * 2.5 + entity)) * 0.03;
+      dummy.position.set(x, y + (dazed ? 0.2 : hop), z);
+      // Dazed workers lie flat, which is the cue to whistle them up.
+      dummy.rotation.set(dazed ? 1.45 : 0, facing, 0);
       dummy.updateMatrix();
       body.setMatrixAt(index, dummy.matrix);
       body.setColorAt(index, bodyColor(worker.state));
-      dummy.position.y += 0.8;
+      dummy.rotation.set(0, 0, 0);
+      if (dazed) {
+        dummy.position.x += Math.sin(facing) * 0.75;
+        dummy.position.z += Math.cos(facing) * 0.75;
+      } else {
+        dummy.position.y += 0.8;
+      }
       dummy.updateMatrix();
       tip.setMatrixAt(index, dummy.matrix);
       tip.setColorAt(index, worker.state === 'idle' ? IDLE_TIP : LIT_TIP);

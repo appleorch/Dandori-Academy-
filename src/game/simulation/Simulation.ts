@@ -5,17 +5,19 @@ import { CAPTAIN, SIM_DT } from '../core/config';
 import { EcsWorld, type Entity, type Store } from '../core/ecs';
 import { Rng } from '../core/rng';
 import { updateEnemies } from '../enemies/enemySystem';
+import { updateHazards } from '../enemies/hazardSystem';
 import { applySeparation } from '../flocking/separation';
 import { updateKiln } from '../kiln/kilnSystem';
 import { NavGrid, type Point } from '../navigation/NavGrid';
 import { FlowField } from '../pathfinding/flowField';
 import { updateThrowing } from '../throwing/throwSystem';
 import { updateWhistle } from '../whistle/whistleSystem';
-import { dismissSquad } from '../workers/squad';
+import { dismissSquad, rushSquad } from '../workers/squad';
 import { updateWorkers } from '../workers/workerSystem';
 import type { LevelDefinition } from '../world/level';
-import { spawnEnemy, spawnTreasure, spawnWorker } from '../world/spawn';
-import type { Captain, Carryable, Enemy, Kiln, Transform, Worker } from './components';
+import { spawnEnemy, spawnPod, spawnTreasure, spawnWorker } from '../world/spawn';
+import type { Captain, Carryable, Enemy, Hazard, Kiln, Transform, Worker } from './components';
+import type { SimEvent, SimEventType } from './events';
 import { PhysicsWorld } from './physics';
 
 export type DayEnd = 'timeUp' | 'allCollected' | 'captainDown' | 'wipedOut';
@@ -46,6 +48,9 @@ export class Simulation {
   readonly workers: Store<Worker> = this.ecs.createStore();
   readonly carryables: Store<Carryable> = this.ecs.createStore();
   readonly enemies: Store<Enemy> = this.ecs.createStore();
+  readonly hazards: Store<Hazard> = this.ecs.createStore();
+  /** What happened during the most recent step. Cleared at the start of the next. */
+  readonly events: SimEvent[] = [];
 
   readonly nav: NavGrid;
   readonly physics: PhysicsWorld;
@@ -73,7 +78,7 @@ export class Simulation {
   timeLeft: number;
   tick = 0;
   ended: DayEnd | null = null;
-  /** Bumped whenever a haul or enemy is created or destroyed, so renderers can resync. */
+  /** Bumped whenever a haul, enemy or glob is created or destroyed, so renderers can resync. */
   entityVersion = 0;
 
   constructor(readonly level: LevelDefinition) {
@@ -117,7 +122,8 @@ export class Simulation {
       spawnWorker(this, spot.x, spot.z, 'follow');
     }
     for (const treasure of level.treasures) spawnTreasure(this, treasure);
-    for (const enemy of level.enemies) spawnEnemy(this, enemy.x, enemy.z);
+    level.pods.forEach((pod, index) => spawnPod(this, pod, index));
+    for (const enemy of level.enemies) spawnEnemy(this, enemy.x, enemy.z, enemy.kind);
   }
 
   /** Advances the day by one fixed step. Does nothing once the day has ended. */
@@ -125,11 +131,14 @@ export class Simulation {
     if (this.ended) return;
     const dt = SIM_DT;
     this.tick++;
+    this.events.length = 0;
     updateCaptain(this, input, dt);
     updateWhistle(this, input, dt);
     updateThrowing(this, input, dt);
     if (input.dismiss) dismissSquad(this);
+    if (input.rush) rushSquad(this);
     updateEnemies(this, dt);
+    updateHazards(this, dt);
     updateWorkers(this, dt);
     applySeparation(this);
     updateCarrying(this, dt);
@@ -144,6 +153,10 @@ export class Simulation {
     } else if (this.timeLeft === 0) {
       this.ended = 'timeUp';
     }
+  }
+
+  emit(type: SimEventType, x: number, z: number, amount = 0): void {
+    this.events.push({ type, x, z, amount });
   }
 
   countWorkers(): WorkerCounts {

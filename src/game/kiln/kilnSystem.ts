@@ -14,6 +14,7 @@ export function updateKiln(sim: Simulation, dt: number): void {
     sim.level.kiln.z + Math.cos(angle) * KILN.spawnRing,
   );
   spawnWorker(sim, spot.x, spot.z, 'idle');
+  sim.emit('spawn', spot.x, spot.z);
   kiln.queue--;
   kiln.spawnTimer = KILN.spawnInterval;
 }

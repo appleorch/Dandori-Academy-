@@ -1,10 +1,15 @@
 import { SHARD_VALUE_PER_WEIGHT } from '../core/config';
 import { POINTS_PER_SECOND, POINTS_PER_WORKER } from '../dandori/scoring';
+import type { EnemyKind } from '../enemies/enemyKinds';
 import type { Box, Point } from '../navigation/NavGrid';
 
 export interface TreasureSpawn extends Point {
   id: string;
   weight: number;
+}
+
+export interface EnemySpawn extends Point {
+  kind: EnemyKind;
 }
 
 export interface LevelDefinition {
@@ -30,7 +35,9 @@ export interface LevelDefinition {
   kiln: Point;
   obstacles: Box[];
   treasures: TreasureSpawn[];
-  enemies: Point[];
+  /** Emberpods: light hauls that hatch into new workers. */
+  pods: Point[];
+  enemies: EnemySpawn[];
 }
 
 const MANY_HANDS: LevelSpec = {
@@ -55,6 +62,7 @@ const MANY_HANDS: LevelSpec = {
     { id: 'shard-4', x: 6, z: -6, weight: 3 },
     { id: 'shard-5', x: 8, z: 6, weight: 3 },
   ],
+  pods: [],
   enemies: [],
 };
 
@@ -66,8 +74,8 @@ const OVER_THE_WALL: LevelSpec = {
     'Emberlings fly over walls; Sunshards have to walk around them. Throw across to start the far jobs early.',
   width: 50,
   depth: 30,
-  dayLength: 90,
-  platinumTime: 60,
+  dayLength: 100,
+  platinumTime: 70,
   seed: 2,
   startingWorkers: 12,
   captain: { x: -17, z: 2 },
@@ -83,6 +91,10 @@ const OVER_THE_WALL: LevelSpec = {
     { id: 'shard-4', x: 16, z: 6, weight: 4 },
     { id: 'shard-5', x: 18, z: -10, weight: 1 },
   ],
+  pods: [
+    { x: -12, z: 6 },
+    { x: 6, z: -2 },
+  ],
   enemies: [],
 };
 
@@ -91,11 +103,11 @@ const THE_GUARD: LevelSpec = {
   stage: 3,
   name: 'The Guard',
   brief:
-    'A Mossback holds the only gap, and the big shard needs more Emberlings than you start with. Its carcass is worth four more.',
+    'A Mossback holds the only gap. Throw a full squad onto its back, and whistle them clear when it shakes or it eats the fallen. Its carcass is worth four more Emberlings.',
   width: 50,
   depth: 30,
   dayLength: 120,
-  platinumTime: 65,
+  platinumTime: 60,
   seed: 3,
   startingWorkers: 9,
   captain: { x: -17, z: 2 },
@@ -110,7 +122,8 @@ const THE_GUARD: LevelSpec = {
     { id: 'shard-3', x: 16, z: 9, weight: 2 },
     { id: 'shard-4', x: 15, z: -2, weight: 10 },
   ],
-  enemies: [{ x: 4, z: 0 }],
+  pods: [{ x: -14, z: -3 }],
+  enemies: [{ x: 4, z: 0, kind: 'mossback' }],
 };
 
 const FIRST_LIGHT: LevelSpec = {
@@ -118,11 +131,11 @@ const FIRST_LIGHT: LevelSpec = {
   stage: 4,
   name: 'First Light',
   brief:
-    'Three lanes, three Mossbacks, six Sunshards. Decide what to clear first and keep every lane busy.',
+    'Three lanes and three guards, one of them a Bogspitter that lobs globs from afar: keep moving when a ring appears on the ground.',
   width: 60,
   depth: 40,
   dayLength: 180,
-  platinumTime: 125,
+  platinumTime: 115,
   seed: 4,
   startingWorkers: 10,
   captain: { x: -15, z: 2 },
@@ -141,10 +154,14 @@ const FIRST_LIGHT: LevelSpec = {
     { id: 'shard-5', x: 17, z: 13, weight: 5 },
     { id: 'shard-6', x: 24, z: -4, weight: 8 },
   ],
+  pods: [
+    { x: -12, z: 4 },
+    { x: 2, z: -6 },
+  ],
   enemies: [
-    { x: -1, z: 5 },
-    { x: 14, z: -6 },
-    { x: 23, z: 8 },
+    { x: -1, z: 5, kind: 'mossback' },
+    { x: 14, z: -6, kind: 'mossback' },
+    { x: 23, z: 8, kind: 'spitter' },
   ],
 };
 
@@ -156,8 +173,8 @@ const LONG_HAUL: LevelSpec = {
     'A wide field and far-off shards. The walk home is the slow part, so start the distant hauls first and grow the squad on the way.',
   width: 80,
   depth: 50,
-  dayLength: 300,
-  platinumTime: 270,
+  dayLength: 360,
+  platinumTime: 280,
   seed: 5,
   startingWorkers: 15,
   captain: { x: -29, z: 2 },
@@ -179,11 +196,16 @@ const LONG_HAUL: LevelSpec = {
     { id: 'shard-7', x: 33, z: -10, weight: 8 },
     { id: 'shard-8', x: 34, z: 17, weight: 10 },
   ],
+  pods: [
+    { x: -24, z: 6 },
+    { x: -2, z: -6 },
+    { x: 14, z: 6 },
+  ],
   enemies: [
-    { x: -8, z: 9 },
-    { x: 12, z: -5 },
-    { x: 20, z: 11 },
-    { x: 32, z: 6 },
+    { x: -8, z: 9, kind: 'mossback' },
+    { x: 12, z: -5, kind: 'ramhorn' },
+    { x: 20, z: 11, kind: 'mossback' },
+    { x: 32, z: 6, kind: 'spitter' },
   ],
 };
 
@@ -195,8 +217,8 @@ const DIVIDE_AND_CONQUER: LevelSpec = {
     'Seven shards scattered over a wide, quiet field. Split your Emberlings across several jobs at once instead of finishing one at a time.',
   width: 64,
   depth: 36,
-  dayLength: 120,
-  platinumTime: 90,
+  dayLength: 140,
+  platinumTime: 105,
   seed: 6,
   startingWorkers: 14,
   captain: { x: -26, z: 2 },
@@ -215,6 +237,11 @@ const DIVIDE_AND_CONQUER: LevelSpec = {
     { id: 'shard-6', x: 24, z: -12, weight: 4 },
     { id: 'shard-7', x: 26, z: 10, weight: 5 },
   ],
+  pods: [
+    { x: -18, z: -6 },
+    { x: -2, z: 10 },
+    { x: 14, z: 8 },
+  ],
   enemies: [],
 };
 
@@ -223,11 +250,11 @@ const THE_GAUNTLET: LevelSpec = {
   stage: 7,
   name: 'The Gauntlet',
   brief:
-    'The only road to the far shards is a narrow corridor with two Mossbacks inside. Clear it, then keep the hauls moving through.',
+    'A Ramhorn guards the corridor. Step out of its charge, then pile on while it stands winded. Keep the hauls moving through afterwards.',
   width: 80,
   depth: 30,
-  dayLength: 170,
-  platinumTime: 120,
+  dayLength: 220,
+  platinumTime: 170,
   seed: 7,
   startingWorkers: 14,
   captain: { x: -33, z: 2 },
@@ -243,9 +270,13 @@ const THE_GAUNTLET: LevelSpec = {
     { id: 'shard-4', x: 35, z: 6, weight: 4 },
     { id: 'shard-5', x: 36, z: -6, weight: 6 },
   ],
+  pods: [
+    { x: -24, z: 0 },
+    { x: -12, z: -10 },
+  ],
   enemies: [
-    { x: 4, z: 0 },
-    { x: 20, z: 0 },
+    { x: 4, z: 0, kind: 'ramhorn' },
+    { x: 20, z: 0, kind: 'mossback' },
   ],
 };
 
@@ -258,7 +289,7 @@ const GROWING_PAINS: LevelSpec = {
   width: 70,
   depth: 40,
   dayLength: 400,
-  platinumTime: 290,
+  platinumTime: 215,
   seed: 8,
   startingWorkers: 6,
   captain: { x: -29, z: 2 },
@@ -275,11 +306,15 @@ const GROWING_PAINS: LevelSpec = {
     { id: 'shard-4', x: 18, z: -14, weight: 8 },
     { id: 'shard-5', x: 30, z: 6, weight: 10 },
   ],
+  pods: [
+    { x: -24, z: -4 },
+    { x: -22, z: 12 },
+  ],
   enemies: [
-    { x: -18, z: 8 },
-    { x: -2, z: -8 },
-    { x: 16, z: 6 },
-    { x: 28, z: -6 },
+    { x: -18, z: 8, kind: 'mossback' },
+    { x: -2, z: -8, kind: 'mossback' },
+    { x: 16, z: 6, kind: 'spitter' },
+    { x: 28, z: -6, kind: 'mossback' },
   ],
 };
 
@@ -292,7 +327,7 @@ const SWITCHBACKS: LevelSpec = {
   width: 80,
   depth: 50,
   dayLength: 390,
-  platinumTime: 285,
+  platinumTime: 270,
   seed: 9,
   startingWorkers: 16,
   captain: { x: -35, z: 2 },
@@ -310,7 +345,15 @@ const SWITCHBACKS: LevelSpec = {
     { id: 'shard-5', x: 33, z: 10, weight: 8 },
     { id: 'shard-6', x: 30, z: -2, weight: 3 },
   ],
-  enemies: [{ x: 22, z: 12 }],
+  pods: [
+    { x: -28, z: -10 },
+    { x: -6, z: -2 },
+    { x: 8, z: -12 },
+  ],
+  enemies: [
+    { x: 22, z: 12, kind: 'spitter' },
+    { x: -8, z: 6, kind: 'mossback' },
+  ],
 };
 
 const FINAL_EXAM: LevelSpec = {
@@ -321,8 +364,8 @@ const FINAL_EXAM: LevelSpec = {
     'Ten shards, six Mossbacks and walls across the whole field. Plan the order, keep every Emberling working, and lose as few as you can.',
   width: 90,
   depth: 56,
-  dayLength: 520,
-  platinumTime: 375,
+  dayLength: 560,
+  platinumTime: 470,
   seed: 10,
   startingWorkers: 20,
   captain: { x: -40, z: 2 },
@@ -347,13 +390,19 @@ const FINAL_EXAM: LevelSpec = {
     { id: 'shard-9', x: 40, z: 20, weight: 10 },
     { id: 'shard-10', x: 40, z: -16, weight: 12 },
   ],
+  pods: [
+    { x: -34, z: 8 },
+    { x: -28, z: -8 },
+    { x: -12, z: 10 },
+    { x: 6, z: -10 },
+  ],
   enemies: [
-    { x: -26, z: 6 },
-    { x: -14, z: -10 },
-    { x: 2, z: 4 },
-    { x: 18, z: -6 },
-    { x: 28, z: 10 },
-    { x: 38, z: 2 },
+    { x: -26, z: 6, kind: 'mossback' },
+    { x: -14, z: -10, kind: 'ramhorn' },
+    { x: 2, z: 4, kind: 'spitter' },
+    { x: 18, z: -6, kind: 'mossback' },
+    { x: 28, z: 10, kind: 'ramhorn' },
+    { x: 38, z: 2, kind: 'spitter' },
   ],
 };
 

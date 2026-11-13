@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { NO_INPUT, type InputState } from '../commands/input';
 import { NO_ENTITY, type Entity } from '../core/ecs';
 import { evaluateDay } from '../dandori/scoring';
+import { ENEMY, ENEMY_SPECS } from '../enemies/enemyKinds';
 import { createMover, steerTo } from '../navigation/steering';
 import { initPhysics } from '../simulation/physics';
 import { Simulation } from '../simulation/Simulation';
@@ -9,9 +10,11 @@ import { LEVELS } from './level';
 
 const THROW_DISTANCE = 6;
 
-const SAFE_DISTANCE = 9;
 const FULL_SQUAD = 6;
 const THREAT_DISTANCE = 6.5;
+const CHARGE_REACH = 19;
+const DODGE_WIDTH = 3.5;
+const RESCUE_RANGE = 10;
 
 /** Workers a haul still needs before it moves. */
 function shortfall(sim: Simulation, entity: Entity): number {
@@ -22,7 +25,8 @@ function shortfall(sim: Simulation, entity: Entity): number {
 /** True while a live enemy's home is close enough that it would hunt workers at this spot. */
 function guarded(sim: Simulation, x: number, z: number): boolean {
   for (const [, enemy] of sim.enemies.entries()) {
-    if (Math.hypot(enemy.homeX - x, enemy.homeZ - z) < SAFE_DISTANCE) return true;
+    const reach = ENEMY_SPECS[enemy.kind].aggroRange + ENEMY.wanderRange;
+    if (Math.hypot(enemy.homeX - x, enemy.homeZ - z) < reach) return true;
   }
   return false;
 }
@@ -57,6 +61,50 @@ function chooseJob(sim: Simulation, squad: number, total: number): Entity {
   if (hauls.length > 0) return nearest(hauls);
   if (squad < Math.min(FULL_SQUAD, total)) return NO_ENTITY;
   return nearest([...sim.enemies.entries()].map(([entity]) => entity));
+}
+
+/** Whistles dazed workers back before the enemy that shook them off can eat them. */
+function rescue(sim: Simulation, input: InputState): void {
+  const from = sim.captainTransform;
+  for (const [entity, worker] of sim.workers.entries()) {
+    if (worker.stun <= 0 || worker.state !== 'idle') continue;
+    const at = sim.transforms.require(entity);
+    if (Math.hypot(at.x - from.x, at.z - from.z) > RESCUE_RANGE) continue;
+    input.cursorX = at.x;
+    input.cursorZ = at.z;
+    input.whistleHeld = true;
+    input.throwHeld = false;
+    return;
+  }
+}
+
+/** Steps out of a glob's landing zone or a Ramhorn's charge line, as any player would. */
+function dodge(sim: Simulation, input: InputState): void {
+  const from = sim.captainTransform;
+  for (const [, hazard] of sim.hazards.entries()) {
+    const dx = from.x - hazard.toX;
+    const dz = from.z - hazard.toZ;
+    const dist = Math.hypot(dx, dz);
+    if (dist < hazard.radius + 1.5) {
+      input.moveX = dist > 0.01 ? dx / dist : 1;
+      input.moveZ = dist > 0.01 ? dz / dist : 0;
+      return;
+    }
+  }
+  for (const [entity, enemy] of sim.enemies.entries()) {
+    if (enemy.kind !== 'ramhorn' || (enemy.state !== 'windup' && enemy.state !== 'charge')) {
+      continue;
+    }
+    const at = sim.transforms.require(entity);
+    const along = (from.x - at.x) * enemy.aimX + (from.z - at.z) * enemy.aimZ;
+    const across = (from.x - at.x) * enemy.aimZ - (from.z - at.z) * enemy.aimX;
+    if (along > -2 && along < CHARGE_REACH && Math.abs(across) < DODGE_WIDTH) {
+      const side = across >= 0 ? 1 : -1;
+      input.moveX = enemy.aimZ * side;
+      input.moveZ = -enemy.aimX * side;
+      return;
+    }
+  }
 }
 
 function nearestEnemy(sim: Simulation): Entity {
@@ -136,6 +184,8 @@ function playGreedy(sim: Simulation): void {
       input.moveX = (from.x - at.x) / threatDist;
       input.moveZ = (from.z - at.z) / threatDist;
     }
+    rescue(sim, input);
+    dodge(sim, input);
     sim.step(input);
   }
 }

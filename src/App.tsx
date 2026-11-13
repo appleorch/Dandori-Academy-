@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { audio } from './game/audio/audioManager';
 import { useGameStore } from './game/core/gameStore';
 import { GameCanvas } from './game/rendering/GameCanvas';
 import { LEVELS } from './game/world/level';
@@ -14,6 +16,10 @@ export function App() {
   const runId = useGameStore((state) => state.runId);
   const levelId = useGameStore((state) => state.levelId);
   const level = LEVELS.find((candidate) => candidate.id === levelId) ?? LEVELS[0];
+  const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
+  const musicVolume = useGameStore((state) => state.settings.musicVolume);
+
+  useEffect(() => audio.setVolumes(sfxVolume, musicVolume), [sfxVolume, musicVolume]);
 
   if (phase === 'menu') return <LessonSelect />;
   if (phase === 'achievements') return <AchievementsScreen />;

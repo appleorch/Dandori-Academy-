@@ -10,6 +10,13 @@ describe('settings', () => {
     });
   });
 
+  it('clamps volumes to 0..1', () => {
+    expect(parseSettings({ sfxVolume: 4, musicVolume: -1 })).toMatchObject({
+      sfxVolume: 1,
+      musicVolume: 0,
+    });
+  });
+
   it('clamps zoom speed', () => {
     expect(parseSettings({ zoomSpeed: 50 }).zoomSpeed).toBe(3);
     expect(parseSettings({ zoomSpeed: 0 }).zoomSpeed).toBe(0.25);

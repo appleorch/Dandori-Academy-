@@ -33,6 +33,7 @@ it after changes with `npm run build:docs`.
 | WASD / arrows       | Move the Warden                                      |
 | Left mouse (hold)   | Throw squad members at the cursor                    |
 | Right mouse / Space | Whistle: call every worker in the circle back to you |
+| F / middle mouse    | Charge: send the whole squad running to the cursor   |
 | Q                   | Dismiss the squad                                    |
 | Esc                 | Pause (resume, restart, settings, quit)              |
 | Mouse wheel         | Zoom                                                 |
@@ -41,9 +42,17 @@ it after changes with `npm run build:docs`.
   ones (pale, with a cold tip) pick up any work within a few steps.
 - **Sunshards** show `carriers / needed`. Once staffed they walk home to the **Kiln**; extra
   carriers (up to double) make them faster.
-- **Mossbacks** eat workers on the ground. Workers thrown onto one cling to its back and are
-  safe until it shakes them off, so hit it with enough of them at once. Its carcass, hauled
-  home, becomes four new Emberlings.
+- **Enemies fight back**, and every attack is telegraphed. Workers thrown onto an enemy cling
+  to its back and are safe there until it shakes them off. Throws aimed near an enemy home in.
+  - **Mossback**: bites what is in front of it. It shudders, shakes its attackers off, then
+    turns to eat the dazed ones lying on the ground: whistle them clear in time.
+  - **Ramhorn**: paints a lane on the ground, then charges down it, trampling up to four
+    workers and knocking the Warden back. Step aside and pile on while it stands winded.
+  - **Bogspitter**: fragile, but lobs globs from long range. A red ring shows where one will
+    land; anything still inside is flattened.
+  - Every carcass hauled home becomes new Emberlings (4, 7 and 3).
+- **Emberpods** are light orange hauls. One carrier takes a pod home, where it hatches into two
+  new Emberlings.
 - You can throw over walls. Hauls cannot go over them, so they take the long way home.
 - The day ends when every Sunshard is home, time runs out, the Warden is down, or no
   Emberlings remain. Leftover time only scores if everything was collected.
@@ -108,19 +117,22 @@ src/
     whistle/      whistle system
     carry/        haul movement and delivery
     kiln/         worker production
-    enemies/      enemy behaviour and combat
+    enemies/      enemy kinds, behaviour, combat and globs
+    audio/        synthesised sound effects and music
     dandori/      scoring and ranks
     progression/  achievements
     save/         save data, validation, persistence and save files
     camera/       camera rig
-    rendering/    React Three Fiber scene
+    rendering/    React Three Fiber scene, particles and event feedback
   ui/             menus, HUD, pause, results, achievements and settings screens
 ```
 
 The simulation is plain TypeScript with no rendering or DOM dependencies. It advances in
 fixed 1/60 s steps from an `InputState` and a seeded RNG, so a day is fully deterministic
 (tested), which is the base the later replay and lockstep phases need. Rendering reads the
-simulation every frame; React state is only used for the HUD and for entity lists.
+simulation every frame; React state is only used for the HUD and for entity lists. Each step
+also records events (a throw, a bite, a delivery); the feedback layer turns those into sound,
+particles, camera shake and score popups, so the simulation itself stays free of presentation.
 
 Performance: workers are drawn with two instanced meshes. The handoff stress scenario
 (100 workers, 20 enemies, 50 carry tasks) costs about 0.35 ms of simulation per step in the
@@ -159,5 +171,5 @@ Each of these is deliberate.
 | 7     | Caves, bosses, weather                 | Not started                                                |
 | 8     | Replays, multiplayer foundations       | Not started (simulation is already deterministic)          |
 
-Known limits: the JS bundle is about 5.5 MB because the Rapier build embeds its WASM; there
-is no audio; frame rate has been measured for the simulation only, not on real GPUs.
+Known limits: the JS bundle is about 5.5 MB because the Rapier build embeds its WASM; audio is
+synthesised and has not been tuned by ear; frame rate has been measured for the simulation only, not on real GPUs.

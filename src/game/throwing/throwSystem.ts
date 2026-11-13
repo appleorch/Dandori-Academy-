@@ -25,10 +25,23 @@ export function updateThrowing(sim: Simulation, input: InputState, dt: number): 
   if (chosen === NO_ENTITY) return;
 
   const worker = sim.workers.require(chosen);
+  // Aim assist: a throw aimed near an enemy goes for the enemy itself.
+  let aimX = sim.cursor.x;
+  let aimZ = sim.cursor.z;
+  let lockDist: number = THROW.aimAssist;
+  for (const [entity, enemy] of sim.enemies.entries()) {
+    const at = sim.transforms.require(entity);
+    const dist = Math.hypot(at.x - sim.cursor.x, at.z - sim.cursor.z) - enemy.radius;
+    if (enemy.hp > 0 && dist < lockDist) {
+      lockDist = dist;
+      aimX = at.x;
+      aimZ = at.z;
+    }
+  }
   // A little scatter keeps a volley from landing on a single point.
   const landing = sim.nav.nearestWalkable(
-    sim.cursor.x + sim.rng.range(-THROW.scatter, THROW.scatter),
-    sim.cursor.z + sim.rng.range(-THROW.scatter, THROW.scatter),
+    aimX + sim.rng.range(-THROW.scatter, THROW.scatter),
+    aimZ + sim.rng.range(-THROW.scatter, THROW.scatter),
   );
   worker.state = 'thrown';
   worker.throwFromX = from.x;
@@ -42,4 +55,5 @@ export function updateThrowing(sim: Simulation, input: InputState, dt: number): 
   );
   from.facing = Math.atan2(landing.x - from.x, landing.z - from.z);
   state.throwCooldown = THROW.cooldown;
+  sim.emit('throw', from.x, from.z);
 }

@@ -1,15 +1,23 @@
 import { Canvas } from '@react-three/fiber';
 import { useEffect, useState } from 'react';
+import { audio } from '../audio/audioManager';
 import { useGameStore } from '../core/gameStore';
 import { CameraRig } from '../camera/CameraRig';
 import { InputController } from '../commands/input';
 import { Simulation } from '../simulation/Simulation';
 import type { LevelDefinition } from '../world/level';
+import { AimArc } from './AimArc';
 import { CaptainMesh } from './CaptainMesh';
 import { CarryableMeshes } from './CarryableMeshes';
 import { CursorFx } from './CursorFx';
 import { EnemyMeshes } from './EnemyMeshes';
+import { Feedback } from './feedback';
 import { GameLoop } from './GameLoop';
+import { HazardMeshes } from './HazardMeshes';
+import { ParticleField } from './ParticleField';
+import { Popups } from './Popups';
+import { Scenery } from './Scenery';
+import { SkyLight } from './SkyLight';
 import { Terrain } from './Terrain';
 import { WorkerInstances } from './WorkerInstances';
 
@@ -20,6 +28,8 @@ import { WorkerInstances } from './WorkerInstances';
 export function GameCanvas({ level }: { level: LevelDefinition }) {
   const [sim, setSim] = useState<Simulation | null>(null);
   const [input] = useState(() => new InputController());
+  const [fx] = useState(() => new Feedback());
+  const playing = useGameStore((state) => state.phase === 'playing' && !state.paused);
 
   const shadows = useGameStore((state) => state.settings.shadows);
   const zoomSpeed = useGameStore((state) => state.settings.zoomSpeed);
@@ -34,6 +44,16 @@ export function GameCanvas({ level }: { level: LevelDefinition }) {
   useEffect(() => {
     input.zoomSpeed = zoomSpeed;
   }, [input, zoomSpeed]);
+
+  // Music plays only while a day is actually running.
+  useEffect(() => {
+    if (!playing) return;
+    audio.startMusic();
+    return () => {
+      audio.stopMusic();
+      audio.setWhistle(false);
+    };
+  }, [playing]);
 
   // Escape toggles the pause menu.
   useEffect(() => {
@@ -68,28 +88,22 @@ export function GameCanvas({ level }: { level: LevelDefinition }) {
       shadows={shadows}
       camera={{ fov: 45, near: 1, far: 300, position: [0, 22, 16] }}
     >
-      <color attach="background" args={['#1b2a22']} />
-      <ambientLight intensity={1.1} />
-      <directionalLight
-        position={[20, 40, 15]}
-        intensity={2.2}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-40}
-        shadow-camera-right={40}
-        shadow-camera-top={40}
-        shadow-camera-bottom={-40}
-      />
       <Terrain level={level} />
+      <Scenery level={level} />
       {sim && (
         <>
-          <GameLoop sim={sim} input={input} />
-          <CameraRig sim={sim} input={input} />
+          <GameLoop sim={sim} input={input} fx={fx} />
+          <CameraRig sim={sim} input={input} fx={fx} />
+          <SkyLight sim={sim} />
           <CaptainMesh sim={sim} />
           <WorkerInstances sim={sim} />
           <CarryableMeshes sim={sim} />
           <EnemyMeshes sim={sim} />
+          <HazardMeshes sim={sim} />
+          <AimArc sim={sim} />
           <CursorFx sim={sim} />
+          <ParticleField particles={fx.particles} />
+          <Popups fx={fx} />
         </>
       )}
     </Canvas>
