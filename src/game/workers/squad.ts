@@ -1,3 +1,4 @@
+import { hasRoute } from '../carry/carrySystem';
 import { WORKER } from '../core/config';
 import { approachPoint, enemyReach, isTargetable } from '../enemies/combat';
 import type { Entity } from '../core/ecs';
@@ -117,8 +118,8 @@ export function findTask(sim: Simulation, x: number, z: number, range: number): 
   for (const [entity, carryable] of sim.carryables.entries()) {
     if (carryable.claimed.length >= carryable.maxCarriers) continue;
     const at = sim.transforms.require(entity);
-    // A haul shut off from the Kiln (behind a gate) waits until the way is open.
-    if (!Number.isFinite(sim.kilnField.dist[sim.nav.cellIndexAt(at.x, at.z)])) continue;
+    // A haul shut off from where it goes (behind a gate or a river) waits until the way is open.
+    if (!hasRoute(sim, carryable, at)) continue;
     const dist = Math.hypot(at.x - x, at.z - z) - carryable.radius;
     if (dist < bestDist && sim.nav.lineOfSight(x, z, at.x, at.z)) {
       best = entity;

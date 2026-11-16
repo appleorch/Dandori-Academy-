@@ -20,7 +20,7 @@ const tint = new Color();
 
 function onClearGround(level: LevelDefinition, x: number, z: number): boolean {
   if (Math.hypot(x - level.kiln.x, z - level.kiln.z) < 3) return false;
-  return !level.obstacles.some(
+  return ![...level.obstacles, ...(level.water ?? []), ...(level.bridges ?? [])].some(
     (box) => Math.abs(x - box.x) < box.w / 2 + 0.3 && Math.abs(z - box.z) < box.d / 2 + 0.3,
   );
 }

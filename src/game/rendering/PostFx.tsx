@@ -10,6 +10,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { HorizontalTiltShiftShader } from 'three/addons/shaders/HorizontalTiltShiftShader.js';
 import { VerticalTiltShiftShader } from 'three/addons/shaders/VerticalTiltShiftShader.js';
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
+import { OVERLAY_LAYER } from './overlay';
 
 /** Blur strength of the tilt-shift, in pixels per unit of distance from the focus band. */
 const TILT_BLUR = 2.2;
@@ -82,7 +83,21 @@ export function PostFx({ ambientOcclusion }: { ambientOcclusion: boolean }) {
 
   useEffect(() => () => composer.dispose(), [composer]);
 
-  // A positive priority takes over rendering from React Three Fiber.
-  useFrame((_, delta) => composer.render(delta), 1);
+  // A positive priority takes over rendering from React Three Fiber. Labels and bars
+  // live on their own layer and are drawn last, straight to the screen, so the
+  // blur and glow never touch text.
+  useFrame((_, delta) => {
+    composer.render(delta);
+    const autoClear = gl.autoClear;
+    const shadows = gl.shadowMap.autoUpdate;
+    gl.autoClear = false;
+    gl.shadowMap.autoUpdate = false;
+    gl.clearDepth();
+    camera.layers.set(OVERLAY_LAYER);
+    gl.render(scene, camera);
+    camera.layers.set(0);
+    gl.autoClear = autoClear;
+    gl.shadowMap.autoUpdate = shadows;
+  }, 1);
   return null;
 }

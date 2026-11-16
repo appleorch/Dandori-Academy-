@@ -1,20 +1,29 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { CanvasTexture, type Sprite, type SpriteMaterial } from 'three';
+import {
+  CanvasTexture,
+  LinearFilter,
+  SRGBColorSpace,
+  type Group,
+  type Sprite,
+  type SpriteMaterial,
+} from 'three';
+import { useOverlayLayer } from './overlay';
 import { POPUP_SECONDS, type Feedback } from './feedback';
 
 const SLOTS = 6;
-const WIDTH = 384;
-const HEIGHT = 96;
+const WIDTH = 768;
+const HEIGHT = 192;
 
 function draw(texture: CanvasTexture, text: string): void {
   const context = (texture.image as HTMLCanvasElement).getContext('2d');
   if (!context) return;
   context.clearRect(0, 0, WIDTH, HEIGHT);
-  context.font = 'bold 56px system-ui, sans-serif';
+  context.font = 'bold 112px system-ui, sans-serif';
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  context.lineWidth = 10;
+  context.lineJoin = 'round';
+  context.lineWidth = 20;
   context.strokeStyle = '#1c1410';
   context.strokeText(text, WIDTH / 2, HEIGHT / 2);
   context.fillStyle = '#ffd257';
@@ -30,12 +39,18 @@ export function Popups({ fx }: { fx: Feedback }) {
         const canvas = document.createElement('canvas');
         canvas.width = WIDTH;
         canvas.height = HEIGHT;
-        return new CanvasTexture(canvas);
+        const texture = new CanvasTexture(canvas);
+        texture.colorSpace = SRGBColorSpace;
+        texture.minFilter = LinearFilter;
+        texture.generateMipmaps = false;
+        return texture;
       }),
     [],
   );
   const sprites = useRef<(Sprite | null)[]>([]);
   const drawn = useRef<string[]>([]);
+  const group = useRef<Group>(null);
+  useOverlayLayer(group);
 
   useEffect(() => () => textures.forEach((texture) => texture.dispose()), [textures]);
 
@@ -57,7 +72,7 @@ export function Popups({ fx }: { fx: Feedback }) {
   });
 
   return (
-    <>
+    <group ref={group}>
       {textures.map((texture, i) => (
         <sprite
           key={i}
@@ -68,9 +83,16 @@ export function Popups({ fx }: { fx: Feedback }) {
           visible={false}
           renderOrder={5}
         >
-          <spriteMaterial map={texture} depthTest={false} depthWrite={false} transparent />
+          <spriteMaterial
+            map={texture}
+            depthTest={false}
+            depthWrite={false}
+            transparent
+            toneMapped={false}
+            fog={false}
+          />
         </sprite>
       ))}
-    </>
+    </group>
   );
 }

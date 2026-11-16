@@ -2,17 +2,30 @@ import { SHARD_VALUE_PER_WEIGHT } from '../core/config';
 import { HARD, type Difficulty } from '../core/difficulty';
 import { POINTS_PER_SECOND, POINTS_PER_WORKER } from '../dandori/scoring';
 import type { EnemyKind } from '../enemies/enemyKinds';
+import type { ShardVariant } from '../simulation/components';
 import type { Box, Point } from '../navigation/NavGrid';
 
 export interface TreasureSpawn extends Point {
   id: string;
   weight: number;
+  /** Plain Sunshard by default. */
+  variant?: ShardVariant;
+  /** Rune shared with exactly one other treasure: both home within 10 s earns a bonus. */
+  twin?: string;
+}
+
+/** A river crossing waiting to be built: a water box that becomes walkable once enough Span-logs arrive at its bank. */
+export interface BridgeSpawn extends Box {
+  bank: Point;
+  needs: number;
 }
 
 export interface EnemySpawn extends Point {
   kind: EnemyKind;
   /** Weight of the Sunshard it drops when beaten. It counts towards the lesson's total. */
   drop?: number;
+  /** Mounds only: something else buried inside. */
+  reveals?: 'pod' | 'sap';
 }
 
 /** A bramble wall across a path, with the health it takes to break. */
@@ -73,6 +86,13 @@ export interface LevelDefinition {
   blooms?: BloomSpawn[];
   /** A Lanternroot boss and its knots. */
   roots?: RootSpawn[];
+  /** Water: blocks walking and hauling, never throwing. */
+  water?: Box[];
+  bridges?: BridgeSpawn[];
+  /** Span-logs, carried to the nearest unbuilt bridge's bank. */
+  logs?: Point[];
+  /** Sapdrops: delivered to the Kiln, they speed up every haul for a while. */
+  saps?: Point[];
 }
 
 const MANY_HANDS: LevelSpec = {
@@ -709,6 +729,311 @@ const THE_BELLWETHER: LevelSpec = {
   ],
 };
 
+const CROSSROADS: LevelSpec = {
+  id: 'crossroads',
+  stage: 17,
+  name: 'Crossroads',
+  brief:
+    'The Kiln sits in a hub with four doors and a ring road beyond. Every haul has two ways home. Mounds hide more: idle Emberlings dig them up on their own. The east door is a gate: break it for a shortcut.',
+  width: 100,
+  depth: 64,
+  dayLength: 300,
+  platinumTime: 185,
+  seed: 17,
+  startingWorkers: 14,
+  captain: { x: 3, z: 2 },
+  kiln: { x: 0, z: 0 },
+  obstacles: [
+    { x: -7.5, z: -10, w: 9, d: 2 },
+    { x: 7.5, z: -10, w: 9, d: 2 },
+    { x: -7.5, z: 10, w: 9, d: 2 },
+    { x: 7.5, z: 10, w: 9, d: 2 },
+    { x: -12, z: -7, w: 2, d: 8 },
+    { x: -12, z: 7, w: 2, d: 8 },
+    { x: 12, z: -7, w: 2, d: 8 },
+    { x: 12, z: 7, w: 2, d: 8 },
+    { x: -25, z: -10, w: 26, d: 2 },
+    { x: 25, z: -10, w: 26, d: 2 },
+    { x: -25, z: 10, w: 26, d: 2 },
+    { x: 25, z: 10, w: 26, d: 2 },
+  ],
+  gates: [{ x: 12, z: 0, w: 2, d: 6, hp: 120 }],
+  treasures: [
+    { id: 'shard-1', x: -30, z: -22, weight: 2 },
+    { id: 'shard-2', x: 0, z: -24, weight: 3, variant: 'lodestone' },
+    { id: 'shard-3', x: 30, z: -22, weight: 4 },
+    { id: 'shard-4', x: -28, z: 22, weight: 3 },
+    { id: 'shard-5', x: 10, z: 24, weight: 5 },
+    { id: 'shard-6', x: 36, z: 24, weight: 2 },
+    { id: 'shard-7', x: -30, z: 0, weight: 4 },
+    { id: 'shard-8', x: 30, z: -4, weight: 6 },
+    { id: 'shard-9', x: 40, z: 4, weight: 8 },
+  ],
+  pods: [
+    { x: -6, z: 4 },
+    { x: -10, z: -18 },
+    { x: -20, z: 20 },
+    { x: 24, z: 0 },
+  ],
+  enemies: [
+    { x: 44, z: -26, kind: 'mound', drop: 3 },
+    { x: -44, z: 26, kind: 'mound', reveals: 'sap' },
+    { x: 22, z: -20, kind: 'mossback' },
+    { x: -24, z: 2, kind: 'mossback' },
+    { x: 28, z: 3, kind: 'ramhorn' },
+    { x: -36, z: 20, kind: 'spitter' },
+  ],
+};
+
+const THE_SPAN: LevelSpec = {
+  id: 'the-span',
+  stage: 18,
+  name: 'The Span',
+  brief:
+    'A river splits the field. The ford in the far south is free but a Ramhorn guards it. Carry Span-logs to a bank to build a bridge: two logs for the north bridge, three for the south.',
+  width: 110,
+  depth: 70,
+  dayLength: 700,
+  platinumTime: 575,
+  seed: 18,
+  startingWorkers: 16,
+  captain: { x: -45, z: 2 },
+  kiln: { x: -48, z: 0 },
+  obstacles: [
+    { x: -22, z: -12, w: 2, d: 26 },
+    { x: -22, z: 22, w: 2, d: 14 },
+  ],
+  water: [
+    { x: 10, z: -20, w: 4, d: 18 },
+    { x: 10, z: 7, w: 4, d: 24 },
+    { x: 10, z: 30, w: 4, d: 10 },
+  ],
+  bridges: [
+    { x: 10, z: -8, w: 4, d: 6, bank: { x: 5.5, z: -8 }, needs: 2 },
+    { x: 10, z: 22, w: 4, d: 6, bank: { x: 5.5, z: 22 }, needs: 3 },
+  ],
+  logs: [
+    { x: -34, z: -22 },
+    { x: -8, z: -18 },
+    { x: -30, z: 18 },
+    { x: -6, z: 8 },
+    { x: 0, z: 28 },
+  ],
+  treasures: [
+    { id: 'shard-1', x: -36, z: -8, weight: 2 },
+    { id: 'shard-2', x: -10, z: -4, weight: 3 },
+    { id: 'shard-3', x: -30, z: 28, weight: 2 },
+    { id: 'shard-4', x: 22, z: -24, weight: 4 },
+    { id: 'shard-5', x: 30, z: -6, weight: 6 },
+    { id: 'shard-6', x: 46, z: -20, weight: 8 },
+    { id: 'shard-7', x: 24, z: 14, weight: 3, variant: 'dewglass' },
+    { id: 'shard-8', x: 40, z: 26, weight: 10, variant: 'lodestone' },
+    { id: 'shard-9', x: 48, z: 6, weight: 5 },
+  ],
+  pods: [
+    { x: -40, z: 10 },
+    { x: -12, z: 20 },
+    { x: 20, z: 0 },
+    { x: 36, z: -28 },
+  ],
+  enemies: [
+    { x: 10, z: -32, kind: 'ramhorn' },
+    { x: -10, z: -26, kind: 'mossback' },
+    { x: 28, z: 22, kind: 'mossback' },
+    { x: 40, z: -10, kind: 'spitter' },
+  ],
+};
+
+const MATCHED_PAIRS: LevelSpec = {
+  id: 'matched-pairs',
+  stage: 19,
+  name: 'Matched Pairs',
+  brief:
+    'The Kiln sits in the middle, and each twin shard has its match on the far side. Bring a pair home within ten seconds of each other for a bonus: stagger your starts. Sapdrops speed every haul up for half a minute.',
+  width: 110,
+  depth: 72,
+  dayLength: 360,
+  platinumTime: 240,
+  seed: 19,
+  startingWorkers: 16,
+  captain: { x: -7, z: 2 },
+  kiln: { x: -10, z: 0 },
+  obstacles: [
+    { x: -24, z: -12, w: 2, d: 24 },
+    { x: -24, z: 20, w: 2, d: 16 },
+    { x: 10, z: -16, w: 2, d: 24 },
+    { x: 10, z: 18, w: 2, d: 20 },
+    { x: 32, z: 10, w: 16, d: 2 },
+    { x: -36, z: 10, w: 12, d: 2 },
+  ],
+  treasures: [
+    { id: 'twin-a1', x: -46, z: -24, weight: 4, twin: 'dawn' },
+    { id: 'twin-a2', x: 30, z: -26, weight: 4, twin: 'dawn' },
+    { id: 'twin-b1', x: -44, z: 22, weight: 3, twin: 'dusk' },
+    { id: 'twin-b2', x: 16, z: 24, weight: 3, twin: 'dusk' },
+    { id: 'twin-c1', x: -40, z: 0, weight: 6, twin: 'noon' },
+    { id: 'twin-c2', x: 44, z: 0, weight: 6, twin: 'noon' },
+    { id: 'shard-1', x: 20, z: -8, weight: 2 },
+    { id: 'shard-2', x: 48, z: 26, weight: 5, variant: 'dewglass' },
+  ],
+  saps: [
+    { x: -24, z: -28 },
+    { x: 40, z: -14 },
+  ],
+  pods: [
+    { x: -16, z: 8 },
+    { x: 0, z: -20 },
+    { x: 20, z: 6 },
+    { x: -48, z: 10 },
+  ],
+  enemies: [
+    { x: -36, z: -16, kind: 'mossback' },
+    { x: -34, z: 26, kind: 'mossback' },
+    { x: 28, z: -14, kind: 'ramhorn' },
+    { x: 36, z: 22, kind: 'spitter' },
+  ],
+};
+
+const GLASS_RIVER: LevelSpec = {
+  id: 'glass-river',
+  stage: 20,
+  name: 'Glass River',
+  brief:
+    'A long river with two bridge sites and two crossings, one under falling drips. Dewglass cracks if its crew breaks up: build the bridges and clear the way before you lift it.',
+  width: 104,
+  depth: 68,
+  dayLength: 600,
+  platinumTime: 490,
+  seed: 20,
+  startingWorkers: 16,
+  captain: { x: -41, z: 2 },
+  kiln: { x: -44, z: 0 },
+  obstacles: [
+    { x: -4, z: -20, w: 2, d: 20 },
+    { x: 16, z: 20, w: 2, d: 20 },
+  ],
+  water: [
+    { x: -21, z: 0, w: 18, d: 4 },
+    { x: 5, z: 0, w: 26, d: 4 },
+    { x: 31, z: 0, w: 18, d: 4 },
+  ],
+  bridges: [
+    { x: -10, z: 0, w: 4, d: 4, bank: { x: -10, z: -4 }, needs: 2 },
+    { x: 20, z: 0, w: 4, d: 4, bank: { x: 20, z: 4 }, needs: 2 },
+  ],
+  logs: [
+    { x: -20, z: -8 },
+    { x: -26, z: -16 },
+    { x: 10, z: 8 },
+    { x: 28, z: 8 },
+  ],
+  drips: [
+    { x: 46, z: -3, period: 3, offset: 0 },
+    { x: 46, z: 3, period: 3, offset: 1.5 },
+    { x: 43, z: 0, period: 3, offset: 0.75 },
+  ],
+  treasures: [
+    { id: 'shard-1', x: -20, z: -22, weight: 3 },
+    { id: 'shard-2', x: 4, z: -14, weight: 4 },
+    { id: 'shard-3', x: 30, z: -24, weight: 6 },
+    { id: 'shard-4', x: 46, z: -20, weight: 8, variant: 'lodestone' },
+    { id: 'shard-5', x: -22, z: 20, weight: 2 },
+    { id: 'shard-6', x: 2, z: 22, weight: 5 },
+    { id: 'shard-7', x: 28, z: 16, weight: 4 },
+    { id: 'shard-8', x: 44, z: 24, weight: 10 },
+    { id: 'glass-1', x: 36, z: -10, weight: 3, variant: 'dewglass' },
+    { id: 'glass-2', x: 8, z: 12, weight: 2, variant: 'dewglass' },
+  ],
+  pods: [
+    { x: -36, z: -14 },
+    { x: -34, z: 16 },
+    { x: 10, z: -26 },
+    { x: 34, z: 28 },
+  ],
+  enemies: [
+    { x: -10, z: -18, kind: 'mossback' },
+    { x: -10, z: 24, kind: 'mossback' },
+    { x: 24, z: -10, kind: 'spitter' },
+    { x: 34, z: 22, kind: 'ramhorn' },
+    { x: -40, z: -26, kind: 'mound', reveals: 'sap' },
+  ],
+};
+
+const GRADUATION_DAY: LevelSpec = {
+  id: 'graduation-day',
+  stage: 21,
+  name: 'Graduation Day',
+  brief:
+    'Everything you have learned on the biggest field yet: a bridge to build, a gate or a dripping gap to the east, mounds, twins, Dewglass, Glowcaps, and a Gravelmaw guarding the far side.',
+  width: 120,
+  depth: 80,
+  dayLength: 1000,
+  platinumTime: 845,
+  seed: 21,
+  startingWorkers: 22,
+  captain: { x: -21, z: 2 },
+  kiln: { x: -24, z: 0 },
+  obstacles: [
+    { x: -24, z: -12, w: 20, d: 2 },
+    { x: -24, z: 12, w: 20, d: 2 },
+    { x: 40, z: -10, w: 2, d: 36 },
+    { x: 40, z: 30, w: 2, d: 20 },
+  ],
+  gates: [{ x: 40, z: 14, w: 2, d: 12, hp: 220 }],
+  water: [
+    { x: 16, z: -22, w: 4, d: 36 },
+    { x: 16, z: 18, w: 4, d: 28 },
+  ],
+  bridges: [{ x: 16, z: 0, w: 4, d: 8, bank: { x: 11.5, z: 0 }, needs: 3 }],
+  logs: [
+    { x: -40, z: 20 },
+    { x: -6, z: -24 },
+    { x: 4, z: 22 },
+  ],
+  drips: [
+    { x: 40, z: -34, period: 4, offset: 0 },
+    { x: 40, z: -30, period: 4, offset: 2 },
+  ],
+  blooms: [
+    { x: -10, z: -30, weight: 3, at: 90, lifetime: 50 },
+    { x: 28, z: 0, weight: 4, at: 240, lifetime: 50 },
+    { x: 46, z: -36, weight: 5, at: 380, lifetime: 50 },
+  ],
+  treasures: [
+    { id: 'shard-1', x: -50, z: 10, weight: 2 },
+    { id: 'shard-2', x: -38, z: -6, weight: 3 },
+    { id: 'shard-3', x: -8, z: 16, weight: 4 },
+    { id: 'shard-4', x: 0, z: -12, weight: 3 },
+    { id: 'shard-5', x: 26, z: 10, weight: 4 },
+    { id: 'shard-6', x: 30, z: -32, weight: 6 },
+    { id: 'shard-7', x: 48, z: 10, weight: 6 },
+    { id: 'shard-8', x: 54, z: -30, weight: 8, variant: 'lodestone' },
+    { id: 'shard-9', x: 52, z: 24, weight: 10 },
+    { id: 'shard-10', x: -44, z: -26, weight: 6 },
+    { id: 'twin-1', x: -30, z: 30, weight: 5, twin: 'oath' },
+    { id: 'twin-2', x: 32, z: 28, weight: 5, twin: 'oath' },
+    { id: 'glass-1', x: 24, z: -6, weight: 3, variant: 'dewglass' },
+  ],
+  pods: [
+    { x: -34, z: 6 },
+    { x: -14, z: -6 },
+    { x: 2, z: 6 },
+    { x: 22, z: -14 },
+    { x: 46, z: 34 },
+    { x: -48, z: -28 },
+  ],
+  enemies: [
+    { x: -54, z: -36, kind: 'mound', reveals: 'sap' },
+    { x: 8, z: 34, kind: 'mound', drop: 3 },
+    { x: -8, z: -18, kind: 'mossback' },
+    { x: 28, z: -26, kind: 'mossback' },
+    { x: 16, z: 36, kind: 'ramhorn' },
+    { x: 30, z: 18, kind: 'spitter' },
+    { x: 54, z: 30, kind: 'spitter' },
+    { x: 50, z: -14, kind: 'gravelmaw', drop: 6 },
+  ],
+};
+
 /** A lesson as written, before its par score is derived. */
 type LevelSpec = Omit<LevelDefinition, 'parScore' | 'difficulty'>;
 
@@ -766,6 +1091,11 @@ export const LEVELS: readonly LevelDefinition[] = [
   THREE_ROOTS,
   RUSH_HOUR,
   THE_BELLWETHER,
+  CROSSROADS,
+  THE_SPAN,
+  MATCHED_PAIRS,
+  GLASS_RIVER,
+  GRADUATION_DAY,
 ].map((spec) => withPar(spec));
 
 /** A lesson as played on the given difficulty: Hard has a shorter day and its own par. */

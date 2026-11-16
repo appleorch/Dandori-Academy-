@@ -6,7 +6,7 @@ scored on how much you brought home and how quickly.
 
 This repository implements the MVP defined in the project handoff document (one worker type,
 one captain, one home base, one enemy type, one treasure type, throwing, whistling, carrying,
-treasure delivery, a day timer and dandori scoring) plus the academy around it: sixteen lessons,
+treasure delivery, a day timer and dandori scoring) plus the academy around it: twenty-one lessons,
 including three boss fights, ranks, and progression from one lesson to the next.
 
 ## Run it
@@ -68,6 +68,15 @@ On a phone or tablet the game shows touch controls instead:
   plates take a quarter damage except while it lies winded after a slam; the Lanternroot is
   shielded while any root-knot glows; the Bellwether is armoured except after charging into
   stone. Off-duty Emberlings scramble out of slam rings and charge lanes on their own.
+- **More to carry and do**: **mounds** are dug up by idle Emberlings and reveal a shard, pod or
+  Sapdrop; **Span-logs** go to a riverbank, and enough of them build a bridge; **Sapdrops**
+  speed every haul up by 40% for 30 seconds; **twin shards** (matching runes) earn a 50% bonus
+  when both arrive within 10 seconds; **Dewglass** is worth more but cracks if its crew breaks
+  up mid-haul; **Lodestones** crawl with a minimum crew and run with a triple one.
+- **Reading danger**: a red disc shows where a bite will land, a "!" and a red line mark an enemy
+  hunting something, an amber ring shows an enemy's hunting radius as the Warden approaches, a
+  gauge fills before a shake, workers about to be hit flash white, and the minimap and red
+  screen-edge arrows show threatened Emberlings off screen.
 - **Emberpods** are light orange hauls. One carrier takes a pod home, where it hatches into two
   new Emberlings.
 - You can throw over walls. Hauls cannot go over them, so they take the long way home.
@@ -94,6 +103,11 @@ On a phone or tablet the game shows touch controls instead:
 | 14  | Three Roots        | Boss: fell three root-knots together to drop its shield    |
 | 15  | Rush Hour          | Everything at once, with Glowcap bonuses mid-day           |
 | 16  | The Bellwether     | Final boss: bait its charge into a pillar                  |
+| 17  | Crossroads         | A hub with four doors and a ring road; digging mounds      |
+| 18  | The Span           | Building bridges from Span-logs, or risking the ford       |
+| 19  | Matched Pairs      | Timing twin shards and Sap for bonuses                     |
+| 20  | Glass River        | Fragile Dewglass across bridges and drips                  |
+| 21  | Graduation Day     | Everything at once on the biggest field                    |
 
 Each day is ranked Bronze, Silver, Gold or Platinum against the lesson's par score. Silver or
 better unlocks the next lesson. Best rank and best score per lesson are saved in the browser.
@@ -112,8 +126,7 @@ on Normal, and keeps its own best rank and score. On Hard (`src/game/core/diffic
 enemies have 25% more health and wind up 15% faster, the Warden has two hearts, drips kill up
 to three Emberlings, each lost Emberling costs 20 points instead of 10, and the day is 10%
 shorter while the Platinum finish time stays the same. The greedy bot is only required to bring
-home all but at most one shard on Hard; it currently earns Platinum on nine lessons, Gold on
-six, and falls one shard short against the Bellwether.
+home at least 80% of the shards on Hard; on the largest maps it falls a shard or two short.
 
 ## Settings, save files and achievements
 
@@ -201,7 +214,7 @@ Each of these is deliberate.
 | 3     | Workers, flocking, throwing, whistling | Done                                                    |
 | 4     | Carrying, home base, treasure delivery | Done                                                    |
 | 5     | Enemy AI, combat, territory            | Done: three enemy kinds, territory, telegraphed attacks |
-| 6     | Dandori scoring, lessons, progression  | Done: sixteen lessons, ranks, unlocks, achievements     |
+| 6     | Dandori scoring, lessons, progression  | Done: twenty-one lessons, ranks, unlocks, achievements  |
 | 7     | Caves, bosses, weather                 | Bosses done (three); caves and weather not started      |
 | 8     | Replays, multiplayer foundations       | Not started (simulation is already deterministic)       |
 

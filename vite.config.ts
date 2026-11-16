@@ -6,5 +6,6 @@ export default defineConfig({
   base: './',
   plugins: [react()],
   build: { target: 'es2022' },
-  test: { environment: 'node', include: ['src/**/*.test.ts'] },
+  // Whole-lesson playthroughs simulate up to twenty minutes of game time.
+  test: { environment: 'node', include: ['src/**/*.test.ts'], testTimeout: 60000 },
 });

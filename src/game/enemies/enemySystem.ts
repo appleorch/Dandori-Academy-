@@ -5,7 +5,7 @@ import { moveAgent, steerTo } from '../navigation/steering';
 import type { Enemy, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { killWorker, setIdle } from '../workers/squad';
-import { spawnCarcass, spawnHazard, spawnPod, spawnTreasure } from '../world/spawn';
+import { spawnCarcass, spawnHazard, spawnPod, spawnSap, spawnTreasure } from '../world/spawn';
 import { ENEMY, ENEMY_SPECS, HAZARDS, type EnemySpec } from './enemyKinds';
 
 const dir = { x: 0, z: 0 };
@@ -224,6 +224,10 @@ function defeat(sim: Simulation, entity: Entity, enemy: Enemy, at: Transform): v
   const ground = sim.nav.nearestWalkable(at.x, at.z);
   if (enemy.kind === 'gate') {
     breakGate(sim, enemy);
+  } else if (enemy.kind === 'mound') {
+    if (enemy.reveals === 'pod') spawnPod(sim, ground, 200 + entity);
+    if (enemy.reveals === 'sap') spawnSap(sim, ground, entity);
+    sim.emit('dug', ground.x, ground.z);
   } else {
     if (spec.carcassYield > 0) spawnCarcass(sim, ground.x, ground.z, enemy.kind);
     sim.stats.enemiesDefeated++;
@@ -253,14 +257,18 @@ function roam(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform, dt:
   if (spec.attack === 'spit' && spec.speed === 0) {
     // A rooted lobber aims at the biggest crowd in range.
     const target = densestCluster(sim, at, spec.aggroRange);
+    enemy.alert = target !== null;
     if (target) beginWindup(enemy, at, windupOf(sim, spec), target.x, target.z);
     return;
   }
   const prey = pickPrey(sim, enemy, spec, at);
+  enemy.alert = prey !== null;
   if (!prey) {
     if (spec.speed > 0) wander(sim, enemy, at, dt);
     return;
   }
+  enemy.targetX = prey.x;
+  enemy.targetZ = prey.z;
   const dist = Math.hypot(prey.x - at.x, prey.z - at.z);
   if (spec.attack === 'bite') {
     if (dist <= enemy.radius + ENEMY.biteRange * 0.6)

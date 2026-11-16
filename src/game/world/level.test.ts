@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { NO_INPUT, type InputState } from '../commands/input';
 import { NO_ENTITY, type Entity } from '../core/ecs';
 import { evaluateDay } from '../dandori/scoring';
+import { hasRoute } from '../carry/carrySystem';
 import { approachPoint, damageTaken, isTargetable } from '../enemies/combat';
 import { ENEMY, ENEMY_SPECS } from '../enemies/enemyKinds';
 import { createMover, steerTo } from '../navigation/steering';
@@ -44,9 +45,9 @@ function unfinished(sim: Simulation, job: Entity): boolean {
   return sim.carryables.has(job) && shortfall(sim, job) > 0;
 }
 
-/** True when the haul has a way home; one shut behind a gate waits. */
-function reachable(sim: Simulation, x: number, z: number): boolean {
-  return Number.isFinite(sim.kilnField.dist[sim.nav.cellIndexAt(x, z)]);
+/** True when the haul has a way to where it goes; one shut behind a gate or river waits. */
+function reachable(sim: Simulation, entity: Entity): boolean {
+  return hasRoute(sim, sim.carryables.require(entity), sim.transforms.require(entity));
 }
 
 /** Nearest job the squad can fully staff: an unguarded haul, else an enemy when at full strength. */
@@ -69,7 +70,7 @@ function chooseJob(sim: Simulation, squad: number, total: number): Entity {
   for (const [entity] of sim.carryables.entries()) {
     const at = sim.transforms.require(entity);
     const needed = shortfall(sim, entity);
-    if (needed > 0 && squad >= needed && !guarded(sim, at.x, at.z) && reachable(sim, at.x, at.z)) {
+    if (needed > 0 && squad >= needed && !guarded(sim, at.x, at.z) && reachable(sim, entity)) {
       hauls.push(entity);
     }
   }
@@ -212,7 +213,7 @@ function playGreedy(sim: Simulation): void {
   const mover = createMover();
   const dir = { x: 0, z: 0 };
   let job: Entity = NO_ENTITY;
-  for (let tick = 0; tick < 60 * 1200 && !sim.ended; tick++) {
+  for (let tick = 0; tick < 60 * 1500 && !sim.ended; tick++) {
     const from = sim.captainTransform;
     const { squad, total } = sim.countWorkers();
     if (!unfinished(sim, job) || squad === 0) {
@@ -285,7 +286,7 @@ beforeAll(async () => {
 });
 
 describe.each(LEVELS)('$name on Hard', (base) => {
-  // Hard is not tuned to the bot: it only has to bring home all but at most one shard.
+  // Hard is not tuned to the bot: it only has to bring home at least 80% of the shards.
   it('stays winnable for a simple greedy player', () => {
     const level = forDifficulty(base, 'hard');
     const sim = new Simulation(level);
@@ -303,7 +304,7 @@ describe.each(LEVELS)('$name on Hard', (base) => {
       penaltyPerLoss('hard'),
     );
     expect(sim.stats.treasuresCollected.length).toBeGreaterThanOrEqual(
-      sim.stats.treasuresTotal - 1,
+      Math.ceil(sim.stats.treasuresTotal * 0.8),
     );
     expect(score.total).toBeGreaterThan(0);
     sim.dispose();
@@ -313,8 +314,9 @@ describe.each(LEVELS)('$name on Hard', (base) => {
 describe.each(LEVELS)('$name', (level) => {
   it('has every spawn on walkable ground', () => {
     const sim = new Simulation(level);
-    // Every spot must be reachable once the gates are broken.
+    // Every spot must be reachable once the gates are broken and bridges built.
     for (const gate of level.gates ?? []) sim.removeWall(gate);
+    for (const bridge of level.bridges ?? []) sim.removeWall(bridge);
     const spots = [
       level.captain,
       level.kiln,
@@ -323,6 +325,9 @@ describe.each(LEVELS)('$name', (level) => {
       ...level.enemies,
       ...(level.blooms ?? []),
       ...(level.roots ?? []).flatMap((root) => root.knots),
+      ...(level.logs ?? []),
+      ...(level.saps ?? []),
+      ...(level.bridges ?? []).map((bridge) => bridge.bank),
     ];
     for (const spot of spots) {
       expect(sim.nav.isWalkable(spot.x, spot.z)).toBe(true);

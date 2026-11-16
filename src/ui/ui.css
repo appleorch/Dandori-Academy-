@@ -999,3 +999,28 @@ button.segment.active.hard {
 .chip.hard-chip {
   background: #c8432f;
 }
+
+.minimap {
+  position: absolute;
+  top: max(112px, env(safe-area-inset-top, 0px));
+  right: max(12px, env(safe-area-inset-right, 0px));
+  border-radius: 8px;
+  border: 1px solid rgba(255, 246, 220, 0.35);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.threat-arrows {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .minimap {
+    top: auto;
+    bottom: max(220px, env(safe-area-inset-bottom, 0px));
+    transform: scale(0.7);
+    transform-origin: bottom right;
+  }
+}
