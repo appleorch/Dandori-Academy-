@@ -43,7 +43,10 @@ export interface Worker {
   mover: Mover;
 }
 
-export type CarryKind = 'treasure' | 'carcass' | 'pod' | 'bloom';
+export type CarryKind = 'treasure' | 'carcass' | 'pod' | 'bloom' | 'sap' | 'log';
+
+/** What a treasure is made of: plain Sunshard, fragile Dewglass, or a crawling Lodestone. */
+export type ShardVariant = 'shard' | 'dewglass' | 'lodestone';
 
 export interface Carryable {
   id: string;
@@ -62,6 +65,18 @@ export interface Carryable {
   claimed: Entity[];
   /** Simulation time at which it wilts unless lifted first; Infinity for most hauls. */
   wiltsAt: number;
+  variant: ShardVariant;
+  /** Rune shared with its twin: both home within a few seconds earns a bonus. */
+  twin: string | null;
+  /** Dewglass only: cracked once its moving crew broke up. */
+  cracked: boolean;
+  /** Whether it was moving last step, to notice a crew breaking up. */
+  moving: boolean;
+  /** Speed with exactly `weight` carriers, and what a full crew adds on top. */
+  baseSpeed: number;
+  bonusSpeed: number;
+  /** Span-logs: the bridge site it is heading for, or -1 for none chosen yet. */
+  dest: number;
 }
 
 export type EnemyState = 'roam' | 'windup' | 'charge' | 'recover';
@@ -78,6 +93,8 @@ export interface Enemy {
   charges: number;
   /** Shard weight dropped on defeat, or 0. */
   drop: number;
+  /** What a dug-up mound leaves besides a shard: a pod, a Sapdrop, or nothing. */
+  reveals: 'pod' | 'sap' | null;
   hp: number;
   maxHp: number;
   radius: number;
@@ -91,6 +108,11 @@ export interface Enemy {
   aimZ: number;
   /** Workers trampled by the current charge. */
   trampled: number;
+  /** True while it has picked prey and is hunting or attacking; shown as an alert icon. */
+  alert: boolean;
+  /** Where its current attack is aimed, for the ground warning. */
+  targetX: number;
+  targetZ: number;
   wanderX: number;
   wanderZ: number;
   wanderTimer: number;

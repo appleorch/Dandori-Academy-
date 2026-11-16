@@ -8,6 +8,19 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.11.0',
+    date: '2026-11-16',
+    changes: [
+      'Five new lessons (17 to 21) on much bigger, branching maps: a central hub with several ways home, rivers and optional side areas.',
+      'New jobs: mounds that idle Emberlings dig up, and Span-logs that build a bridge when enough reach a riverbank.',
+      'New hauls: Sapdrops speed every haul up for 30 seconds, twin shards pay a bonus when both arrive within 10 seconds, Dewglass cracks if its crew breaks up, and Lodestones crawl until fully crewed.',
+      'Easier to see danger: a red bite zone, a "!" over hunting enemies with a line to their target, a hunting ring as you approach, a shake gauge, flashing workers who are about to be hit, and stars over dazed ones.',
+      'A minimap, and red arrows at the screen edge pointing to Emberlings in danger off screen.',
+      'More detailed creatures: Emberlings have arms and legs and lift their hauls; enemies walk on legs, have eyes and jaws, and flash when hit.',
+      'Labels, health bars and score popups stay sharp on High graphics.',
+    ],
+  },
+  {
     version: '0.10.0',
     date: '2026-11-16',
     changes: [

@@ -18,7 +18,15 @@ import { updateWhistle } from '../whistle/whistleSystem';
 import { dismissSquad, rushSquad } from '../workers/squad';
 import { updateWorkers } from '../workers/workerSystem';
 import { shardCount, type LevelDefinition } from '../world/level';
-import { spawnEnemy, spawnPod, spawnTreasure, spawnWorker } from '../world/spawn';
+import { BridgeSite } from '../carry/bridgeSite';
+import {
+  spawnEnemy,
+  spawnLog,
+  spawnPod,
+  spawnSap,
+  spawnTreasure,
+  spawnWorker,
+} from '../world/spawn';
 import type { Captain, Carryable, Enemy, Hazard, Kiln, Transform, Worker } from './components';
 import type { SimEvent, SimEventType } from './events';
 import { PhysicsWorld } from './physics';
@@ -60,7 +68,13 @@ export class Simulation {
   /** True on Hard: tougher, faster enemies and lethal drips (see core/difficulty). */
   readonly hard: boolean;
   readonly captainMaxHp: number;
-  /** Every solid box: the lesson's walls plus gates not yet broken. */
+  /** Bridge sites, in the lesson's order. */
+  readonly bridges: BridgeSite[];
+  /** Seconds of Sap left; while positive every haul moves faster. */
+  sapTimer = 0;
+  /** Twins that arrived alone, waiting for their partner. */
+  readonly twinArrivals = new Map<string, { time: number; value: number }>();
+  /** Every solid box: the lesson's walls, water, unbuilt bridges, and gates not yet broken. */
   readonly walls: Box[];
   readonly nav: NavGrid;
   readonly physics: PhysicsWorld;
@@ -95,13 +109,21 @@ export class Simulation {
     this.hard = level.difficulty === 'hard';
     this.captainMaxHp = this.hard ? HARD.captainHp : CAPTAIN.maxHp;
     this.captainState.hp = this.captainMaxHp;
-    this.walls = [...level.obstacles, ...(level.gates ?? [])];
+    this.walls = [
+      ...level.obstacles,
+      ...(level.gates ?? []),
+      ...(level.water ?? []),
+      ...(level.bridges ?? []),
+    ];
     this.nav = new NavGrid(level.width, level.depth, this.walls);
     this.physics = new PhysicsWorld(level.width, level.depth, this.walls, level.captain, SIM_DT);
     this.rng = new Rng(level.seed);
     this.kilnField = new FlowField(this.nav);
     this.kilnField.compute(this.nav.cellIndexAt(level.kiln.x, level.kiln.z));
     this.squadField = new FlowField(this.nav);
+    this.bridges = (level.bridges ?? []).map(
+      (bridge) => new BridgeSite(bridge, bridge.bank, bridge.needs, this.nav),
+    );
     this.timeLeft = level.dayLength;
     this.stats = {
       treasureValue: 0,
@@ -133,8 +155,13 @@ export class Simulation {
     }
     for (const treasure of level.treasures) spawnTreasure(this, treasure);
     level.pods.forEach((pod, index) => spawnPod(this, pod, index));
+    (level.logs ?? []).forEach((log, index) => spawnLog(this, log, index));
+    (level.saps ?? []).forEach((sap, index) => spawnSap(this, sap, index));
     for (const enemy of level.enemies) {
-      spawnEnemy(this, enemy.x, enemy.z, enemy.kind, { drop: enemy.drop ?? 0 });
+      spawnEnemy(this, enemy.x, enemy.z, enemy.kind, {
+        drop: enemy.drop ?? 0,
+        reveals: enemy.reveals,
+      });
     }
     for (const gate of level.gates ?? []) {
       spawnEnemy(this, gate.x, gate.z, 'gate', { hp: gate.hp, shape: gate });
@@ -168,6 +195,7 @@ export class Simulation {
     this.kilnField.invalidate();
     this.kilnField.compute(this.nav.cellIndexAt(this.level.kiln.x, this.level.kiln.z));
     this.squadField.invalidate();
+    for (const site of this.bridges) site.refresh();
   }
 
   /** Advances the day by one fixed step. Does nothing once the day has ended. */

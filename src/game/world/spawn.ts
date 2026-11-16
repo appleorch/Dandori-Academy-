@@ -1,11 +1,19 @@
-import { POD, SHARD_VALUE_PER_WEIGHT } from '../core/config';
+import {
+  CARRY,
+  DEWGLASS_BONUS_PER_WEIGHT,
+  LODESTONE,
+  LOG,
+  POD,
+  SAP,
+  SHARD_VALUE_PER_WEIGHT,
+} from '../core/config';
 import { HARD } from '../core/difficulty';
 import type { Entity } from '../core/ecs';
 import { NO_ENTITY } from '../core/ecs';
 import { ENEMY_SPECS, HAZARDS, type EnemyKind, type HazardKind } from '../enemies/enemyKinds';
 import type { Box, Point } from '../navigation/NavGrid';
 import { createMover } from '../navigation/steering';
-import type { WorkerState } from '../simulation/components';
+import type { Carryable, WorkerState } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import type { BloomSpawn, TreasureSpawn } from './level';
 
@@ -36,62 +44,89 @@ export function spawnWorker(sim: Simulation, x: number, z: number, state: Worker
   return entity;
 }
 
-/** A Sunshard. Heavier shards are bigger, worth more and need more carriers. */
-export function spawnTreasure(sim: Simulation, spawn: TreasureSpawn): Entity {
+/** Registers a haul, filling in the defaults most hauls share. */
+function addCarryable(
+  sim: Simulation,
+  at: Point,
+  fields: Pick<Carryable, 'id' | 'kind' | 'weight' | 'maxCarriers' | 'radius'> & Partial<Carryable>,
+): Entity {
   const entity = sim.ecs.create();
-  sim.transforms.set(entity, { x: spawn.x, y: 0, z: spawn.z, facing: 0 });
+  sim.transforms.set(entity, { x: at.x, y: 0, z: at.z, facing: 0 });
   sim.carryables.set(entity, {
-    id: spawn.id,
-    kind: 'treasure',
-    weight: spawn.weight,
-    maxCarriers: spawn.weight * 2,
-    value: spawn.weight * SHARD_VALUE_PER_WEIGHT,
+    value: 0,
     workerYield: 0,
-    radius: 0.5 + 0.1 * spawn.weight,
     carriers: [],
     claimed: [],
     wiltsAt: Infinity,
+    variant: 'shard',
+    twin: null,
+    cracked: false,
+    moving: false,
+    baseSpeed: CARRY.baseSpeed,
+    bonusSpeed: CARRY.bonusSpeed,
+    dest: -1,
+    ...fields,
   });
   sim.entityVersion++;
   return entity;
 }
 
+/** A Sunshard, Dewglass or Lodestone. Heavier ones are bigger, worth more and need more carriers. */
+export function spawnTreasure(sim: Simulation, spawn: TreasureSpawn): Entity {
+  const variant = spawn.variant ?? 'shard';
+  const lodestone = variant === 'lodestone';
+  return addCarryable(sim, spawn, {
+    id: spawn.id,
+    kind: 'treasure',
+    variant,
+    twin: spawn.twin ?? null,
+    weight: spawn.weight,
+    maxCarriers: spawn.weight * (lodestone ? LODESTONE.crew : 2),
+    value:
+      spawn.weight *
+      (SHARD_VALUE_PER_WEIGHT + (variant === 'dewglass' ? DEWGLASS_BONUS_PER_WEIGHT : 0)),
+    radius: 0.5 + 0.1 * spawn.weight,
+    baseSpeed: lodestone ? LODESTONE.baseSpeed : CARRY.baseSpeed,
+    bonusSpeed: lodestone ? LODESTONE.bonusSpeed : CARRY.bonusSpeed,
+  });
+}
+
 /** An Emberpod: one carrier can take it home, where it hatches into new workers. */
 export function spawnPod(sim: Simulation, at: Point, index: number): Entity {
-  const entity = sim.ecs.create();
-  sim.transforms.set(entity, { x: at.x, y: 0, z: at.z, facing: 0 });
-  sim.carryables.set(entity, {
-    id: `pod-${index}`,
-    kind: 'pod',
-    value: 0,
-    carriers: [],
-    claimed: [],
-    wiltsAt: Infinity,
-    ...POD,
+  return addCarryable(sim, at, { id: `pod-${index}`, kind: 'pod', ...POD });
+}
+
+/** A Sapdrop: delivered to the Kiln, it speeds every haul up for a while. */
+export function spawnSap(sim: Simulation, at: Point, index: number): Entity {
+  return addCarryable(sim, at, {
+    id: `sap-${index}`,
+    kind: 'sap',
+    weight: SAP.weight,
+    maxCarriers: SAP.maxCarriers,
+    radius: SAP.radius,
   });
-  sim.entityVersion++;
-  return entity;
+}
+
+/** A Span-log, carried to a bridge site's bank rather than the Kiln. */
+export function spawnLog(sim: Simulation, at: Point, index: number): Entity {
+  return addCarryable(sim, at, { id: `log-${index}`, kind: 'log', ...LOG });
 }
 
 /** What a defeated enemy leaves behind. Hauling it home grows the workforce. */
 export function spawnCarcass(sim: Simulation, x: number, z: number, kind: EnemyKind): Entity {
   const spec = ENEMY_SPECS[kind];
-  const entity = sim.ecs.create();
-  sim.transforms.set(entity, { x, y: 0, z, facing: 0 });
-  sim.carryables.set(entity, {
-    id: `carcass-${entity}`,
-    kind: 'carcass',
-    weight: spec.carcassWeight,
-    maxCarriers: spec.carcassWeight * 2,
-    value: 0,
-    workerYield: spec.carcassYield,
-    radius: CARCASS_RADIUS,
-    carriers: [],
-    claimed: [],
-    wiltsAt: Infinity,
-  });
-  sim.entityVersion++;
-  return entity;
+  return addCarryable(
+    sim,
+    { x, z },
+    {
+      id: `carcass-${sim.ecs.peekNext()}`,
+      kind: 'carcass',
+      weight: spec.carcassWeight,
+      maxCarriers: spec.carcassWeight * 2,
+      workerYield: spec.carcassYield,
+      radius: CARCASS_RADIUS,
+    },
+  );
 }
 
 interface EnemyOptions {
@@ -101,6 +136,7 @@ interface EnemyOptions {
   parent?: Entity;
   /** Weight of the Sunshard it drops on defeat. */
   drop?: number;
+  reveals?: 'pod' | 'sap';
 }
 
 export function spawnEnemy(
@@ -121,6 +157,7 @@ export function spawnEnemy(
     phase: 0,
     charges: 0,
     drop: options.drop ?? 0,
+    reveals: options.reveals ?? null,
     hp,
     maxHp: hp,
     radius: spec.radius,
@@ -132,6 +169,9 @@ export function spawnEnemy(
     aimX: 0,
     aimZ: 1,
     trampled: 0,
+    alert: false,
+    targetX: x,
+    targetZ: z,
     wanderX: x,
     wanderZ: z,
     wanderTimer: 0,
@@ -144,22 +184,15 @@ export function spawnEnemy(
 
 /** A Glowcap: a bonus haul worth more than its weight in score, which wilts if left too long. */
 export function spawnBloom(sim: Simulation, bloom: BloomSpawn, index: number): Entity {
-  const entity = sim.ecs.create();
-  sim.transforms.set(entity, { x: bloom.x, y: 0, z: bloom.z, facing: 0 });
-  sim.carryables.set(entity, {
+  return addCarryable(sim, bloom, {
     id: `bloom-${index}`,
     kind: 'bloom',
     weight: bloom.weight,
     maxCarriers: bloom.weight * 2,
     value: bloom.weight * BLOOM_VALUE_PER_WEIGHT,
-    workerYield: 0,
     radius: 0.5 + 0.1 * bloom.weight,
-    carriers: [],
-    claimed: [],
     wiltsAt: sim.elapsed + bloom.lifetime,
   });
-  sim.entityVersion++;
-  return entity;
 }
 
 /** Starts a hazard heading for `to`. A negative `delay` holds it back before it starts. */

@@ -42,6 +42,15 @@ export const WHISTLE = {
 /** Score for delivering a Sunshard, per point of weight. */
 export const SHARD_VALUE_PER_WEIGHT = 100;
 
+/** Dewglass is worth this much more per weight while intact; a crack takes it away. */
+export const DEWGLASS_BONUS_PER_WEIGHT = 50;
+/** A Lodestone crawls with a minimum crew and needs up to triple its weight to run. */
+export const LODESTONE = { crew: 3, baseSpeed: 1, bonusSpeed: 2.8 } as const;
+export const SAP = { weight: 1, maxCarriers: 2, radius: 0.4, seconds: 30, speedUp: 1.4 } as const;
+export const LOG = { weight: 2, maxCarriers: 4, radius: 0.6 } as const;
+/** Twins delivered this close together earn this fraction of both values as a bonus. */
+export const TWIN = { window: 10, bonus: 0.5 } as const;
+
 export const CARRY = {
   baseSpeed: 2.2,
   bonusSpeed: 1.6,

@@ -31,6 +31,12 @@ export type SoundName =
   | 'regrow'
   | 'bloom'
   | 'wilt'
+  | 'dug'
+  | 'crack'
+  | 'sap'
+  | 'twin'
+  | 'logPlaced'
+  | 'bridgeBuilt'
   | 'warning'
   | 'dayEnd';
 
@@ -290,6 +296,28 @@ class AudioManager {
         break;
       case 'wilt':
         this.notes([784, 622, 523], 0.1, 0.2, 0.14);
+        break;
+      case 'dug':
+        this.burst(0.3, 600, 0.4);
+        this.notes([523, 784], 0.08, 0.15, 0.18);
+        break;
+      case 'crack':
+        this.burst(0.08, 5000, 0.45);
+        this.tone(sfx, 2400, 900, 0.18, 'square', 0.12);
+        break;
+      case 'sap':
+        this.notes([392, 523, 659, 784, 1047], 0.05, 0.18, 0.2);
+        break;
+      case 'twin':
+        this.notes([784, 988, 1175, 1568], 0.06, 0.25, 0.24);
+        break;
+      case 'logPlaced':
+        this.tone(sfx, 180, 120, 0.2, 'triangle', 0.3);
+        this.burst(0.1, 800, 0.25);
+        break;
+      case 'bridgeBuilt':
+        this.notes([392, 494, 587, 784], 0.09, 0.3, 0.24);
+        this.burst(0.35, 700, 0.35);
         break;
       case 'warning':
         this.notes([880, 880, 880], 0.28, 0.2, 0.22);

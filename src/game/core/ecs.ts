@@ -54,6 +54,11 @@ export class EcsWorld {
     return store;
   }
 
+  /** The id the next `create` will return. */
+  peekNext(): Entity {
+    return this.nextId;
+  }
+
   create(): Entity {
     const entity = this.nextId++;
     this.alive.add(entity);

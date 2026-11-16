@@ -26,7 +26,13 @@ export type SimEventType =
   | 'shieldDown'
   | 'regrow'
   | 'bloom'
-  | 'wilt';
+  | 'wilt'
+  | 'dug'
+  | 'crack'
+  | 'sap'
+  | 'twin'
+  | 'logPlaced'
+  | 'bridgeBuilt';
 
 export interface SimEvent {
   type: SimEventType;

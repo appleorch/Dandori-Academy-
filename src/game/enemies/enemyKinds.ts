@@ -3,6 +3,7 @@ export type EnemyKind =
   | 'ramhorn'
   | 'spitter'
   | 'gate'
+  | 'mound'
   | 'gravelmaw'
   | 'lanternroot'
   | 'rootknot'
@@ -121,6 +122,8 @@ export const ENEMY_SPECS: Record<EnemyKind, EnemySpec> = {
   },
   /** A wall of bramble across a path. Each gate sets its own health. */
   gate: { ...NO_ATTACK, name: 'Bramble Gate', hp: 150, radius: 0 },
+  /** A heap of soil with something buried in it. Idle Emberlings dig nearby mounds on their own. */
+  mound: { ...NO_ATTACK, name: 'Mound', hp: 80, radius: 1 },
   /**
    * Boss. A plated grub that rears over a ring and slams it. Its plates take a
    * quarter damage; only while it lies winded after a slam does it take full damage.

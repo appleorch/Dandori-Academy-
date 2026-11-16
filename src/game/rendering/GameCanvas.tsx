@@ -17,12 +17,15 @@ import { EnemyMeshes } from './EnemyMeshes';
 import { Feedback } from './feedback';
 import { GameLoop } from './GameLoop';
 import { HazardMeshes } from './HazardMeshes';
+import { Minimap } from './Minimap';
 import { ParticleField } from './ParticleField';
+import { OverlayInMainPass } from './OverlayInMainPass';
 import { PostFx } from './PostFx';
 import { Popups } from './Popups';
 import { Scenery } from './Scenery';
 import { SkyLight } from './SkyLight';
 import { Terrain } from './Terrain';
+import { WaterAndBridges } from './WaterAndBridges';
 import { WorkerInstances } from './WorkerInstances';
 
 /**
@@ -123,7 +126,11 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
       }}
       camera={{ fov: 42, near: 1, far: 320, position: [0, 22, 16] }}
     >
-      {quality.postFx && <PostFx ambientOcclusion={quality.ambientOcclusion} />}
+      {quality.postFx ? (
+        <PostFx ambientOcclusion={quality.ambientOcclusion} />
+      ) : (
+        <OverlayInMainPass />
+      )}
       <Terrain level={level} />
       <Scenery level={level} />
       {sim && (
@@ -136,6 +143,8 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
           <WorkerInstances sim={sim} />
           <CarryableMeshes sim={sim} />
           <EnemyMeshes sim={sim} />
+          <WaterAndBridges sim={sim} />
+          <Minimap sim={sim} />
           <HazardMeshes sim={sim} />
           <AimArc sim={sim} />
           <CursorFx sim={sim} />

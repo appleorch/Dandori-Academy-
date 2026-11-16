@@ -4,6 +4,7 @@ import { Color, LatheGeometry, Object3D, Vector2, type InstancedMesh } from 'thr
 import { WORKER } from '../core/config';
 import type { WorkerState } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
+import { inDanger } from './danger';
 
 const BODY_PROFILE: readonly (readonly [number, number])[] = [
   [0, 0],
@@ -20,8 +21,11 @@ const IDLE_BODY = new Color('#d9a79c');
 const LIT_FLAME = new Color('#ffb02e');
 const COLD_FLAME = new Color('#8fa3ad');
 const EYE_WHITE = new Color('#fff8ec');
+const DANGER = new Color('#ffffff');
+const LIMB = new Color('#b8301f');
 const dummy = new Object3D();
 const flame = new Color();
+const tint = new Color();
 
 /** Eye offsets from the body origin when facing +z: left and right. */
 const EYES = [-0.09, 0.09] as const;
@@ -35,8 +39,8 @@ function bodyColor(state: WorkerState): Color {
 
 /**
  * Draws every Emberling with instanced meshes: body, eyes, pupils, the stalk and
- * flickering ember on its head, and a soft contact shadow. A full field costs six
- * draw calls. Idle workers are pale with a cold ember, and dazed ones lie flat.
+ * flickering ember on its head, arms, legs and a soft contact shadow. A full field
+ * costs eight draw calls. Idle workers are pale with a cold ember, and dazed ones lie flat.
  */
 export function WorkerInstances({ sim }: { sim: Simulation }) {
   const bodies = useRef<InstancedMesh>(null);
@@ -45,6 +49,9 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
   const eyes = useRef<InstancedMesh>(null);
   const pupils = useRef<InstancedMesh>(null);
   const blobs = useRef<InstancedMesh>(null);
+  const arms = useRef<InstancedMesh>(null);
+  const legs = useRef<InstancedMesh>(null);
+  const stars = useRef<InstancedMesh>(null);
   const bodyGeometry = useMemo(
     () =>
       new LatheGeometry(
@@ -61,7 +68,11 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
     const eye = eyes.current;
     const pupil = pupils.current;
     const blob = blobs.current;
-    if (!body || !ember || !stalk || !eye || !pupil || !blob) return;
+    const arm = arms.current;
+    const leg = legs.current;
+    const star = stars.current;
+    if (!body || !ember || !stalk || !eye || !pupil || !blob || !arm || !leg || !star) return;
+    let starCount = 0;
     const time = clock.elapsedTime;
     let index = 0;
     for (const [entity, worker] of sim.workers.entries()) {
@@ -79,8 +90,40 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       dummy.scale.set(1, squash, 1);
       dummy.updateMatrix();
       body.setMatrixAt(index, dummy.matrix);
-      body.setColorAt(index, bodyColor(worker.state));
+      // A worker standing where an attack is about to land flashes, so it can be saved in time.
+      const threatened =
+        worker.state !== 'thrown' && worker.state !== 'attacking' && inDanger(sim, x, z);
+      const color = bodyColor(worker.state);
+      body.setColorAt(
+        index,
+        threatened && Math.sin(time * 30) > 0 ? tint.copy(color).lerp(DANGER, 0.7) : color,
+      );
       const bodyMatrix = dummy.matrix.clone();
+
+      // Limbs: legs stride while moving, arms hang, lift a haul overhead, or flail on an enemy.
+      const moving =
+        worker.state !== 'idle' && worker.state !== 'attacking' && worker.state !== 'thrown';
+      const stride = moving ? Math.sin(time * 14 + entity) * 0.7 : 0;
+      for (let side = 0; side < 2; side++) {
+        const sign = side === 0 ? -1 : 1;
+        const slot = index * 2 + side;
+        dummy.position.set(sign * 0.11, 0.1, 0);
+        dummy.rotation.set(stride * sign, 0, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        leg.setMatrixAt(slot, dummy.matrix.clone().premultiply(bodyMatrix));
+        let lift = 0.2;
+        if (worker.state === 'carrying') lift = -2.7;
+        else if (worker.state === 'attacking') {
+          lift = -1.6 + Math.sin(time * 30 + entity + side * 2) * 0.9;
+        } else if (worker.state === 'thrown') lift = -2.9;
+        else if (moving) lift = -stride * 0.8 * sign;
+        dummy.position.set(sign * 0.24, 0.36, 0.02);
+        dummy.rotation.set(lift, 0, sign * 0.35);
+        dummy.updateMatrix();
+        arm.setMatrixAt(slot, dummy.matrix.premultiply(bodyMatrix));
+        arm.setColorAt(slot, color);
+      }
 
       // Parts are placed in the body's local space, so they lie down with it.
       dummy.position.set(0, 0.86, 0);
@@ -114,6 +157,18 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
         pupil.setMatrixAt(slot, dummy.matrix.premultiply(bodyMatrix));
       }
 
+      if (dazed) {
+        // Little stars circle a dazed worker's head until it recovers.
+        for (let k = 0; k < 3; k++) {
+          const angle = time * 5 + (k * Math.PI * 2) / 3;
+          dummy.position.set(x + Math.sin(angle) * 0.35, 0.75, z + Math.cos(angle) * 0.35);
+          dummy.rotation.set(0, angle, 0);
+          dummy.scale.setScalar(1);
+          dummy.updateMatrix();
+          star.setMatrixAt(starCount++, dummy.matrix);
+        }
+      }
+
       const lift = Math.max(0, y);
       dummy.position.set(x, 0.02, z);
       dummy.rotation.set(-Math.PI / 2, 0, 0);
@@ -127,7 +182,9 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
-    for (const mesh of [eye, pupil]) {
+    star.count = starCount;
+    star.instanceMatrix.needsUpdate = true;
+    for (const mesh of [eye, pupil, arm, leg]) {
       mesh.count = index * 2;
       mesh.instanceMatrix.needsUpdate = true;
     }
@@ -174,6 +231,30 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       >
         <sphereGeometry args={[0.033, 8, 6]} />
         <meshBasicMaterial color="#1c1410" />
+      </instancedMesh>
+      <instancedMesh
+        ref={legs}
+        args={[undefined, undefined, WORKER.maxOnField * 2]}
+        frustumCulled={false}
+      >
+        <capsuleGeometry args={[0.05, 0.12, 3, 6]} />
+        <meshStandardMaterial color="#6e1d12" roughness={0.7} />
+      </instancedMesh>
+      <instancedMesh
+        ref={arms}
+        args={[undefined, undefined, WORKER.maxOnField * 2]}
+        frustumCulled={false}
+      >
+        <capsuleGeometry args={[0.04, 0.16, 3, 6]} />
+        <meshStandardMaterial color={LIMB} roughness={0.5} />
+      </instancedMesh>
+      <instancedMesh
+        ref={stars}
+        args={[undefined, undefined, WORKER.maxOnField * 3]}
+        frustumCulled={false}
+      >
+        <octahedronGeometry args={[0.07, 0]} />
+        <meshBasicMaterial color={[2, 1.8, 0.6]} toneMapped={false} />
       </instancedMesh>
       <instancedMesh
         ref={blobs}
