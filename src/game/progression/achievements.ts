@@ -51,7 +51,7 @@ function feat(
   return { id, name, description, earned: (_save, day) => day !== null && test(day) };
 }
 
-const FINAL = LEVELS[LEVELS.length - 1];
+const FINAL = LEVELS.find((level) => level.id === 'final-exam') ?? LEVELS[LEVELS.length - 1];
 
 /** Every achievement, roughly in the order a player meets them. */
 export const ACHIEVEMENTS: readonly Achievement[] = [
@@ -109,6 +109,21 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     (s) => s.totals.enemies,
   ),
   counter('regular', 'Regular', 'Play 25 days.', 25, (s) => s.totals.days),
+  feat(
+    'glowcap',
+    'Glowcap Gatherer',
+    'Bring a Glowcap home before it wilts.',
+    (day) => day.bloomsCollected > 0,
+  ),
+  feat('gatecrasher', 'Pit Fighter', 'Defeat the Gravelmaw.', (day) =>
+    day.bossesDefeated.includes('gravelmaw'),
+  ),
+  feat('uprooted', 'Uprooted', 'Defeat the Lanternroot.', (day) =>
+    day.bossesDefeated.includes('lanternroot'),
+  ),
+  feat('bell-ringer', 'Bell Ringer', 'Defeat the Bellwether.', (day) =>
+    day.bossesDefeated.includes('bellwether'),
+  ),
   {
     id: 'graduate',
     name: 'Graduate',

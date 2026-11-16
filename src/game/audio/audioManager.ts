@@ -22,6 +22,15 @@ export type SoundName =
   | 'splat'
   | 'rush'
   | 'dismiss'
+  | 'splash'
+  | 'slamWindup'
+  | 'stomp'
+  | 'phase'
+  | 'gateBroken'
+  | 'shieldDown'
+  | 'regrow'
+  | 'bloom'
+  | 'wilt'
   | 'warning'
   | 'dayEnd';
 
@@ -250,6 +259,37 @@ class AudioManager {
         break;
       case 'dismiss':
         this.notes([660, 440], 0.09, 0.12, 0.2);
+        break;
+      case 'splash':
+        this.tone(sfx, 1300, 500, 0.12, 'sine', 0.2);
+        this.burst(0.12, 2500, 0.18);
+        break;
+      case 'slamWindup':
+        this.tone(sfx, 55, 140, 1.1, 'sawtooth', 0.22);
+        break;
+      case 'stomp':
+        this.burst(0.4, 200, 0.75);
+        this.tone(sfx, 70, 32, 0.45, 'sine', 0.55);
+        break;
+      case 'phase':
+        this.tone(sfx, 160, 90, 0.7, 'sawtooth', 0.28);
+        this.tone(sfx, 240, 120, 0.7, 'square', 0.12, 0.05);
+        break;
+      case 'gateBroken':
+        this.burst(0.5, 1200, 0.55);
+        this.notes([392, 494, 587], 0.06, 0.12, 0.18);
+        break;
+      case 'shieldDown':
+        this.notes([1047, 784, 1319, 1568], 0.08, 0.2, 0.22);
+        break;
+      case 'regrow':
+        this.tone(sfx, 200, 420, 0.5, 'triangle', 0.18);
+        break;
+      case 'bloom':
+        this.notes([1319, 1568, 2093], 0.1, 0.35, 0.16);
+        break;
+      case 'wilt':
+        this.notes([784, 622, 523], 0.1, 0.2, 0.14);
         break;
       case 'warning':
         this.notes([880, 880, 880], 0.28, 0.2, 0.22);

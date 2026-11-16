@@ -7,7 +7,7 @@ export const PENALTY_PER_LOSS = 10;
 /** Fraction of the par score needed for each rank, best first. */
 const THRESHOLDS: readonly (readonly [Rank, number])[] = [
   ['Platinum', 1],
-  ['Gold', 0.8],
+  ['Gold', 0.85],
   ['Silver', 0.55],
 ];
 

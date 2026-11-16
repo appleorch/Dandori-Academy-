@@ -30,6 +30,8 @@ export function updateThrowing(sim: Simulation, input: InputState, dt: number): 
   let aimZ = sim.cursor.z;
   let lockDist: number = THROW.aimAssist;
   for (const [entity, enemy] of sim.enemies.entries()) {
+    // Gates are aimed at like ground, so a throw can still clear one.
+    if (enemy.shape) continue;
     const at = sim.transforms.require(entity);
     const dist = Math.hypot(at.x - sim.cursor.x, at.z - sim.cursor.z) - enemy.radius;
     if (enemy.hp > 0 && dist < lockDist) {

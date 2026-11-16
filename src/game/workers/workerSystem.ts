@@ -4,10 +4,14 @@ import { NO_ENTITY } from '../core/ecs';
 import { moveAgent, steerTo } from '../navigation/steering';
 import type { Transform, Worker } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
+import { approachPoint, damageEnemy, enemyReach } from '../enemies/combat';
+import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import { assignTask, findTask, latchOn, setIdle } from './squad';
 
 const LANDING_SCAN_RANGE = 2.5;
 const RUSH_SCAN_INTERVAL = 0.15;
+/** Rings at least this wide are the slow boss slams and stomps that workers flee on their own. */
+const BIG_RING = 3;
 const dir = { x: 0, z: 0 };
 
 function walkToward(
@@ -50,8 +54,8 @@ function land(sim: Simulation, entity: Entity, worker: Worker, transform: Transf
   transform.y = 0;
   for (const [enemyEntity, enemy] of sim.enemies.entries()) {
     const at = sim.transforms.require(enemyEntity);
-    if (enemy.hp > 0 && Math.hypot(at.x - transform.x, at.z - transform.z) <= enemy.radius + 1) {
-      enemy.hp -= WORKER.impactDamage;
+    if (enemy.hp > 0 && enemyReach(enemy, at, transform.x, transform.z) <= 1) {
+      damageEnemy(sim, enemyEntity, enemy, WORKER.impactDamage);
       latchOn(sim, entity, worker, enemyEntity, enemy);
       return;
     }
@@ -81,6 +85,50 @@ function fly(
   transform.y = 0.6 + 4 * THROW.arcHeight * u * (1 - u);
 }
 
+/**
+ * Moves a worker out of danger it can see coming: straight out of a boss's ring, or
+ * sideways out of a charger's painted lane. Returns true if it moved.
+ */
+function escapeHazard(sim: Simulation, transform: Transform, dt: number): boolean {
+  const step = WORKER.speed * dt;
+  for (const [entity, enemy] of sim.enemies.entries()) {
+    const charging = enemy.state === 'windup' || enemy.state === 'charge';
+    if (!charging || ENEMY_SPECS[enemy.kind].attack !== 'charge') continue;
+    const spec = ENEMY_SPECS[enemy.kind];
+    const at = sim.transforms.require(entity);
+    const along = (transform.x - at.x) * enemy.aimX + (transform.z - at.z) * enemy.aimZ;
+    const across = (transform.x - at.x) * enemy.aimZ - (transform.z - at.z) * enemy.aimX;
+    if (
+      along < -1 ||
+      along > spec.chargeSpeed * spec.chargeTime ||
+      Math.abs(across) > enemy.radius + 0.8
+    ) {
+      continue;
+    }
+    const side = across >= 0 ? 1 : -1;
+    moveAgent(sim.nav, transform, enemy.aimZ * side * step, -enemy.aimX * side * step);
+    return true;
+  }
+  for (const [, hazard] of sim.hazards.entries()) {
+    // Only a boss's ground-shaking rings are big and slow enough to scramble out of;
+    // globs, pebbles and drips are for the player to avoid.
+    if (hazard.time < 0 || hazard.radius < BIG_RING) continue;
+    const dx = transform.x - hazard.toX;
+    const dz = transform.z - hazard.toZ;
+    const dist = Math.hypot(dx, dz);
+    if (dist > hazard.radius + 0.4) continue;
+    moveAgent(
+      sim.nav,
+      transform,
+      dist > 0.01 ? (dx / dist) * step : step,
+      dist > 0.01 ? (dz / dist) * step : 0,
+    );
+    transform.facing = Math.atan2(dx, dz);
+    return true;
+  }
+  return false;
+}
+
 /** Runs every worker's state machine for one step. */
 export function updateWorkers(sim: Simulation, dt: number): void {
   let squadSize = 0;
@@ -99,6 +147,8 @@ export function updateWorkers(sim: Simulation, dt: number): void {
     }
     switch (worker.state) {
       case 'idle': {
+        // Workers off duty scramble out of a marked ring rather than wait to be flattened.
+        if (escapeHazard(sim, transform, dt)) break;
         worker.scan -= dt;
         if (worker.scan > 0) break;
         worker.scan = WORKER.scanInterval;
@@ -107,7 +157,7 @@ export function updateWorkers(sim: Simulation, dt: number): void {
         break;
       }
       case 'follow':
-        follow(sim, worker, transform, dt);
+        if (!escapeHazard(sim, transform, dt)) follow(sim, worker, transform, dt);
         break;
       case 'rush': {
         worker.rushTime -= dt;
@@ -144,15 +194,16 @@ export function updateWorkers(sim: Simulation, dt: number): void {
           break;
         }
         const at = sim.transforms.require(worker.target);
-        if (Math.hypot(at.x - transform.x, at.z - transform.z) <= enemy.radius + 0.2) {
+        if (enemyReach(enemy, at, transform.x, transform.z) <= (enemy.shape ? 0.8 : 0.2)) {
           latchOn(sim, entity, worker, worker.target, enemy);
         } else {
-          walkToward(sim, worker, transform, at.x, at.z, dt);
+          const spot = approachPoint(sim, enemy, at, transform.x, transform.z);
+          walkToward(sim, worker, transform, spot.x, spot.z, dt);
         }
         break;
       }
       case 'attacking':
-        sim.enemies.require(worker.target).hp -= WORKER.attackDps * dt;
+        damageEnemy(sim, worker.target, sim.enemies.require(worker.target), WORKER.attackDps * dt);
         break;
       case 'carrying':
         // Position is driven by the carry system.

@@ -17,6 +17,11 @@ export class FlowField {
     this.dist = new Float32Array(nav.size);
   }
 
+  /** Forgets the current goal, so the next compute runs even for the same goal. */
+  invalidate(): void {
+    this.goal = -1;
+  }
+
   /** Recomputes the field for a goal cell. A repeat call with the same goal is free. */
   compute(goal: number): void {
     if (goal === this.goal) return;

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { NO_INPUT, type InputState } from '../commands/input';
 import { CAPTAIN, POD } from '../core/config';
-import { ENEMY, ENEMY_SPECS, type EnemyKind } from '../enemies/enemyKinds';
+import { ENEMY_SPECS, HAZARDS, type EnemyKind } from '../enemies/enemyKinds';
 import { LEVELS, type LevelDefinition } from '../world/level';
 import type { SimEventType } from './events';
 import { initPhysics } from './physics';
@@ -87,7 +87,7 @@ describe('Ramhorn', () => {
     expect(seen.get('chargeWindup')).toBe(1);
     expect(seen.get('slam')).toBe(1);
     expect(sim.stats.workersLost).toBeGreaterThan(0);
-    expect(sim.stats.workersLost).toBeLessThanOrEqual(ENEMY.trampleKills);
+    expect(sim.stats.workersLost).toBeLessThanOrEqual(ENEMY_SPECS.ramhorn.trampleKills);
     expect(sim.captainState.hp).toBe(CAPTAIN.maxHp - 1);
     const [, enemy] = [...sim.enemies.entries()][0];
     expect(enemy.state).toBe('recover');
@@ -111,7 +111,7 @@ describe('Bogspitter', () => {
     expect(seen.get('spit')).toBeGreaterThanOrEqual(1);
     expect(seen.get('splat')).toBeGreaterThanOrEqual(1);
     expect(sim.stats.workersLost).toBeGreaterThan(0);
-    expect(sim.stats.workersLost).toBeLessThanOrEqual(2 * ENEMY.splashKills);
+    expect(sim.stats.workersLost).toBeLessThanOrEqual(2 * HAZARDS.glob.kills);
     expect(sim.captainState.hp).toBeLessThan(CAPTAIN.maxHp);
     expect(Math.abs(sim.captainTransform.x) + Math.abs(sim.captainTransform.z)).toBeGreaterThan(1);
     sim.dispose();
@@ -150,6 +150,7 @@ describe('squad orders and pods', () => {
 
   it('gives every enemy kind a carcass worth hauling', () => {
     for (const spec of Object.values(ENEMY_SPECS)) {
+      if (spec.carcassYield === 0) continue;
       expect(spec.carcassYield).toBeGreaterThan(spec.carcassWeight);
       expect(spec.windup).toBeGreaterThan(0.5);
     }

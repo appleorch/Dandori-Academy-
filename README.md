@@ -6,8 +6,8 @@ scored on how much you brought home and how quickly.
 
 This repository implements the MVP defined in the project handoff document (one worker type,
 one captain, one home base, one enemy type, one treasure type, throwing, whistling, carrying,
-treasure delivery, a day timer and dandori scoring) plus the academy around it: ten lessons,
-ranks, and progression from one lesson to the next.
+treasure delivery, a day timer and dandori scoring) plus the academy around it: sixteen lessons,
+including three boss fights, ranks, and progression from one lesson to the next.
 
 ## Run it
 
@@ -61,6 +61,13 @@ On a phone or tablet the game shows touch controls instead:
   - **Bogspitter**: fragile, but lobs globs from long range. A red ring shows where one will
     land; anything still inside is flattened.
   - Every carcass hauled home becomes new Emberlings (4, 7 and 3).
+- **Bramble gates** block a path until enough Emberlings break them; hauls behind a gate
+  wait until it falls. **Dew drips** fall on the dark wet patches and knock carriers off their
+  haul. **Glowcaps** sprout partway through some days and wilt if left: bonus score.
+- **Bosses** have a health bar across the top that says when they can be hurt. The Gravelmaw's
+  plates take a quarter damage except while it lies winded after a slam; the Lanternroot is
+  shielded while any root-knot glows; the Bellwether is armoured except after charging into
+  stone. Off-duty Emberlings scramble out of slam rings and charge lanes on their own.
 - **Emberpods** are light orange hauls. One carrier takes a pod home, where it hatches into two
   new Emberlings.
 - You can throw over walls. Hauls cannot go over them, so they take the long way home.
@@ -81,15 +88,22 @@ On a phone or tablet the game shows touch controls instead:
 | 8   | Growing Pains      | Starting small and growing the squad from carcasses        |
 | 9   | Switchbacks        | Long zigzag hauls past walls you can throw over            |
 | 10  | Final Exam         | Ten shards, six guards, walls everywhere                   |
+| 11  | Bramble Gate       | Breaking gates so hauls behind them can come home          |
+| 12  | Drip Line          | Overstaffing hauls that must cross dripping ground         |
+| 13  | Gravelmaw's Pit    | Boss: dodge the slam, strike while it lies winded          |
+| 14  | Three Roots        | Boss: fell three root-knots together to drop its shield    |
+| 15  | Rush Hour          | Everything at once, with Glowcap bonuses mid-day           |
+| 16  | The Bellwether     | Final boss: bait its charge into a pillar                  |
 
 Each day is ranked Bronze, Silver, Gold or Platinum against the lesson's par score. Silver or
 better unlocks the next lesson. Best rank and best score per lesson are saved in the browser.
 Each lesson sets a Platinum time (`platinumTime` in `src/game/world/level.ts`): bring every
 Sunshard home by then without losing an Emberling and the day is Platinum. The par score is
-derived from that time, and Gold and Silver need 80% and 55% of par. The lesson list, the pause
+derived from that time, and Gold and Silver need 85% and 55% of par. The lesson list, the pause
 menu and the results screen show every rank's score and the clock time it needs. Platinum times
-are about 1.3 times slower than the greedy bot in `src/game/world/level.test.ts`, and that test
-requires the bot to earn Platinum on every lesson, so every rank is always reachable.
+are 10% slower than the greedy bot in `src/game/world/level.test.ts` (30% on the first three
+lessons), and that test requires the bot to earn Platinum on every lesson, so every rank is
+always reachable.
 
 ## Settings, save files and achievements
 
@@ -170,16 +184,16 @@ Each of these is deliberate.
 
 ## Status against the handoff phases
 
-| Phase | Scope                                  | Status                                                     |
-| ----- | -------------------------------------- | ---------------------------------------------------------- |
-| 1     | Bootstrap, main loop, world scene, ECS | Done                                                       |
-| 2     | Captain, camera, navigation, rendering | Done                                                       |
-| 3     | Workers, flocking, throwing, whistling | Done                                                       |
-| 4     | Carrying, home base, treasure delivery | Done                                                       |
-| 5     | Enemy AI, combat, territory            | Done for one enemy type                                    |
-| 6     | Dandori scoring, lessons, progression  | Scoring, ranks, saves and one lesson; no lesson select yet |
-| 7     | Caves, bosses, weather                 | Not started                                                |
-| 8     | Replays, multiplayer foundations       | Not started (simulation is already deterministic)          |
+| Phase | Scope                                  | Status                                                  |
+| ----- | -------------------------------------- | ------------------------------------------------------- |
+| 1     | Bootstrap, main loop, world scene, ECS | Done                                                    |
+| 2     | Captain, camera, navigation, rendering | Done                                                    |
+| 3     | Workers, flocking, throwing, whistling | Done                                                    |
+| 4     | Carrying, home base, treasure delivery | Done                                                    |
+| 5     | Enemy AI, combat, territory            | Done: three enemy kinds, territory, telegraphed attacks |
+| 6     | Dandori scoring, lessons, progression  | Done: sixteen lessons, ranks, unlocks, achievements     |
+| 7     | Caves, bosses, weather                 | Bosses done (three); caves and weather not started      |
+| 8     | Replays, multiplayer foundations       | Not started (simulation is already deterministic)       |
 
 Known limits: the JS bundle is about 5.5 MB because the Rapier build embeds its WASM; audio is
 synthesised and has not been tuned by ear; frame rate has been measured for the simulation only, not on real GPUs.

@@ -9,6 +9,8 @@ import {
   type DayRecord,
   type SaveData,
 } from '../save/saveManager';
+import { damageTaken } from '../enemies/combat';
+import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { DayEnd, Simulation } from '../simulation/Simulation';
 import { LEVELS } from '../world/level';
 import { CAPTAIN } from './config';
@@ -40,6 +42,15 @@ export interface HudSnapshot {
   treasuresCollected: number;
   treasuresTotal: number;
   captainHp: number;
+  boss: BossSnapshot | null;
+}
+
+export interface BossSnapshot {
+  name: string;
+  /** Remaining health, 0 to 1. */
+  health: number;
+  /** 'open' while it takes full damage, 'armoured' while it takes reduced damage, 'shielded' while it takes none. */
+  guard: 'open' | 'armoured' | 'shielded';
 }
 
 export interface DayResult {
@@ -99,7 +110,22 @@ function snapshot(sim: Simulation): HudSnapshot {
     treasuresCollected: sim.stats.treasuresCollected.length,
     treasuresTotal: sim.stats.treasuresTotal,
     captainHp: sim.captainState.hp,
+    boss: bossSnapshot(sim),
   };
+}
+
+function bossSnapshot(sim: Simulation): BossSnapshot | null {
+  for (const [entity, enemy] of sim.enemies.entries()) {
+    const spec = ENEMY_SPECS[enemy.kind];
+    if (!spec.boss) continue;
+    const taken = damageTaken(sim, entity, enemy);
+    return {
+      name: spec.name,
+      health: Math.max(0, enemy.hp / enemy.maxHp),
+      guard: taken === 0 ? 'shielded' : taken < 1 ? 'armoured' : 'open',
+    };
+  }
+  return null;
 }
 
 export const useGameStore = create<GameStore>((set, get) => {
@@ -182,6 +208,8 @@ export const useGameStore = create<GameStore>((set, get) => {
         captainHits: CAPTAIN.maxHp - Math.max(0, sim.captainState.hp),
         timeLeft: sim.timeLeft,
         dayLength: level.dayLength,
+        bossesDefeated: stats.bossesDefeated,
+        bloomsCollected: stats.bloomsCollected,
       };
       const previous = get().save;
       const { save, unlocked } = unlockAchievements(recordDay(previous, day), day, new Date());

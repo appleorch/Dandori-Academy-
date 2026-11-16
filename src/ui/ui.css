@@ -922,3 +922,50 @@ button.segment.active {
   background: var(--accent);
   color: #2a1a08;
 }
+
+.bossbar {
+  align-self: center;
+  width: min(560px, 100%);
+  display: grid;
+  gap: 3px;
+  text-align: center;
+  font-weight: 700;
+  text-shadow: 0 1px 3px #000;
+}
+
+.bossbar small {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #ffd6a0;
+}
+
+.bossbar.open small {
+  color: #8dff9a;
+}
+
+.bossbar.shielded small {
+  color: #ffcf6a;
+}
+
+.bossbar-track {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 246, 220, 0.35);
+  overflow: hidden;
+}
+
+.bossbar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #a3271b, #e5533d);
+  transition: width 0.2s linear;
+}
+
+.bossbar.open .bossbar-fill {
+  background: linear-gradient(90deg, #2f9a4a, #8dff9a);
+}
+
+.bossbar.shielded .bossbar-fill {
+  background: linear-gradient(90deg, #b07a2a, #ffcf6a);
+}

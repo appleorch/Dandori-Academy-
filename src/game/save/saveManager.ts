@@ -53,6 +53,9 @@ export interface DayRecord {
   captainHits: number;
   timeLeft: number;
   dayLength: number;
+  /** Kinds of boss beaten during the day. */
+  bossesDefeated: readonly string[];
+  bloomsCollected: number;
 }
 
 /** The subset of the Web Storage API the save manager needs. */

@@ -34,20 +34,31 @@ export class NavGrid {
   readonly minZ: number;
   readonly blocked: Uint8Array;
 
-  constructor(width: number, depth: number, obstacles: readonly Box[], agentRadius = 0.45) {
+  constructor(
+    width: number,
+    depth: number,
+    obstacles: readonly Box[],
+    private readonly agentRadius = 0.45,
+  ) {
     this.cols = Math.ceil(width);
     this.rows = Math.ceil(depth);
     this.minX = -width / 2;
     this.minZ = -depth / 2;
     this.blocked = new Uint8Array(this.cols * this.rows);
+    this.setObstacles(obstacles);
+  }
+
+  /** Rebuilds which cells are blocked, for when a wall appears or disappears. */
+  setObstacles(obstacles: readonly Box[]): void {
+    this.blocked.fill(0);
     for (let cz = 0; cz < this.rows; cz++) {
       for (let cx = 0; cx < this.cols; cx++) {
         const x = this.minX + cx + 0.5;
         const z = this.minZ + cz + 0.5;
         for (const box of obstacles) {
           if (
-            Math.abs(x - box.x) < box.w / 2 + agentRadius &&
-            Math.abs(z - box.z) < box.d / 2 + agentRadius
+            Math.abs(x - box.x) < box.w / 2 + this.agentRadius &&
+            Math.abs(z - box.z) < box.d / 2 + this.agentRadius
           ) {
             this.blocked[cz * this.cols + cx] = 1;
             break;

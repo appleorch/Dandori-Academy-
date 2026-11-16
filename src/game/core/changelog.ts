@@ -8,6 +8,20 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.9.0',
+    date: '2026-11-16',
+    changes: [
+      'Six new lessons (11 to 16), including three boss fights: the Gravelmaw, the Lanternroot and the Bellwether.',
+      'Bosses are armoured or shielded. Each has a moment to strike, shown on its health bar across the top of the screen.',
+      'Bramble gates block the way home until broken. Dew drips knock carriers off their haul. Glowcaps sprout mid-day for bonus score.',
+      'Harder: Platinum times are 10% slower than a test player (30% on the first three lessons), and Gold needs 85% of par.',
+      'New look: soft shadows, ambient occlusion, glow, a miniature depth-of-field blur, textured lawn, boulders and clay, wind in the grass, clover and mushrooms.',
+      'Graphics setting (Low, Medium, High) replaces the shadows switch.',
+      'Off-duty Emberlings scramble out of boss slam rings and charge lanes.',
+      'Five new achievements.',
+    ],
+  },
+  {
     version: '0.8.0',
     date: '2026-11-13',
     changes: [

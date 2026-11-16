@@ -1,7 +1,13 @@
-import { useGameStore } from '../game/core/gameStore';
+import { useGameStore, type BossSnapshot } from '../game/core/gameStore';
 import { formatTime } from './format';
 import { rankTargets } from '../game/dandori/targets';
 import type { LevelDefinition } from '../game/world/level';
+
+const GUARD_TEXT: Record<BossSnapshot['guard'], string> = {
+  open: 'Open: full damage!',
+  armoured: 'Armoured',
+  shielded: 'Shielded: break the root-knots',
+};
 
 /** In-day overlay: clock, treasure progress, a day bar marked with each rank's deadline, where
  * the workforce is, and the pause button. */
@@ -33,6 +39,20 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
           </button>
         )}
       </div>
+      {hud.boss && (
+        <div
+          className={`bossbar ${hud.boss.guard}`}
+          role="img"
+          aria-label={`${hud.boss.name} health ${Math.round(hud.boss.health * 100)} percent, ${GUARD_TEXT[hud.boss.guard]}`}
+        >
+          <span className="bossbar-name">
+            {hud.boss.name} <small>{GUARD_TEXT[hud.boss.guard]}</small>
+          </span>
+          <span className="bossbar-track">
+            <span className="bossbar-fill" style={{ width: `${hud.boss.health * 100}%` }} />
+          </span>
+        </div>
+      )}
       <div
         className="daybar"
         role="img"

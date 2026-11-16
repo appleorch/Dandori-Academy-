@@ -5,16 +5,18 @@ import { CAPTAIN, SIM_DT } from '../core/config';
 import { EcsWorld, type Entity, type Store } from '../core/ecs';
 import { Rng } from '../core/rng';
 import { updateEnemies } from '../enemies/enemySystem';
+import { updateDrips } from '../enemies/dripSystem';
 import { updateHazards } from '../enemies/hazardSystem';
+import { updateBlooms } from '../carry/bloomSystem';
 import { applySeparation } from '../flocking/separation';
 import { updateKiln } from '../kiln/kilnSystem';
-import { NavGrid, type Point } from '../navigation/NavGrid';
+import { NavGrid, type Box, type Point } from '../navigation/NavGrid';
 import { FlowField } from '../pathfinding/flowField';
 import { updateThrowing } from '../throwing/throwSystem';
 import { updateWhistle } from '../whistle/whistleSystem';
 import { dismissSquad, rushSquad } from '../workers/squad';
 import { updateWorkers } from '../workers/workerSystem';
-import type { LevelDefinition } from '../world/level';
+import { shardCount, type LevelDefinition } from '../world/level';
 import { spawnEnemy, spawnPod, spawnTreasure, spawnWorker } from '../world/spawn';
 import type { Captain, Carryable, Enemy, Hazard, Kiln, Transform, Worker } from './components';
 import type { SimEvent, SimEventType } from './events';
@@ -28,6 +30,8 @@ export interface SimStats {
   treasuresTotal: number;
   workersLost: number;
   enemiesDefeated: number;
+  bossesDefeated: string[];
+  bloomsCollected: number;
 }
 
 export interface WorkerCounts {
@@ -52,6 +56,8 @@ export class Simulation {
   /** What happened during the most recent step. Cleared at the start of the next. */
   readonly events: SimEvent[] = [];
 
+  /** Every solid box: the lesson's walls plus gates not yet broken. */
+  readonly walls: Box[];
   readonly nav: NavGrid;
   readonly physics: PhysicsWorld;
   readonly rng: Rng;
@@ -82,14 +88,9 @@ export class Simulation {
   entityVersion = 0;
 
   constructor(readonly level: LevelDefinition) {
-    this.nav = new NavGrid(level.width, level.depth, level.obstacles);
-    this.physics = new PhysicsWorld(
-      level.width,
-      level.depth,
-      level.obstacles,
-      level.captain,
-      SIM_DT,
-    );
+    this.walls = [...level.obstacles, ...(level.gates ?? [])];
+    this.nav = new NavGrid(level.width, level.depth, this.walls);
+    this.physics = new PhysicsWorld(level.width, level.depth, this.walls, level.captain, SIM_DT);
     this.rng = new Rng(level.seed);
     this.kilnField = new FlowField(this.nav);
     this.kilnField.compute(this.nav.cellIndexAt(level.kiln.x, level.kiln.z));
@@ -98,9 +99,11 @@ export class Simulation {
     this.stats = {
       treasureValue: 0,
       treasuresCollected: [],
-      treasuresTotal: level.treasures.length,
+      treasuresTotal: shardCount(level),
       workersLost: 0,
       enemiesDefeated: 0,
+      bossesDefeated: [],
+      bloomsCollected: 0,
     };
 
     this.captain = this.ecs.create();
@@ -123,7 +126,33 @@ export class Simulation {
     }
     for (const treasure of level.treasures) spawnTreasure(this, treasure);
     level.pods.forEach((pod, index) => spawnPod(this, pod, index));
-    for (const enemy of level.enemies) spawnEnemy(this, enemy.x, enemy.z, enemy.kind);
+    for (const enemy of level.enemies) {
+      spawnEnemy(this, enemy.x, enemy.z, enemy.kind, { drop: enemy.drop ?? 0 });
+    }
+    for (const gate of level.gates ?? []) {
+      spawnEnemy(this, gate.x, gate.z, 'gate', { hp: gate.hp, shape: gate });
+    }
+    for (const root of level.roots ?? []) {
+      const core = spawnEnemy(this, root.x, root.z, 'lanternroot', { drop: root.drop });
+      for (const knot of root.knots) spawnEnemy(this, knot.x, knot.z, 'rootknot', { parent: core });
+    }
+  }
+
+  /** Seconds since the day began. */
+  get elapsed(): number {
+    return this.tick * SIM_DT;
+  }
+
+  /** Takes a wall out of the world (a broken gate) and reroutes everything around the change. */
+  removeWall(box: Box): void {
+    const index = this.walls.indexOf(box);
+    if (index < 0) return;
+    this.walls.splice(index, 1);
+    this.nav.setObstacles(this.walls);
+    this.physics.removeWall(box);
+    this.kilnField.invalidate();
+    this.kilnField.compute(this.nav.cellIndexAt(this.level.kiln.x, this.level.kiln.z));
+    this.squadField.invalidate();
   }
 
   /** Advances the day by one fixed step. Does nothing once the day has ended. */
@@ -138,6 +167,8 @@ export class Simulation {
     if (input.dismiss) dismissSquad(this);
     if (input.rush) rushSquad(this);
     updateEnemies(this, dt);
+    updateDrips(this, dt);
+    updateBlooms(this);
     updateHazards(this, dt);
     updateWorkers(this, dt);
     applySeparation(this);

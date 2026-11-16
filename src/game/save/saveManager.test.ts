@@ -35,6 +35,8 @@ const day = {
   captainHits: 0,
   timeLeft: 0,
   dayLength: 120,
+  bossesDefeated: [],
+  bloomsCollected: 0,
 } as const;
 
 describe('save manager', () => {

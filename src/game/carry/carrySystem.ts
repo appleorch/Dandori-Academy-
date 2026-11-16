@@ -23,6 +23,11 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable): void {
     sim.stats.treasureValue += carryable.value;
     sim.stats.treasuresCollected.push(carryable.id);
     sim.emit('deliver', kiln.x, kiln.z, carryable.value);
+  } else if (carryable.kind === 'bloom') {
+    // Bonus score: it counts towards the total but not towards clearing the lesson.
+    sim.stats.treasureValue += carryable.value;
+    sim.stats.bloomsCollected++;
+    sim.emit('deliver', kiln.x, kiln.z, carryable.value);
   }
   if (carryable.workerYield > 0) {
     sim.kiln.queue += carryable.workerYield;

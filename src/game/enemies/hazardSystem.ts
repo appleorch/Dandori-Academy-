@@ -1,40 +1,51 @@
 import { damageCaptain } from '../captain/captainSystem';
 import type { Hazard } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
-import { killWorker } from '../workers/squad';
-import { ENEMY } from './enemyKinds';
+import { killWorker, setIdle } from '../workers/squad';
+import { HAZARDS } from './enemyKinds';
 
-const ARC_HEIGHT = 5;
-
-function splash(sim: Simulation, hazard: Hazard): void {
-  let flattened = 0;
+/** Resolves a hazard where it lands: kills up to its limit, stuns the rest, hurts the captain. */
+function land(sim: Simulation, hazard: Hazard): void {
+  const spec = HAZARDS[hazard.kind];
+  let killed = 0;
   for (const [entity, worker] of sim.workers.entries()) {
-    if (flattened >= ENEMY.splashKills) break;
     if (worker.state === 'thrown' || worker.state === 'attacking') continue;
     const at = sim.transforms.require(entity);
-    if (Math.hypot(at.x - hazard.toX, at.z - hazard.toZ) <= hazard.radius) {
+    if (Math.hypot(at.x - hazard.toX, at.z - hazard.toZ) > hazard.radius) continue;
+    if (killed < spec.kills) {
       killWorker(sim, entity, worker);
-      flattened++;
+      killed++;
+    } else if (spec.stun > 0) {
+      setIdle(sim, entity, worker);
+      worker.stun = spec.stun;
     }
   }
   const captain = sim.captainTransform;
-  if (Math.hypot(captain.x - hazard.toX, captain.z - hazard.toZ) <= hazard.radius) {
+  if (
+    spec.hurtsCaptain &&
+    Math.hypot(captain.x - hazard.toX, captain.z - hazard.toZ) <= hazard.radius
+  ) {
     damageCaptain(sim, hazard.toX, hazard.toZ);
   }
-  sim.emit('splat', hazard.toX, hazard.toZ);
+  sim.emit(
+    hazard.kind === 'drip' ? 'splash' : hazard.kind === 'glob' ? 'splat' : 'slam',
+    hazard.toX,
+    hazard.toZ,
+  );
 }
 
-/** Flies every glob along its arc and resolves the ones that land. */
+/** Moves every hazard along its path and resolves the ones that arrive. */
 export function updateHazards(sim: Simulation, dt: number): void {
   for (const [entity, hazard] of sim.hazards.entries()) {
     hazard.time += dt;
-    const u = Math.min(1, hazard.time / hazard.duration);
+    const spec = HAZARDS[hazard.kind];
+    const u = Math.max(0, Math.min(1, hazard.time / hazard.duration));
     const at = sim.transforms.require(entity);
     at.x = hazard.fromX + (hazard.toX - hazard.fromX) * u;
     at.z = hazard.fromZ + (hazard.toZ - hazard.fromZ) * u;
-    at.y = 1 + 4 * ARC_HEIGHT * u * (1 - u);
-    if (u >= 1) {
-      splash(sim, hazard);
+    at.y = spec.drop > 0 ? spec.drop * (1 - u * u) : 1 + 4 * spec.arc * u * (1 - u);
+    if (hazard.time >= hazard.duration) {
+      land(sim, hazard);
       sim.ecs.destroy(entity);
       sim.entityVersion++;
     }

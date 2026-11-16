@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LEVELS } from '../world/level';
+import { LEVELS, shardCount, treasureTotal } from '../world/level';
 import { evaluateDay } from './scoring';
 import { rankTargets } from './targets';
 
@@ -29,9 +29,9 @@ describe.each(LEVELS)('$name rank targets', (level) => {
       const day = (timeLeft: number) =>
         evaluateDay(
           {
-            treasureValue: level.treasures.reduce((sum, t) => sum + t.weight * 100, 0),
-            treasuresCollected: level.treasures.length,
-            treasuresTotal: level.treasures.length,
+            treasureValue: treasureTotal(level),
+            treasuresCollected: shardCount(level),
+            treasuresTotal: shardCount(level),
             timeLeft,
             workersAlive: level.startingWorkers,
             workersLost: 0,

@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
-import type { Group, Mesh } from 'three';
+import type { Group, Object3D } from 'three';
 import type { Entity } from '../core/ecs';
 import { useGameStore } from '../core/gameStore';
 import type { Carryable } from '../simulation/components';
@@ -15,7 +15,7 @@ interface CarryableMeshProps {
 
 function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
   const group = useRef<Group>(null);
-  const body = useRef<Mesh>(null);
+  const body = useRef<Object3D>(null);
   const { radius, kind } = carryable;
   const showCount = useGameStore((state) => state.settings.carrierCounts);
 
@@ -48,6 +48,23 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
             flatShading
           />
         </mesh>
+      ) : kind === 'bloom' ? (
+        <group ref={body}>
+          <mesh position={[0, -radius * 0.2, 0]}>
+            <cylinderGeometry args={[radius * 0.25, radius * 0.35, radius * 1.2, 10]} />
+            <meshStandardMaterial color="#e8f4ec" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, radius * 0.45, 0]}>
+            <sphereGeometry args={[radius * 0.95, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial
+              color="#5fe6d2"
+              emissive="#2affd0"
+              emissiveIntensity={1.3}
+              roughness={0.35}
+            />
+          </mesh>
+          <pointLight color="#6affe0" intensity={4} distance={5} decay={2} />
+        </group>
       ) : kind === 'pod' ? (
         <mesh ref={body} scale={[1, 1.3, 1]} castShadow>
           <sphereGeometry args={[radius, 14, 10]} />

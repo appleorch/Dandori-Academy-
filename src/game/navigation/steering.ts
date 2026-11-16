@@ -48,7 +48,17 @@ export function steerTo(
     mover.goalCell = -1;
   } else {
     const goal = nav.cellIndexAt(targetX, targetZ);
-    if (mover.replan <= 0 && (mover.path.length === 0 || goal !== mover.goalCell)) {
+    // A path is stale if its next waypoint can no longer be seen, for example after
+    // being knocked back around a corner.
+    const lost =
+      mover.path.length > 0 &&
+      !nav.lineOfSight(
+        pos.x,
+        pos.z,
+        nav.centerX(mover.path[mover.pathIndex]),
+        nav.centerZ(mover.path[mover.pathIndex]),
+      );
+    if (mover.replan <= 0 && (mover.path.length === 0 || goal !== mover.goalCell || lost)) {
       mover.path = findPath(nav, nav.cellIndexAt(pos.x, pos.z), goal) ?? [];
       mover.pathIndex = 0;
       mover.goalCell = goal;

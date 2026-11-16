@@ -19,6 +19,8 @@ const day: DayRecord = {
   captainHits: 1,
   timeLeft: 0,
   dayLength: 120,
+  bossesDefeated: [],
+  bloomsCollected: 0,
 };
 
 function play(save: SaveData, record: DayRecord): { save: SaveData; ids: string[] } {
@@ -75,6 +77,17 @@ describe('achievements', () => {
       'first-hunt',
       'mossback-hunter',
     ]);
+  });
+
+  it('awards boss and Glowcap feats from the day they happen', () => {
+    const day2: DayRecord = {
+      ...day,
+      bossesDefeated: ['gravelmaw', 'bellwether'],
+      bloomsCollected: 1,
+    };
+    const ids = play(emptySave(), day2).ids;
+    expect(ids).toEqual(expect.arrayContaining(['glowcap', 'gatecrasher', 'bell-ringer']));
+    expect(ids).not.toContain('uprooted');
   });
 
   it('awards the rank milestones', () => {

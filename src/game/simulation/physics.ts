@@ -19,6 +19,7 @@ export class PhysicsWorld {
   private readonly controller: RAPIER.KinematicCharacterController;
   private readonly body: RAPIER.RigidBody;
   private readonly collider: RAPIER.Collider;
+  private readonly walls = new Map<Box, RAPIER.Collider>();
 
   constructor(width: number, depth: number, obstacles: readonly Box[], start: Point, dt: number) {
     this.world = new RAPIER.World({ x: 0, y: 0, z: 0 });
@@ -32,15 +33,7 @@ export class PhysicsWorld {
       { x: 0, z: -hd - BORDER / 2, w: width + 2 * BORDER, d: BORDER },
       { x: 0, z: hd + BORDER / 2, w: width + 2 * BORDER, d: BORDER },
     ];
-    for (const box of walls) {
-      this.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(box.w / 2, WALL_HALF_HEIGHT, box.d / 2).setTranslation(
-          box.x,
-          WALL_HALF_HEIGHT,
-          box.z,
-        ),
-      );
-    }
+    for (const box of walls) this.addWall(box);
     this.body = this.world.createRigidBody(
       RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(start.x, 1, start.z),
     );
@@ -50,6 +43,26 @@ export class PhysicsWorld {
     );
     this.controller = this.world.createCharacterController(0.02);
     this.world.step();
+  }
+
+  /** Adds a solid box the captain cannot walk through. */
+  addWall(box: Box): void {
+    const collider = this.world.createCollider(
+      RAPIER.ColliderDesc.cuboid(box.w / 2, WALL_HALF_HEIGHT, box.d / 2).setTranslation(
+        box.x,
+        WALL_HALF_HEIGHT,
+        box.z,
+      ),
+    );
+    this.walls.set(box, collider);
+  }
+
+  /** Removes a box added with `addWall`, such as a gate that has been broken. */
+  removeWall(box: Box): void {
+    const collider = this.walls.get(box);
+    if (!collider) return;
+    this.world.removeCollider(collider, false);
+    this.walls.delete(box);
   }
 
   /** Moves the captain by the desired displacement, resolves collisions and writes the result. */

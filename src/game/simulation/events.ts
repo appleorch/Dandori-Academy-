@@ -17,7 +17,16 @@ export type SimEventType =
   | 'spit'
   | 'splat'
   | 'rush'
-  | 'dismiss';
+  | 'dismiss'
+  | 'splash'
+  | 'slamWindup'
+  | 'stomp'
+  | 'phase'
+  | 'gateBroken'
+  | 'shieldDown'
+  | 'regrow'
+  | 'bloom'
+  | 'wilt';
 
 export interface SimEvent {
   type: SimEventType;
