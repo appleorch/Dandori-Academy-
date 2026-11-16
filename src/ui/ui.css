@@ -969,3 +969,33 @@ button.segment.active {
 .bossbar.shielded .bossbar-fill {
   background: linear-gradient(90deg, #b07a2a, #ffcf6a);
 }
+
+.lesson-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.lesson-head h1 {
+  margin: 0;
+}
+
+button.segment.active.hard {
+  background: #c8432f;
+  color: var(--ink);
+}
+
+.lessons.hard button.lesson {
+  border-color: rgba(229, 83, 61, 0.55);
+}
+
+.lessons.hard .lesson-number {
+  background: #c8432f;
+  color: var(--ink);
+}
+
+.chip.hard-chip {
+  background: #c8432f;
+}

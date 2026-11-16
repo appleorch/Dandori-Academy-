@@ -1,3 +1,4 @@
+import type { Difficulty } from '../core/difficulty';
 import { rankValue, type Rank } from '../dandori/scoring';
 import { bestRank, type DayRecord, type SaveData } from '../save/saveManager';
 import { LEVELS } from '../world/level';
@@ -19,9 +20,9 @@ function cleared(day: DayRecord): boolean {
   return day.treasureIds.length === day.treasuresTotal;
 }
 
-function lessonsAtLeast(save: SaveData, rank: Rank): number {
+function lessonsAtLeast(save: SaveData, rank: Rank, difficulty: Difficulty = 'normal'): number {
   return LEVELS.filter((level) => {
-    const earned = bestRank(save, level.id);
+    const earned = bestRank(save, level.id, difficulty);
     return earned !== null && rankValue(earned) >= rankValue(rank);
   }).length;
 }
@@ -132,6 +133,15 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
       const rank = bestRank(save, FINAL.id);
       return rank !== null && rankValue(rank) >= rankValue('Silver');
     },
+  },
+  counter('hardened', 'Hardened', 'Earn Silver or better on Hard in any lesson.', 1, (s) =>
+    lessonsAtLeast(s, 'Silver', 'hard'),
+  ),
+  {
+    id: 'hard-as-stone',
+    name: 'Hard as Stone',
+    description: 'Earn Platinum on Hard against the Bellwether.',
+    earned: (save) => bestRank(save, 'the-bellwether', 'hard') === 'Platinum',
   },
   counter(
     'dandori-master',

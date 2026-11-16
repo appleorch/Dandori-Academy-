@@ -8,6 +8,17 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.10.0',
+    date: '2026-11-16',
+    changes: [
+      'Hard mode: switch between Normal and Hard on the lesson list. A lesson opens on Hard after Gold on Normal.',
+      'On Hard, enemies have 25% more health and strike sooner, the Warden has two hearts, drips are deadly, each lost Emberling costs double and the day is 10% shorter.',
+      'Hard keeps its own best rank and score for every lesson, and they count towards the academy total.',
+      'Two new achievements for Hard mode.',
+      'Fix: each dew drip fell twice, and a Glowcap could sprout twice.',
+    ],
+  },
+  {
     version: '0.9.0',
     date: '2026-11-16',
     changes: [

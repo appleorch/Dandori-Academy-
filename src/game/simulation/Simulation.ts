@@ -2,6 +2,7 @@ import { updateCaptain } from '../captain/captainSystem';
 import { updateCarrying } from '../carry/carrySystem';
 import type { InputState } from '../commands/input';
 import { CAPTAIN, SIM_DT } from '../core/config';
+import { HARD } from '../core/difficulty';
 import { EcsWorld, type Entity, type Store } from '../core/ecs';
 import { Rng } from '../core/rng';
 import { updateEnemies } from '../enemies/enemySystem';
@@ -56,6 +57,9 @@ export class Simulation {
   /** What happened during the most recent step. Cleared at the start of the next. */
   readonly events: SimEvent[] = [];
 
+  /** True on Hard: tougher, faster enemies and lethal drips (see core/difficulty). */
+  readonly hard: boolean;
+  readonly captainMaxHp: number;
   /** Every solid box: the lesson's walls plus gates not yet broken. */
   readonly walls: Box[];
   readonly nav: NavGrid;
@@ -88,6 +92,9 @@ export class Simulation {
   entityVersion = 0;
 
   constructor(readonly level: LevelDefinition) {
+    this.hard = level.difficulty === 'hard';
+    this.captainMaxHp = this.hard ? HARD.captainHp : CAPTAIN.maxHp;
+    this.captainState.hp = this.captainMaxHp;
     this.walls = [...level.obstacles, ...(level.gates ?? [])];
     this.nav = new NavGrid(level.width, level.depth, this.walls);
     this.physics = new PhysicsWorld(level.width, level.depth, this.walls, level.captain, SIM_DT);
@@ -143,6 +150,14 @@ export class Simulation {
     return this.tick * SIM_DT;
   }
 
+  /**
+   * `elapsed` as it was one step ago. Computed the same way, so it matches the previous
+   * step's `elapsed` exactly; timers that fire "when a time is crossed" rely on that.
+   */
+  get previousElapsed(): number {
+    return (this.tick - 1) * SIM_DT;
+  }
+
   /** Takes a wall out of the world (a broken gate) and reroutes everything around the change. */
   removeWall(box: Box): void {
     const index = this.walls.indexOf(box);
@@ -167,7 +182,7 @@ export class Simulation {
     if (input.dismiss) dismissSquad(this);
     if (input.rush) rushSquad(this);
     updateEnemies(this, dt);
-    updateDrips(this, dt);
+    updateDrips(this);
     updateBlooms(this);
     updateHazards(this, dt);
     updateWorkers(this, dt);

@@ -1,4 +1,5 @@
 import { POD, SHARD_VALUE_PER_WEIGHT } from '../core/config';
+import { HARD } from '../core/difficulty';
 import type { Entity } from '../core/ecs';
 import { NO_ENTITY } from '../core/ecs';
 import { ENEMY_SPECS, HAZARDS, type EnemyKind, type HazardKind } from '../enemies/enemyKinds';
@@ -110,7 +111,7 @@ export function spawnEnemy(
   options: EnemyOptions = {},
 ): Entity {
   const spec = ENEMY_SPECS[kind];
-  const hp = options.hp ?? spec.hp;
+  const hp = options.hp ?? spec.hp * (sim.hard ? HARD.enemyHp : 1);
   const entity = sim.ecs.create();
   sim.transforms.set(entity, { x, y: 0, z, facing: 0 });
   sim.enemies.set(entity, {

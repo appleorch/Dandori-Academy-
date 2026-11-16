@@ -2,17 +2,19 @@ import { damageCaptain } from '../captain/captainSystem';
 import type { Hazard } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { killWorker, setIdle } from '../workers/squad';
+import { HARD } from '../core/difficulty';
 import { HAZARDS } from './enemyKinds';
 
 /** Resolves a hazard where it lands: kills up to its limit, stuns the rest, hurts the captain. */
 function land(sim: Simulation, hazard: Hazard): void {
   const spec = HAZARDS[hazard.kind];
+  const kills = hazard.kind === 'drip' && sim.hard ? HARD.dripKills : spec.kills;
   let killed = 0;
   for (const [entity, worker] of sim.workers.entries()) {
     if (worker.state === 'thrown' || worker.state === 'attacking') continue;
     const at = sim.transforms.require(entity);
     if (Math.hypot(at.x - hazard.toX, at.z - hazard.toZ) > hazard.radius) continue;
-    if (killed < spec.kills) {
+    if (killed < kills) {
       killWorker(sim, entity, worker);
       killed++;
     } else if (spec.stun > 0) {

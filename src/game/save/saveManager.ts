@@ -1,3 +1,4 @@
+import type { Difficulty } from '../core/difficulty';
 import { rankValue, RANKS, type Rank } from '../dandori/scoring';
 
 export const SAVE_VERSION = '1';
@@ -16,8 +17,8 @@ export interface SaveTotals {
 
 /**
  * Persistent progress. Field layout follows the project handoff document, with
- * `workerCounts` in place of its `pikminCounts`, plus `bestScores`, `achievements`
- * and `totals`. Saves written before those fields existed still load.
+ * `workerCounts` in place of its `pikminCounts`, plus `bestScores`, Hard-mode bests,
+ * `achievements` and `totals`. Saves written before those fields existed still load.
  */
 export interface SaveData {
   version: string;
@@ -33,6 +34,9 @@ export interface SaveData {
   bestRanks: Record<string, string>;
   /** Best score per level id. */
   bestScores: Record<string, number>;
+  /** Best rank and score per level id on Hard. */
+  bestRanksHard: Record<string, string>;
+  bestScoresHard: Record<string, number>;
   /** Unlocked achievement ids, each with the ISO time it was earned. */
   achievements: Record<string, string>;
   totals: SaveTotals;
@@ -40,6 +44,7 @@ export interface SaveData {
 
 export interface DayRecord {
   levelId: string;
+  difficulty: Difficulty;
   stage: number;
   score: number;
   rank: Rank;
@@ -70,6 +75,8 @@ export function emptySave(): SaveData {
     treasuresCollected: [],
     bestRanks: {},
     bestScores: {},
+    bestRanksHard: {},
+    bestScoresHard: {},
     achievements: {},
     totals: { days: 0, treasures: 0, enemies: 0, workersLost: 0 },
   };
@@ -122,6 +129,8 @@ export function parseSave(value: unknown): SaveData | null {
     treasuresCollected: value.treasuresCollected as string[],
     bestRanks: value.bestRanks as Record<string, string>,
     bestScores: isNumberRecord(value.bestScores) ? value.bestScores : {},
+    bestRanksHard: isStringRecord(value.bestRanksHard) ? value.bestRanksHard : {},
+    bestScoresHard: isNumberRecord(value.bestScoresHard) ? value.bestScoresHard : {},
     achievements: isStringRecord(value.achievements) ? value.achievements : {},
     totals: parseTotals(value.totals),
   };
@@ -148,10 +157,31 @@ export function writeSave(storage: SaveStorage, data: SaveData): boolean {
   }
 }
 
-/** Best rank earned on a level, or null if it has never been finished. */
-export function bestRank(save: SaveData, levelId: string): Rank | null {
-  const stored = save.bestRanks[levelId];
+/** Lowest Normal rank that opens a lesson's Hard mode. */
+export const HARD_UNLOCK_RANK: Rank = 'Gold';
+
+/** Best rank earned on a level, or null if it has never been finished on that difficulty. */
+export function bestRank(
+  save: SaveData,
+  levelId: string,
+  difficulty: Difficulty = 'normal',
+): Rank | null {
+  const stored = (difficulty === 'hard' ? save.bestRanksHard : save.bestRanks)[levelId];
   return RANKS.find((rank) => rank === stored) ?? null;
+}
+
+export function bestScore(
+  save: SaveData,
+  levelId: string,
+  difficulty: Difficulty = 'normal',
+): number {
+  return (difficulty === 'hard' ? save.bestScoresHard : save.bestScores)[levelId] ?? 0;
+}
+
+/** Whether a lesson's Hard mode is open: Gold or better on Normal. */
+export function hardUnlocked(save: SaveData, levelId: string): boolean {
+  const rank = bestRank(save, levelId);
+  return rank !== null && rankValue(rank) >= rankValue(HARD_UNLOCK_RANK);
 }
 
 /**
@@ -159,25 +189,32 @@ export function bestRank(save: SaveData, levelId: string): Rank | null {
  * a rank of UNLOCK_RANK or better opens the next lesson.
  */
 export function recordDay(save: SaveData, day: DayRecord): SaveData {
-  const previous = bestRank(save, day.levelId);
+  const hard = day.difficulty === 'hard';
+  const previous = bestRank(save, day.levelId, day.difficulty);
   const improved = previous === null || rankValue(day.rank) > rankValue(previous);
-  const unlocksNext = rankValue(day.rank) >= rankValue(UNLOCK_RANK);
+  const unlocksNext = !hard && rankValue(day.rank) >= rankValue(UNLOCK_RANK);
   const ids = day.treasureIds.map((id) => `${day.levelId}:${id}`);
-  const bestScores = {
-    ...save.bestScores,
-    [day.levelId]: Math.max(save.bestScores[day.levelId] ?? 0, day.score),
-  };
+  const scores = hard ? save.bestScoresHard : save.bestScores;
+  const ranks = hard ? save.bestRanksHard : save.bestRanks;
+  const nextScores = { ...scores, [day.levelId]: Math.max(scores[day.levelId] ?? 0, day.score) };
+  const nextRanks = { ...ranks, [day.levelId]: improved ? day.rank : previous };
+  const bestScores = hard ? save.bestScores : nextScores;
+  const bestScoresHard = hard ? nextScores : save.bestScoresHard;
+  const sum = (record: Record<string, number>): number =>
+    Object.values(record).reduce((total, score) => total + score, 0);
   return {
     version: SAVE_VERSION,
     stage: Math.max(save.stage, unlocksNext ? day.stage + 1 : day.stage),
-    score: Object.values(bestScores).reduce((sum, score) => sum + score, 0),
+    score: sum(bestScores) + sum(bestScoresHard),
     workerCounts: {
       ...save.workerCounts,
       ember: Math.max(save.workerCounts.ember ?? 0, day.workersAlive),
     },
     treasuresCollected: [...new Set([...save.treasuresCollected, ...ids])],
-    bestRanks: { ...save.bestRanks, [day.levelId]: improved ? day.rank : previous },
+    bestRanks: hard ? save.bestRanks : nextRanks,
     bestScores,
+    bestRanksHard: hard ? nextRanks : save.bestRanksHard,
+    bestScoresHard,
     achievements: save.achievements,
     totals: {
       days: save.totals.days + 1,

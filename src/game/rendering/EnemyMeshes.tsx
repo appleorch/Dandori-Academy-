@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import type { Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Sprite } from 'three';
 import type { Entity } from '../core/ecs';
 import { useGameStore } from '../core/gameStore';
+import { HARD } from '../core/difficulty';
 import { isShielded } from '../enemies/combat';
 import { ENEMY_SPECS, type EnemyKind } from '../enemies/enemyKinds';
 import type { Box } from '../navigation/NavGrid';
@@ -305,6 +306,7 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
   const r = enemy.radius;
   const spec = ENEMY_SPECS[enemy.kind];
   const chargeLength = spec.chargeSpeed * spec.chargeTime;
+  const windup = spec.windup * (sim.hard ? HARD.windup : 1);
   const showHealth = useGameStore((state) => state.settings.healthBars);
 
   useFrame(({ clock }) => {
@@ -330,12 +332,12 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
       if (bell.current)
         bell.current.rotation.x = windingUp ? Math.sin(time * 22) * 0.6 : Math.sin(time * 2) * 0.1;
     } else if (spec.attack === 'slam') {
-      const progress = windingUp ? 1 - enemy.timer / spec.windup : 0;
+      const progress = windingUp ? 1 - enemy.timer / windup : 0;
       model.rotation.x = windingUp ? -0.9 * progress : winded ? 0.15 : 0;
       model.position.y = windingUp ? progress * 1.2 : 0;
       if (winded) model.rotation.z = 0.5 + Math.sin(time * 4) * 0.05;
     } else if (spec.attack === 'spit' && windingUp) {
-      model.scale.setScalar(1 + (1 - enemy.timer / spec.windup) * 0.3);
+      model.scale.setScalar(1 + (1 - enemy.timer / windup) * 0.3);
     }
     if (enemy.kind === 'rootknot') {
       const withered = enemy.hp <= 0;

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { evaluateDay, type ScoreBreakdown } from '../dandori/scoring';
 import { unlockAchievements } from '../progression/achievements';
 import {
+  bestScore,
   emptySave,
   loadSave,
   recordDay,
@@ -13,7 +14,7 @@ import { damageTaken } from '../enemies/combat';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { DayEnd, Simulation } from '../simulation/Simulation';
 import { LEVELS } from '../world/level';
-import { CAPTAIN } from './config';
+import { penaltyPerLoss, type Difficulty } from './difficulty';
 import { loadSettings, writeSettings, DEFAULT_SETTINGS, type Settings } from './settings';
 
 /** Phones and tablets start at medium graphics; they can raise it in Settings. */
@@ -63,12 +64,15 @@ export interface DayResult {
   unlockedNext: boolean;
   /** Ids of achievements earned by this day. */
   achievements: string[];
+  difficulty: Difficulty;
 }
 
 interface GameStore {
   phase: GamePhase;
   /** Id of the lesson being played or last played. */
   levelId: string;
+  /** Difficulty of the day being played, fixed when it starts. */
+  playDifficulty: Difficulty;
   /** Incremented for every new day so the scene builds a fresh simulation. */
   runId: number;
   /** While true the simulation does not advance and the pause menu shows. */
@@ -140,6 +144,7 @@ export const useGameStore = create<GameStore>((set, get) => {
   return {
     phase: 'menu',
     levelId: LEVELS[0].id,
+    playDifficulty: 'normal',
     runId: 0,
     paused: false,
     hud: null,
@@ -152,6 +157,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       set((state) => ({
         phase: 'playing',
         levelId,
+        playDifficulty: state.settings.difficulty,
         runId: state.runId + 1,
         paused: false,
         hud: null,
@@ -193,9 +199,11 @@ export const useGameStore = create<GameStore>((set, get) => {
           workersLost: stats.workersLost,
         },
         level.parScore,
+        penaltyPerLoss(level.difficulty),
       );
       const day: DayRecord = {
         levelId: level.id,
+        difficulty: level.difficulty,
         stage: level.stage,
         score: score.total,
         rank: score.rank,
@@ -205,7 +213,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         treasuresTotal: stats.treasuresTotal,
         enemiesDefeated: stats.enemiesDefeated,
         enemiesTotal: level.enemies.length,
-        captainHits: CAPTAIN.maxHp - Math.max(0, sim.captainState.hp),
+        captainHits: sim.captainMaxHp - Math.max(0, sim.captainState.hp),
         timeLeft: sim.timeLeft,
         dayLength: level.dayLength,
         bossesDefeated: stats.bossesDefeated,
@@ -224,8 +232,9 @@ export const useGameStore = create<GameStore>((set, get) => {
           score,
           treasuresCollected: stats.treasuresCollected.length,
           treasuresTotal: stats.treasuresTotal,
-          isBestScore: score.total > (previous.bestScores[level.id] ?? 0),
+          isBestScore: score.total > bestScore(previous, level.id, level.difficulty),
           unlockedNext: save.stage > previous.stage && level.stage < LEVELS.length,
+          difficulty: level.difficulty,
           achievements: unlocked.map((achievement) => achievement.id),
         },
       });

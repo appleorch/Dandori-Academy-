@@ -1,4 +1,10 @@
-import { rankValue, type Rank } from '../game/dandori/scoring';
+import { penaltyPerLoss } from '../game/core/difficulty';
+import {
+  POINTS_PER_SECOND,
+  POINTS_PER_WORKER,
+  rankValue,
+  type Rank,
+} from '../game/dandori/scoring';
 import { rankTargets } from '../game/dandori/targets';
 import type { LevelDefinition } from '../game/world/level';
 import { formatPoints, formatTime } from './format';
@@ -7,6 +13,12 @@ interface RankTargetsProps {
   level: LevelDefinition;
   /** Rank just earned, to mark which targets were met. */
   earned?: Rank;
+}
+
+/** Seconds of time bonus one lost Emberling costs: its survival bonus plus the penalty. */
+function lossSeconds(level: LevelDefinition): string {
+  const points = POINTS_PER_WORKER + penaltyPerLoss(level.difficulty);
+  return String(points / POINTS_PER_SECOND);
 }
 
 function timeText(timeLeft: number | null): string {
@@ -45,7 +57,7 @@ export function RankTargets({ level, earned }: RankTargetsProps) {
       </table>
       <p className="note">
         Times assume no Emberlings lost. Each extra Emberling alive at the end is worth half a
-        second; each one lost costs a second and a half.
+        second; each one lost costs {lossSeconds(level)} seconds.
       </p>
     </div>
   );

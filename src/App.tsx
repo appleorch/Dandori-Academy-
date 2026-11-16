@@ -3,7 +3,7 @@ import { audio } from './game/audio/audioManager';
 import { InputController } from './game/commands/input';
 import { useGameStore } from './game/core/gameStore';
 import { GameCanvas } from './game/rendering/GameCanvas';
-import { LEVELS } from './game/world/level';
+import { forDifficulty, LEVELS } from './game/world/level';
 import { AchievementsScreen } from './ui/AchievementsScreen';
 import { Hud } from './ui/Hud';
 import { LessonSelect } from './ui/LessonSelect';
@@ -18,7 +18,11 @@ export function App() {
   const paused = useGameStore((state) => state.paused);
   const runId = useGameStore((state) => state.runId);
   const levelId = useGameStore((state) => state.levelId);
-  const level = LEVELS.find((candidate) => candidate.id === levelId) ?? LEVELS[0];
+  const playDifficulty = useGameStore((state) => state.playDifficulty);
+  const level = forDifficulty(
+    LEVELS.find((candidate) => candidate.id === levelId) ?? LEVELS[0],
+    playDifficulty,
+  );
   const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
   const musicVolume = useGameStore((state) => state.settings.musicVolume);
   const touch = useTouchDevice();

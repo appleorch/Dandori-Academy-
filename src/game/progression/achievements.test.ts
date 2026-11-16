@@ -7,6 +7,7 @@ const now = new Date('2026-11-13T12:00:00Z');
 
 const day: DayRecord = {
   levelId: 'the-guard',
+  difficulty: 'normal',
   stage: 3,
   score: 2000,
   rank: 'Silver',
@@ -88,6 +89,18 @@ describe('achievements', () => {
     const ids = play(emptySave(), day2).ids;
     expect(ids).toEqual(expect.arrayContaining(['glowcap', 'gatecrasher', 'bell-ringer']));
     expect(ids).not.toContain('uprooted');
+  });
+
+  it('awards the Hard-mode milestones from Hard ranks only', () => {
+    const hardSilver: SaveData = { ...emptySave(), bestRanksHard: { 'many-hands': 'Silver' } };
+    expect(unlockAchievements(hardSilver, null, now).unlocked.map((a) => a.id)).toEqual([
+      'hardened',
+    ]);
+    const bell: SaveData = { ...emptySave(), bestRanksHard: { 'the-bellwether': 'Platinum' } };
+    expect(unlockAchievements(bell, null, now).unlocked.map((a) => a.id)).toEqual([
+      'hardened',
+      'hard-as-stone',
+    ]);
   });
 
   it('awards the rank milestones', () => {

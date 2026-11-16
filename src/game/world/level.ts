@@ -1,4 +1,5 @@
 import { SHARD_VALUE_PER_WEIGHT } from '../core/config';
+import { HARD, type Difficulty } from '../core/difficulty';
 import { POINTS_PER_SECOND, POINTS_PER_WORKER } from '../dandori/scoring';
 import type { EnemyKind } from '../enemies/enemyKinds';
 import type { Box, Point } from '../navigation/NavGrid';
@@ -56,6 +57,8 @@ export interface LevelDefinition {
   platinumTime: number;
   /** Score that earns Platinum. Derived from `platinumTime`; see `withPar`. */
   parScore: number;
+  /** Normal, or Hard with the modifiers in core/difficulty. */
+  difficulty: Difficulty;
   seed: number;
   startingWorkers: number;
   captain: Point;
@@ -707,7 +710,7 @@ const THE_BELLWETHER: LevelSpec = {
 };
 
 /** A lesson as written, before its par score is derived. */
-type LevelSpec = Omit<LevelDefinition, 'parScore'>;
+type LevelSpec = Omit<LevelDefinition, 'parScore' | 'difficulty'>;
 
 /** Total value of every Sunshard in a lesson. */
 export function treasureTotal(
@@ -735,10 +738,11 @@ export function shardCount(
  * Par is exactly the score of a Platinum-pace day: every Sunshard home at
  * `platinumTime`, with the starting squad alive and nobody lost.
  */
-function withPar(spec: LevelSpec): LevelDefinition {
+function withPar(spec: LevelSpec, difficulty: Difficulty = 'normal'): LevelDefinition {
   const timeLeft = spec.dayLength - spec.platinumTime;
   return {
     ...spec,
+    difficulty,
     parScore:
       treasureTotal(spec) + spec.startingWorkers * POINTS_PER_WORKER + timeLeft * POINTS_PER_SECOND,
   };
@@ -762,4 +766,17 @@ export const LEVELS: readonly LevelDefinition[] = [
   THREE_ROOTS,
   RUSH_HOUR,
   THE_BELLWETHER,
-].map(withPar);
+].map((spec) => withPar(spec));
+
+/** A lesson as played on the given difficulty: Hard has a shorter day and its own par. */
+export function forDifficulty(level: LevelDefinition, difficulty: Difficulty): LevelDefinition {
+  if (difficulty === level.difficulty) return level;
+  // The Normal day length: the lesson's own, or the stock lesson's when converting back from Hard.
+  const normalDay =
+    level.difficulty === 'normal'
+      ? level.dayLength
+      : (LEVELS.find((candidate) => candidate.id === level.id)?.dayLength ?? level.dayLength);
+  const dayLength = difficulty === 'hard' ? Math.round(normalDay * HARD.dayLength) : normalDay;
+  // withPar replaces the par and difficulty.
+  return withPar({ ...level, dayLength }, difficulty);
+}

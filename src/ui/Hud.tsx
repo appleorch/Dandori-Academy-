@@ -24,6 +24,7 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
         <div className="chip hud-level">
           {level.stage}. {level.name}
         </div>
+        {level.difficulty === 'hard' && <div className="chip hard-chip">Hard</div>}
         <div className={hud.timeLeft <= 30 ? 'chip clock urgent' : 'chip clock'}>
           {formatTime(hud.timeLeft)}
         </div>

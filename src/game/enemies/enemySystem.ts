@@ -1,4 +1,5 @@
 import { damageCaptain } from '../captain/captainSystem';
+import { HARD } from '../core/difficulty';
 import type { Entity } from '../core/ecs';
 import { moveAgent, steerTo } from '../navigation/steering';
 import type { Enemy, Transform } from '../simulation/components';
@@ -8,6 +9,11 @@ import { spawnCarcass, spawnHazard, spawnPod, spawnTreasure } from '../world/spa
 import { ENEMY, ENEMY_SPECS, HAZARDS, type EnemySpec } from './enemyKinds';
 
 const dir = { x: 0, z: 0 };
+
+/** Telegraph time, shorter on Hard. */
+function windupOf(sim: Simulation, spec: EnemySpec): number {
+  return spec.windup * (sim.hard ? HARD.windup : 1);
+}
 /** Pebbles thrown by a late-phase slam, and how far they scatter. */
 const PEBBLES = 3;
 const PEBBLE_SCATTER = 8;
@@ -182,7 +188,7 @@ function shakeOff(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform)
   sim.emit('shake', at.x, at.z);
   // A biter turns straight on the dazed workers; whistle them clear or lose them.
   if (spec.attack === 'bite') {
-    beginWindup(enemy, at, spec.windup, firstX, firstZ);
+    beginWindup(enemy, at, windupOf(sim, spec), firstX, firstZ);
     enemy.timer += ENEMY.shakePause;
   }
 }
@@ -247,7 +253,7 @@ function roam(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform, dt:
   if (spec.attack === 'spit' && spec.speed === 0) {
     // A rooted lobber aims at the biggest crowd in range.
     const target = densestCluster(sim, at, spec.aggroRange);
-    if (target) beginWindup(enemy, at, spec.windup, target.x, target.z);
+    if (target) beginWindup(enemy, at, windupOf(sim, spec), target.x, target.z);
     return;
   }
   const prey = pickPrey(sim, enemy, spec, at);
@@ -258,11 +264,11 @@ function roam(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform, dt:
   const dist = Math.hypot(prey.x - at.x, prey.z - at.z);
   if (spec.attack === 'bite') {
     if (dist <= enemy.radius + ENEMY.biteRange * 0.6)
-      beginWindup(enemy, at, spec.windup, prey.x, prey.z);
+      beginWindup(enemy, at, windupOf(sim, spec), prey.x, prey.z);
     else walk(sim, enemy, at, prey.x, prey.z, spec.speed, dt);
   } else if (spec.attack === 'charge') {
     if (sim.nav.lineOfSight(at.x, at.z, prey.x, prey.z)) {
-      beginWindup(enemy, at, spec.windup, prey.x, prey.z);
+      beginWindup(enemy, at, windupOf(sim, spec), prey.x, prey.z);
       aimCharge(enemy, at, prey.x, prey.z);
       enemy.charges = 0;
       sim.emit('chargeWindup', at.x, at.z);
@@ -271,15 +277,15 @@ function roam(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform, dt:
     }
   } else if (spec.attack === 'slam') {
     if (dist <= enemy.radius + ENEMY.slamReach) {
-      beginWindup(enemy, at, spec.windup, prey.x, prey.z);
+      beginWindup(enemy, at, windupOf(sim, spec), prey.x, prey.z);
       // The ring on the ground is the slam itself, landing when the windup ends.
-      spawnHazard(sim, 'slam', at, at, spec.windup);
+      spawnHazard(sim, 'slam', at, at, windupOf(sim, spec));
       sim.emit('slamWindup', at.x, at.z);
     } else {
       walk(sim, enemy, at, prey.x, prey.z, spec.speed, dt);
     }
   } else if (spec.attack === 'spit') {
-    beginWindup(enemy, at, spec.windup, prey.x, prey.z);
+    beginWindup(enemy, at, windupOf(sim, spec), prey.x, prey.z);
   }
 }
 
@@ -335,7 +341,7 @@ function endCharge(
   enemy.charges++;
   if (enemy.kind === 'bellwether' && enemy.phase > 0 && enemy.charges < 2) {
     const prey = pickPrey(sim, enemy, spec, at) ?? sim.captainTransform;
-    beginWindup(enemy, at, ENEMY.rechargeWindup, prey.x, prey.z);
+    beginWindup(enemy, at, ENEMY.rechargeWindup * (sim.hard ? HARD.windup : 1), prey.x, prey.z);
     aimCharge(enemy, at, prey.x, prey.z);
     sim.emit('chargeWindup', at.x, at.z);
     return;

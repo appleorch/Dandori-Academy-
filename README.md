@@ -105,6 +105,16 @@ are 10% slower than the greedy bot in `src/game/world/level.test.ts` (30% on the
 lessons), and that test requires the bot to earn Platinum on every lesson, so every rank is
 always reachable.
 
+## Hard mode
+
+The lesson list has a Normal / Hard switch. A lesson's Hard mode opens after earning Gold on it
+on Normal, and keeps its own best rank and score. On Hard (`src/game/core/difficulty.ts`):
+enemies have 25% more health and wind up 15% faster, the Warden has two hearts, drips kill up
+to three Emberlings, each lost Emberling costs 20 points instead of 10, and the day is 10%
+shorter while the Platinum finish time stays the same. The greedy bot is only required to bring
+home all but at most one shard on Hard; it currently earns Platinum on nine lessons, Gold on
+six, and falls one shard short against the Bellwether.
+
 ## Settings, save files and achievements
 
 - **Settings** (main menu, or the pause menu during a day): shadows, carrier counts, enemy

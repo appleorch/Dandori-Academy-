@@ -7,7 +7,8 @@ import { ENEMY, ENEMY_SPECS } from '../enemies/enemyKinds';
 import { createMover, steerTo } from '../navigation/steering';
 import { initPhysics } from '../simulation/physics';
 import { Simulation } from '../simulation/Simulation';
-import { LEVELS } from './level';
+import { penaltyPerLoss } from '../core/difficulty';
+import { forDifficulty, LEVELS } from './level';
 
 const THROW_DISTANCE = 6;
 
@@ -281,6 +282,32 @@ function playGreedy(sim: Simulation): void {
 
 beforeAll(async () => {
   await initPhysics();
+});
+
+describe.each(LEVELS)('$name on Hard', (base) => {
+  // Hard is not tuned to the bot: it only has to bring home all but at most one shard.
+  it('stays winnable for a simple greedy player', () => {
+    const level = forDifficulty(base, 'hard');
+    const sim = new Simulation(level);
+    playGreedy(sim);
+    const score = evaluateDay(
+      {
+        treasureValue: sim.stats.treasureValue,
+        treasuresCollected: sim.stats.treasuresCollected.length,
+        treasuresTotal: sim.stats.treasuresTotal,
+        timeLeft: sim.timeLeft,
+        workersAlive: sim.workers.size,
+        workersLost: sim.stats.workersLost,
+      },
+      level.parScore,
+      penaltyPerLoss('hard'),
+    );
+    expect(sim.stats.treasuresCollected.length).toBeGreaterThanOrEqual(
+      sim.stats.treasuresTotal - 1,
+    );
+    expect(score.total).toBeGreaterThan(0);
+    sim.dispose();
+  });
 });
 
 describe.each(LEVELS)('$name', (level) => {

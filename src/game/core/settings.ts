@@ -1,3 +1,5 @@
+import { DIFFICULTIES, type Difficulty } from './difficulty';
+
 /**
  * Rendering quality. Low: no shadows or effects. Medium: shadows, bloom, tilt-shift
  * and vignette. High: adds ambient occlusion, sharper shadows and full resolution.
@@ -8,6 +10,8 @@ export type GraphicsLevel = (typeof GRAPHICS_LEVELS)[number];
 /** Player preferences. Stored per browser, separate from progress. */
 export interface Settings {
   graphics: GraphicsLevel;
+  /** Mode chosen on the lesson list. */
+  difficulty: Difficulty;
   carrierCounts: boolean;
   healthBars: boolean;
   /** Multiplier on mouse-wheel zoom. */
@@ -21,6 +25,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   graphics: 'high',
+  difficulty: 'normal',
   carrierCounts: true,
   healthBars: true,
   zoomSpeed: 1,
@@ -41,6 +46,7 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
   const settings = { ...defaults };
   if (typeof value !== 'object' || value === null) return settings;
   const raw = value as Record<string, unknown>;
+  settings.difficulty = DIFFICULTIES.find((mode) => mode === raw.difficulty) ?? settings.difficulty;
   const graphics = GRAPHICS_LEVELS.find((level) => level === raw.graphics);
   // Settings saved before quality levels existed had a shadows switch instead.
   if (graphics) settings.graphics = graphics;

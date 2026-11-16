@@ -2,9 +2,9 @@ import type { Simulation } from '../simulation/Simulation';
 import { spawnHazard } from '../world/spawn';
 
 /** Drops a dewdrop at each drip spot whenever its period comes round. */
-export function updateDrips(sim: Simulation, dt: number): void {
+export function updateDrips(sim: Simulation): void {
   const now = sim.elapsed;
-  const before = now - dt;
+  const before = sim.previousElapsed;
   for (const drip of sim.level.drips ?? []) {
     if (now < drip.offset) continue;
     const cycle = Math.floor((now - drip.offset) / drip.period);

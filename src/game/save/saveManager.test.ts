@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   bestRank,
+  bestScore,
+  hardUnlocked,
   emptySave,
   loadSave,
   recordDay,
@@ -23,6 +25,7 @@ function memoryStorage(initial?: string): SaveStorage & { value: string | null }
 
 const day = {
   levelId: 'lesson-1',
+  difficulty: 'normal',
   stage: 1,
   score: 2500,
   rank: 'Gold',
@@ -102,6 +105,24 @@ describe('save manager', () => {
     const two = recordDay(one, { ...day, levelId: 'lesson-2', stage: 2, score: 1000 });
     expect(two.bestScores).toEqual({ 'lesson-1': 2500, 'lesson-2': 1000 });
     expect(two.score).toBe(3500);
+  });
+
+  it('keeps Hard bests apart, counts them in the total and opens Hard at Gold', () => {
+    expect(hardUnlocked(emptySave(), 'lesson-1')).toBe(false);
+    const silver = recordDay(emptySave(), { ...day, rank: 'Silver' });
+    expect(hardUnlocked(silver, 'lesson-1')).toBe(false);
+    const gold = recordDay(silver, day);
+    expect(hardUnlocked(gold, 'lesson-1')).toBe(true);
+    const hard = recordDay(gold, { ...day, difficulty: 'hard', rank: 'Bronze', score: 700 });
+    expect(bestRank(hard, 'lesson-1')).toBe('Gold');
+    expect(bestRank(hard, 'lesson-1', 'hard')).toBe('Bronze');
+    expect(bestScore(hard, 'lesson-1', 'hard')).toBe(700);
+    expect(hard.score).toBe(2500 + 700);
+    expect(hard.stage).toBe(gold.stage);
+    const legacy: Partial<SaveData> = { ...gold };
+    delete legacy.bestRanksHard;
+    delete legacy.bestScoresHard;
+    expect(loadSave(memoryStorage(JSON.stringify(legacy))).bestRanksHard).toEqual({});
   });
 
   it('unlocks the next lesson at Silver or better, never below', () => {

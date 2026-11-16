@@ -1,4 +1,3 @@
-import { SIM_DT } from '../core/config';
 import type { Simulation } from '../simulation/Simulation';
 import { setIdle } from '../workers/squad';
 import { spawnBloom } from '../world/spawn';
@@ -9,7 +8,7 @@ export function updateBlooms(sim: Simulation): void {
   const blooms = sim.level.blooms ?? [];
   blooms.forEach((bloom, index) => {
     // Sprout on the one step whose time window contains the bloom's start time.
-    if (now >= bloom.at && now - SIM_DT < bloom.at) {
+    if (now >= bloom.at && sim.previousElapsed < bloom.at) {
       spawnBloom(sim, bloom, index);
       sim.emit('bloom', bloom.x, bloom.z, bloom.weight);
     }
