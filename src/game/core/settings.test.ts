@@ -4,10 +4,16 @@ import { DEFAULT_SETTINGS, loadSettings, parseSettings, writeSettings } from './
 describe('settings', () => {
   it('defaults every missing or invalid field', () => {
     expect(parseSettings(null)).toEqual(DEFAULT_SETTINGS);
-    expect(parseSettings({ shadows: false, healthBars: 'no', zoomSpeed: 'fast' })).toEqual({
+    expect(parseSettings({ graphics: 'medium', healthBars: 'no', zoomSpeed: 'fast' })).toEqual({
       ...DEFAULT_SETTINGS,
-      shadows: false,
+      graphics: 'medium',
     });
+    expect(parseSettings({ graphics: 'ultra' }).graphics).toBe(DEFAULT_SETTINGS.graphics);
+  });
+
+  it('turns the old shadows switch into a graphics level', () => {
+    expect(parseSettings({ shadows: false }).graphics).toBe('low');
+    expect(parseSettings({ shadows: true }).graphics).toBe('high');
   });
 
   it('clamps volumes to 0..1', () => {
@@ -30,7 +36,12 @@ describe('settings', () => {
         stored = value;
       },
     };
-    const custom = { ...DEFAULT_SETTINGS, carrierCounts: false, zoomSpeed: 2 };
+    const custom = {
+      ...DEFAULT_SETTINGS,
+      carrierCounts: false,
+      zoomSpeed: 2,
+      graphics: 'low' as const,
+    };
     expect(writeSettings(storage, custom)).toBe(true);
     expect(loadSettings(storage)).toEqual(custom);
     stored = '{broken';

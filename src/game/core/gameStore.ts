@@ -14,6 +14,17 @@ import { LEVELS } from '../world/level';
 import { CAPTAIN } from './config';
 import { loadSettings, writeSettings, DEFAULT_SETTINGS, type Settings } from './settings';
 
+/** Phones and tablets start at medium graphics; they can raise it in Settings. */
+function deviceDefaults(): Settings {
+  try {
+    if (window.matchMedia('(pointer: coarse)').matches)
+      return { ...DEFAULT_SETTINGS, graphics: 'medium' };
+  } catch {
+    // No window (tests): use the plain defaults.
+  }
+  return DEFAULT_SETTINGS;
+}
+
 /** Screens reachable from the main menu. */
 export type MenuScreen = 'menu' | 'achievements' | 'settings';
 export type GamePhase = MenuScreen | 'playing' | 'results';
@@ -109,7 +120,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     entityVersion: 0,
     result: null,
     save: initial.save,
-    settings: storage ? loadSettings(storage) : { ...DEFAULT_SETTINGS },
+    settings: storage ? loadSettings(storage, deviceDefaults()) : deviceDefaults(),
 
     startDay: (levelId) =>
       set((state) => ({

@@ -37,12 +37,14 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
       {kind === 'treasure' ? (
         <mesh ref={body} castShadow>
           <octahedronGeometry args={[radius * 1.15]} />
-          <meshStandardMaterial
-            color="#ffd257"
-            emissive="#ff9d1a"
-            emissiveIntensity={0.6}
-            metalness={0.4}
-            roughness={0.3}
+          <meshPhysicalMaterial
+            color="#ffc24a"
+            emissive="#ff8a1a"
+            emissiveIntensity={0.75}
+            metalness={0.2}
+            roughness={0.15}
+            clearcoat={1}
+            envMapIntensity={1.6}
             flatShading
           />
         </mesh>

@@ -1,6 +1,13 @@
+/**
+ * Rendering quality. Low: no shadows or effects. Medium: shadows, bloom, tilt-shift
+ * and vignette. High: adds ambient occlusion, sharper shadows and full resolution.
+ */
+export const GRAPHICS_LEVELS = ['low', 'medium', 'high'] as const;
+export type GraphicsLevel = (typeof GRAPHICS_LEVELS)[number];
+
 /** Player preferences. Stored per browser, separate from progress. */
 export interface Settings {
-  shadows: boolean;
+  graphics: GraphicsLevel;
   carrierCounts: boolean;
   healthBars: boolean;
   /** Multiplier on mouse-wheel zoom. */
@@ -13,7 +20,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  shadows: true,
+  graphics: 'high',
   carrierCounts: true,
   healthBars: true,
   zoomSpeed: 1,
@@ -30,11 +37,15 @@ const STORAGE_KEY = 'dandori-academy-settings';
 export type SettingsStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
 /** Builds settings from untrusted data, keeping each valid field and defaulting the rest. */
-export function parseSettings(value: unknown): Settings {
-  const settings = { ...DEFAULT_SETTINGS };
+export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTINGS): Settings {
+  const settings = { ...defaults };
   if (typeof value !== 'object' || value === null) return settings;
   const raw = value as Record<string, unknown>;
-  for (const key of ['shadows', 'carrierCounts', 'healthBars', 'pauseOnBlur'] as const) {
+  const graphics = GRAPHICS_LEVELS.find((level) => level === raw.graphics);
+  // Settings saved before quality levels existed had a shadows switch instead.
+  if (graphics) settings.graphics = graphics;
+  else if (raw.shadows === false) settings.graphics = 'low';
+  for (const key of ['carrierCounts', 'healthBars', 'pauseOnBlur'] as const) {
     if (typeof raw[key] === 'boolean') settings[key] = raw[key];
   }
   if (typeof raw.zoomSpeed === 'number' && Number.isFinite(raw.zoomSpeed)) {
@@ -49,12 +60,15 @@ export function parseSettings(value: unknown): Settings {
   return settings;
 }
 
-export function loadSettings(storage: SettingsStorage): Settings {
+export function loadSettings(
+  storage: SettingsStorage,
+  defaults: Settings = DEFAULT_SETTINGS,
+): Settings {
   try {
     const raw = storage.getItem(STORAGE_KEY);
-    return raw === null ? { ...DEFAULT_SETTINGS } : parseSettings(JSON.parse(raw));
+    return raw === null ? { ...defaults } : parseSettings(JSON.parse(raw), defaults);
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    return { ...defaults };
   }
 }
 

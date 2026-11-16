@@ -1,12 +1,15 @@
 import { Canvas } from '@react-three/fiber';
 import { useEffect, useState } from 'react';
+import { ACESFilmicToneMapping } from 'three';
 import { audio } from '../audio/audioManager';
 import { useGameStore } from '../core/gameStore';
 import { CameraRig } from '../camera/CameraRig';
 import type { InputController } from '../commands/input';
 import { Simulation } from '../simulation/Simulation';
+import type { GraphicsLevel } from '../core/settings';
 import type { LevelDefinition } from '../world/level';
 import { AimArc } from './AimArc';
+import { Atmosphere } from './Atmosphere';
 import { CaptainMesh } from './CaptainMesh';
 import { CarryableMeshes } from './CarryableMeshes';
 import { CursorFx } from './CursorFx';
@@ -15,6 +18,7 @@ import { Feedback } from './feedback';
 import { GameLoop } from './GameLoop';
 import { HazardMeshes } from './HazardMeshes';
 import { ParticleField } from './ParticleField';
+import { PostFx } from './PostFx';
 import { Popups } from './Popups';
 import { Scenery } from './Scenery';
 import { SkyLight } from './SkyLight';
@@ -23,8 +27,28 @@ import { WorkerInstances } from './WorkerInstances';
 
 /**
  * Owns one day's simulation and renders it. Remount (change `key`) to start a new day.
- * Turning shadows on or off rebuilds the 3D scene but keeps the simulation.
+ * Changing the graphics level rebuilds the 3D scene but keeps the simulation.
  */
+interface Quality {
+  shadows: boolean;
+  shadowMapSize: number;
+  postFx: boolean;
+  ambientOcclusion: boolean;
+  dpr: [number, number];
+}
+
+const QUALITY: Record<GraphicsLevel, Quality> = {
+  low: { shadows: false, shadowMapSize: 512, postFx: false, ambientOcclusion: false, dpr: [1, 1] },
+  medium: {
+    shadows: true,
+    shadowMapSize: 1024,
+    postFx: true,
+    ambientOcclusion: false,
+    dpr: [1, 1.5],
+  },
+  high: { shadows: true, shadowMapSize: 2048, postFx: true, ambientOcclusion: true, dpr: [1, 2] },
+};
+
 interface GameCanvasProps {
   level: LevelDefinition;
   input: InputController;
@@ -35,7 +59,8 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   const [fx] = useState(() => new Feedback());
   const playing = useGameStore((state) => state.phase === 'playing' && !state.paused);
 
-  const shadows = useGameStore((state) => state.settings.shadows);
+  const graphics = useGameStore((state) => state.settings.graphics);
+  const quality = QUALITY[graphics];
   const zoomSpeed = useGameStore((state) => state.settings.zoomSpeed);
   const pauseOnBlur = useGameStore((state) => state.settings.pauseOnBlur);
 
@@ -88,17 +113,25 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
 
   return (
     <Canvas
-      key={shadows ? 'shadows' : 'flat'}
-      shadows={shadows}
-      camera={{ fov: 45, near: 1, far: 300, position: [0, 22, 16] }}
+      key={graphics}
+      shadows={quality.shadows ? 'soft' : false}
+      dpr={quality.dpr}
+      gl={{
+        antialias: !quality.postFx,
+        toneMapping: ACESFilmicToneMapping,
+        toneMappingExposure: 0.92,
+      }}
+      camera={{ fov: 42, near: 1, far: 320, position: [0, 22, 16] }}
     >
+      {quality.postFx && <PostFx ambientOcclusion={quality.ambientOcclusion} />}
       <Terrain level={level} />
       <Scenery level={level} />
       {sim && (
         <>
           <GameLoop sim={sim} input={input} fx={fx} />
           <CameraRig sim={sim} input={input} fx={fx} />
-          <SkyLight sim={sim} />
+          <SkyLight sim={sim} shadowMapSize={quality.shadowMapSize} />
+          <Atmosphere sim={sim} />
           <CaptainMesh sim={sim} />
           <WorkerInstances sim={sim} />
           <CarryableMeshes sim={sim} />

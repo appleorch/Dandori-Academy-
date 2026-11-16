@@ -68,7 +68,7 @@ export function Popups({ fx }: { fx: Feedback }) {
           visible={false}
           renderOrder={5}
         >
-          <spriteMaterial map={texture} depthTest={false} transparent />
+          <spriteMaterial map={texture} depthTest={false} depthWrite={false} transparent />
         </sprite>
       ))}
     </>

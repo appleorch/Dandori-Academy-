@@ -1,19 +1,26 @@
 import { useGameStore } from '../game/core/gameStore';
 import {
   DEFAULT_SETTINGS,
+  GRAPHICS_LEVELS,
   ZOOM_SPEED_MAX,
   ZOOM_SPEED_MIN,
+  type GraphicsLevel,
   type Settings,
 } from '../game/core/settings';
 
-type ToggleKey = 'shadows' | 'carrierCounts' | 'healthBars' | 'pauseOnBlur';
+type ToggleKey = 'carrierCounts' | 'healthBars' | 'pauseOnBlur';
 
 const TOGGLES: readonly (readonly [ToggleKey, string, string])[] = [
-  ['shadows', 'Shadows', 'Turn off for a smoother frame rate on slower computers.'],
   ['carrierCounts', 'Carrier counts', 'Show carriers held and needed above each Sunshard.'],
   ['healthBars', 'Health bars', 'Show a wounded enemy’s health.'],
   ['pauseOnBlur', 'Pause when away', 'Pause the day when you switch to another tab or window.'],
 ];
+
+const GRAPHICS_HINTS: Record<GraphicsLevel, string> = {
+  low: 'No shadows or effects. Smoothest on slow phones.',
+  medium: 'Shadows, glow and the miniature depth-of-field look.',
+  high: 'Adds soft ambient shadows in creases and full resolution.',
+};
 
 type RangeKey = 'sfxVolume' | 'musicVolume' | 'zoomSpeed';
 
@@ -70,6 +77,26 @@ export function SettingsPanel() {
   return (
     <section className="settings" aria-labelledby="settings-heading">
       <h2 id="settings-heading">Settings</h2>
+      <div className="setting">
+        <span className="setting-text">
+          <strong id="graphics-label">Graphics</strong>
+          <small>{GRAPHICS_HINTS[settings.graphics]}</small>
+        </span>
+        <span className="segmented" role="radiogroup" aria-labelledby="graphics-label">
+          {GRAPHICS_LEVELS.map((level) => (
+            <button
+              key={level}
+              type="button"
+              role="radio"
+              aria-checked={settings.graphics === level}
+              className={settings.graphics === level ? 'segment active' : 'segment'}
+              onClick={() => updateSettings({ graphics: level })}
+            >
+              {level[0].toUpperCase() + level.slice(1)}
+            </button>
+          ))}
+        </span>
+      </div>
       {TOGGLES.map(([key, label, hint]) => (
         <label key={key} className="setting" htmlFor={`setting-${key}`}>
           <span className="setting-text">

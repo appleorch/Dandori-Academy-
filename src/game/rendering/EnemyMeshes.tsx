@@ -173,10 +173,10 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
       )}
       <group ref={barGroup} position={[0, r * 2.4 + 1, 0]}>
         <sprite scale={[BAR_WIDTH + 0.12, 0.34, 1]}>
-          <spriteMaterial color="#1c1410" depthTest={false} />
+          <spriteMaterial color="#1c1410" depthTest={false} depthWrite={false} />
         </sprite>
         <sprite ref={bar} renderOrder={1}>
-          <spriteMaterial color="#e5533d" depthTest={false} />
+          <spriteMaterial color="#e5533d" depthTest={false} depthWrite={false} />
         </sprite>
       </group>
     </group>

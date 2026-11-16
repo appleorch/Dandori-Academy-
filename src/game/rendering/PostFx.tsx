@@ -1,0 +1,88 @@
+import { useFrame, useThree } from '@react-three/fiber';
+import { useEffect, useMemo } from 'react';
+import { Vector2, type Object3D, type Scene } from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { HorizontalTiltShiftShader } from 'three/addons/shaders/HorizontalTiltShiftShader.js';
+import { VerticalTiltShiftShader } from 'three/addons/shaders/VerticalTiltShiftShader.js';
+import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
+
+/** Blur strength of the tilt-shift, in pixels per unit of distance from the focus band. */
+const TILT_BLUR = 2.2;
+/** Height of the in-focus band, as a fraction of the screen (0.5 is the middle). */
+const FOCUS = 0.5;
+
+/** Hides every visible sprite, point cloud and transparent mesh; returns what it hid. */
+function hideOverlays(scene: Scene): Object3D[] {
+  const hidden: Object3D[] = [];
+  scene.traverseVisible((object) => {
+    const material = (object as Object3D & { material?: { transparent?: boolean } }).material;
+    const overlay =
+      (object as { isSprite?: boolean }).isSprite === true ||
+      (object as { isPoints?: boolean }).isPoints === true ||
+      material?.transparent === true;
+    if (overlay) hidden.push(object);
+  });
+  for (const object of hidden) object.visible = false;
+  return hidden;
+}
+
+/**
+ * Post-processing: ambient occlusion in creases (full quality only), a soft bloom
+ * on embers, shards and the Kiln, a tilt-shift blur at the top and bottom of the
+ * screen that makes the field read as a miniature, and a gentle vignette.
+ */
+export function PostFx({ ambientOcclusion }: { ambientOcclusion: boolean }) {
+  const { gl, scene, camera, size, viewport } = useThree();
+
+  const { composer, tiltX, tiltY, bloom } = useMemo(() => {
+    const composer = new EffectComposer(gl);
+    composer.addPass(new RenderPass(scene, camera));
+    if (ambientOcclusion) {
+      const gtao = new GTAOPass(scene, camera, 1, 1);
+      gtao.updateGtaoMaterial({ radius: 0.9, distanceExponent: 1.6, thickness: 1.2, scale: 1.1 });
+      gtao.blendIntensity = 0.85;
+      // Labels, particles and other see-through overlays must not cast ambient
+      // occlusion: hide them while the pass renders its depth and normals.
+      const render = gtao.render.bind(gtao);
+      gtao.render = (...args: Parameters<GTAOPass['render']>) => {
+        const hidden = hideOverlays(scene);
+        render(...args);
+        for (const object of hidden) object.visible = true;
+      };
+      composer.addPass(gtao);
+    }
+    const bloom = new UnrealBloomPass(new Vector2(1, 1), 0.42, 0.55, 0.82);
+    composer.addPass(bloom);
+    const tiltX = new ShaderPass(HorizontalTiltShiftShader);
+    const tiltY = new ShaderPass(VerticalTiltShiftShader);
+    tiltX.uniforms.r.value = FOCUS;
+    tiltY.uniforms.r.value = FOCUS;
+    composer.addPass(tiltX);
+    composer.addPass(tiltY);
+    const vignette = new ShaderPass(VignetteShader);
+    vignette.uniforms.offset.value = 0.95;
+    vignette.uniforms.darkness.value = 1.05;
+    composer.addPass(vignette);
+    composer.addPass(new OutputPass());
+    return { composer, tiltX, tiltY, bloom };
+  }, [gl, scene, camera, ambientOcclusion]);
+
+  useEffect(() => {
+    composer.setPixelRatio(viewport.dpr);
+    composer.setSize(size.width, size.height);
+    bloom.resolution.set(size.width, size.height);
+    tiltX.uniforms.h.value = TILT_BLUR / size.width;
+    tiltY.uniforms.v.value = TILT_BLUR / size.height;
+  }, [composer, bloom, tiltX, tiltY, size, viewport.dpr]);
+
+  useEffect(() => () => composer.dispose(), [composer]);
+
+  // A positive priority takes over rendering from React Three Fiber.
+  useFrame((_, delta) => composer.render(delta), 1);
+  return null;
+}
