@@ -29,11 +29,23 @@ export function updateCaptain(sim: Simulation, input: InputState, dt: number): v
   sim.squadField.compute(sim.nav.cellIndexAt(anchor.x, anchor.z));
 }
 
-/** Applies a hit to the captain unless still invulnerable from the last one. */
-export function damageCaptain(sim: Simulation): void {
+/**
+ * Applies a hit from the given point: the captain loses a heart and is knocked
+ * back, unless still invulnerable from the last hit.
+ */
+export function damageCaptain(sim: Simulation, fromX: number, fromZ: number): void {
   const state = sim.captainState;
   if (state.invuln > 0) return;
   state.hp--;
   state.invuln = CAPTAIN.invulnTime;
+  const transform = sim.captainTransform;
+  const dx = transform.x - fromX;
+  const dz = transform.z - fromZ;
+  const dist = Math.hypot(dx, dz);
+  if (dist > 1e-3) {
+    const push = CAPTAIN.knockback / dist;
+    sim.physics.moveCaptain(dx * push, dz * push, transform);
+  }
+  sim.emit('captainHurt', transform.x, transform.z);
   if (state.hp <= 0) sim.ended = 'captainDown';
 }

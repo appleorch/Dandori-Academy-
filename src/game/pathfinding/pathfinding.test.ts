@@ -98,3 +98,21 @@ describe('steering', () => {
     expect(Math.hypot(pos.x - 5, pos.z + 3)).toBeLessThanOrEqual(0.2);
   });
 });
+
+describe('steering after being displaced', () => {
+  it('replans when its next waypoint is no longer in sight', () => {
+    const nav = walledGrid();
+    const mover = createMover();
+    const dir = { x: 0, z: 0 };
+    const pos = { x: -5, z: -3 };
+    steerTo(nav, mover, pos, 5, -3, 1, dir);
+    // Knocked to the far side of the wall: the cached path now leads through it.
+    pos.x = 2;
+    pos.z = -3;
+    for (let i = 0; i < 600 && Math.hypot(pos.x + 8, pos.z + 3) > 0.3; i++) {
+      steerTo(nav, mover, pos, -8, -3, 1 / 60, dir);
+      moveAgent(nav, pos, dir.x * 0.1, dir.z * 0.1);
+    }
+    expect(Math.hypot(pos.x + 8, pos.z + 3)).toBeLessThanOrEqual(0.3);
+  });
+});

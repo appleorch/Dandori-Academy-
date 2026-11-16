@@ -1,3 +1,5 @@
+import { WORKER } from '../core/config';
+import { approachPoint, enemyReach, isTargetable } from '../enemies/combat';
 import type { Entity } from '../core/ecs';
 import { NO_ENTITY } from '../core/ecs';
 import type { Enemy, Worker } from '../simulation/components';
@@ -33,9 +35,11 @@ export function setIdle(sim: Simulation, entity: Entity, worker: Worker, scanDel
   worker.scan = scanDelay;
 }
 
+/** Calls a worker to the squad. A dazed worker snaps out of it almost at once. */
 export function joinSquad(sim: Simulation, entity: Entity, worker: Worker): void {
   detachWorker(sim, entity, worker);
   worker.state = 'follow';
+  worker.stun = Math.min(worker.stun, 0.2);
 }
 
 /** Sends every squad member off duty; they pick up nearby work on their own. */
@@ -43,6 +47,26 @@ export function dismissSquad(sim: Simulation): void {
   for (const [entity, worker] of sim.workers.entries()) {
     if (worker.state === 'follow') setIdle(sim, entity, worker);
   }
+  sim.emit('dismiss', sim.captainTransform.x, sim.captainTransform.z);
+}
+
+/** Orders the whole squad to run to the cursor and take on whatever is there. */
+export function rushSquad(sim: Simulation): void {
+  let sent = false;
+  for (const [, worker] of sim.workers.entries()) {
+    if (worker.state !== 'follow' || worker.stun > 0) continue;
+    const spot = sim.nav.nearestWalkable(
+      sim.cursor.x + sim.rng.range(-0.8, 0.8),
+      sim.cursor.z + sim.rng.range(-0.8, 0.8),
+    );
+    worker.state = 'rush';
+    worker.rushX = spot.x;
+    worker.rushZ = spot.z;
+    worker.rushTime = WORKER.rushTimeout;
+    worker.scan = 0;
+    sent = true;
+  }
+  if (sent) sim.emit('rush', sim.captainTransform.x, sim.captainTransform.z);
 }
 
 /** Assigns a worker to haul or attack `target`, whichever kind of entity it is. */
@@ -67,21 +91,25 @@ export function latchOn(
 ): void {
   const transform = sim.transforms.require(entity);
   const enemyTransform = sim.transforms.require(enemyEntity);
+  if (enemy.shape) transform.y = 0.55;
   worker.state = 'attacking';
   worker.target = enemyEntity;
   worker.slot = Math.atan2(transform.x - enemyTransform.x, transform.z - enemyTransform.z);
   enemy.latched.push(entity);
+  sim.emit('latch', transform.x, transform.z);
 }
 
 export function killWorker(sim: Simulation, entity: Entity, worker: Worker): void {
   detachWorker(sim, entity, worker);
+  const at = sim.transforms.require(entity);
+  sim.emit('workerLost', at.x, at.z);
   sim.ecs.destroy(entity);
   sim.stats.workersLost++;
 }
 
 /**
- * Nearest job within range and line of sight: a haul with a free carrier slot or
- * a live enemy. Returns NO_ENTITY when there is nothing to do.
+ * Nearest job within range and line of sight: a haul with a free carrier slot that
+ * has a way home, or an enemy or gate that can be hurt. NO_ENTITY when there is none.
  */
 export function findTask(sim: Simulation, x: number, z: number, range: number): Entity {
   let best: Entity = NO_ENTITY;
@@ -89,6 +117,8 @@ export function findTask(sim: Simulation, x: number, z: number, range: number): 
   for (const [entity, carryable] of sim.carryables.entries()) {
     if (carryable.claimed.length >= carryable.maxCarriers) continue;
     const at = sim.transforms.require(entity);
+    // A haul shut off from the Kiln (behind a gate) waits until the way is open.
+    if (!Number.isFinite(sim.kilnField.dist[sim.nav.cellIndexAt(at.x, at.z)])) continue;
     const dist = Math.hypot(at.x - x, at.z - z) - carryable.radius;
     if (dist < bestDist && sim.nav.lineOfSight(x, z, at.x, at.z)) {
       best = entity;
@@ -96,10 +126,11 @@ export function findTask(sim: Simulation, x: number, z: number, range: number): 
     }
   }
   for (const [entity, enemy] of sim.enemies.entries()) {
-    if (enemy.hp <= 0) continue;
+    if (!isTargetable(sim, entity, enemy)) continue;
     const at = sim.transforms.require(entity);
-    const dist = Math.hypot(at.x - x, at.z - z) - enemy.radius;
-    if (dist < bestDist && sim.nav.lineOfSight(x, z, at.x, at.z)) {
+    const dist = enemyReach(enemy, at, x, z);
+    const spot = approachPoint(sim, enemy, at, x, z);
+    if (dist < bestDist && sim.nav.lineOfSight(x, z, spot.x, spot.z)) {
       best = entity;
       bestDist = dist;
     }

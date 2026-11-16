@@ -1,21 +1,68 @@
 import { Canvas } from '@react-three/fiber';
 import { useEffect, useState } from 'react';
+import { ACESFilmicToneMapping } from 'three';
+import { audio } from '../audio/audioManager';
+import { useGameStore } from '../core/gameStore';
 import { CameraRig } from '../camera/CameraRig';
-import { InputController } from '../commands/input';
+import type { InputController } from '../commands/input';
 import { Simulation } from '../simulation/Simulation';
+import type { GraphicsLevel } from '../core/settings';
 import type { LevelDefinition } from '../world/level';
+import { AimArc } from './AimArc';
+import { Atmosphere } from './Atmosphere';
 import { CaptainMesh } from './CaptainMesh';
 import { CarryableMeshes } from './CarryableMeshes';
 import { CursorFx } from './CursorFx';
 import { EnemyMeshes } from './EnemyMeshes';
+import { Feedback } from './feedback';
 import { GameLoop } from './GameLoop';
+import { HazardMeshes } from './HazardMeshes';
+import { ParticleField } from './ParticleField';
+import { PostFx } from './PostFx';
+import { Popups } from './Popups';
+import { Scenery } from './Scenery';
+import { SkyLight } from './SkyLight';
 import { Terrain } from './Terrain';
 import { WorkerInstances } from './WorkerInstances';
 
-/** Owns one day's simulation and renders it. Remount (change `key`) to start a new day. */
-export function GameCanvas({ level }: { level: LevelDefinition }) {
+/**
+ * Owns one day's simulation and renders it. Remount (change `key`) to start a new day.
+ * Changing the graphics level rebuilds the 3D scene but keeps the simulation.
+ */
+interface Quality {
+  shadows: boolean;
+  shadowMapSize: number;
+  postFx: boolean;
+  ambientOcclusion: boolean;
+  dpr: [number, number];
+}
+
+const QUALITY: Record<GraphicsLevel, Quality> = {
+  low: { shadows: false, shadowMapSize: 512, postFx: false, ambientOcclusion: false, dpr: [1, 1] },
+  medium: {
+    shadows: true,
+    shadowMapSize: 1024,
+    postFx: true,
+    ambientOcclusion: false,
+    dpr: [1, 1.5],
+  },
+  high: { shadows: true, shadowMapSize: 2048, postFx: true, ambientOcclusion: true, dpr: [1, 2] },
+};
+
+interface GameCanvasProps {
+  level: LevelDefinition;
+  input: InputController;
+}
+
+export function GameCanvas({ level, input }: GameCanvasProps) {
   const [sim, setSim] = useState<Simulation | null>(null);
-  const [input] = useState(() => new InputController());
+  const [fx] = useState(() => new Feedback());
+  const playing = useGameStore((state) => state.phase === 'playing' && !state.paused);
+
+  const graphics = useGameStore((state) => state.settings.graphics);
+  const quality = QUALITY[graphics];
+  const zoomSpeed = useGameStore((state) => state.settings.zoomSpeed);
+  const pauseOnBlur = useGameStore((state) => state.settings.pauseOnBlur);
 
   useEffect(() => {
     const created = new Simulation(level);
@@ -23,30 +70,77 @@ export function GameCanvas({ level }: { level: LevelDefinition }) {
     return () => created.dispose();
   }, [level]);
 
+  useEffect(() => {
+    input.zoomSpeed = zoomSpeed;
+  }, [input, zoomSpeed]);
+
+  // Music plays only while a day is actually running.
+  useEffect(() => {
+    if (!playing) return;
+    audio.startMusic();
+    return () => {
+      audio.stopMusic();
+      audio.setWhistle(false);
+    };
+  }, [playing]);
+
+  // Escape toggles the pause menu.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.code !== 'Escape') return;
+      const store = useGameStore.getState();
+      if (store.paused) store.resume();
+      else store.pause();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  // Pause when the player switches tabs or windows, if they asked for that.
+  useEffect(() => {
+    if (!pauseOnBlur) return;
+    const pause = (): void => useGameStore.getState().pause();
+    const onVisibility = (): void => {
+      if (document.hidden) pause();
+    };
+    window.addEventListener('blur', pause);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('blur', pause);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [pauseOnBlur]);
+
   return (
-    <Canvas shadows camera={{ fov: 45, near: 1, far: 300, position: [0, 22, 16] }}>
-      <color attach="background" args={['#1b2a22']} />
-      <ambientLight intensity={1.1} />
-      <directionalLight
-        position={[20, 40, 15]}
-        intensity={2.2}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-40}
-        shadow-camera-right={40}
-        shadow-camera-top={40}
-        shadow-camera-bottom={-40}
-      />
+    <Canvas
+      key={graphics}
+      shadows={quality.shadows ? 'soft' : false}
+      dpr={quality.dpr}
+      gl={{
+        antialias: !quality.postFx,
+        toneMapping: ACESFilmicToneMapping,
+        toneMappingExposure: 0.92,
+      }}
+      camera={{ fov: 42, near: 1, far: 320, position: [0, 22, 16] }}
+    >
+      {quality.postFx && <PostFx ambientOcclusion={quality.ambientOcclusion} />}
       <Terrain level={level} />
+      <Scenery level={level} />
       {sim && (
         <>
-          <GameLoop sim={sim} input={input} />
-          <CameraRig sim={sim} input={input} />
+          <GameLoop sim={sim} input={input} fx={fx} />
+          <CameraRig sim={sim} input={input} fx={fx} />
+          <SkyLight sim={sim} shadowMapSize={quality.shadowMapSize} />
+          <Atmosphere sim={sim} />
           <CaptainMesh sim={sim} />
           <WorkerInstances sim={sim} />
           <CarryableMeshes sim={sim} />
           <EnemyMeshes sim={sim} />
+          <HazardMeshes sim={sim} />
+          <AimArc sim={sim} />
           <CursorFx sim={sim} />
+          <ParticleField particles={fx.particles} />
+          <Popups fx={fx} />
         </>
       )}
     </Canvas>

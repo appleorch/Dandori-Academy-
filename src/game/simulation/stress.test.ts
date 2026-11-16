@@ -2,7 +2,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { NO_INPUT } from '../commands/input';
 import { SIM_DT } from '../core/config';
 import { Rng } from '../core/rng';
-import { LESSON_1, type LevelDefinition } from '../world/level';
+import { LEVELS, type LevelDefinition } from '../world/level';
+
+const FIRST_LIGHT = LEVELS[3];
 import { initPhysics } from './physics';
 import { Simulation } from './Simulation';
 
@@ -11,12 +13,16 @@ function stressLevel(): LevelDefinition {
   const rng = new Rng(7);
   const spot = () => ({ x: rng.range(-10, 28), z: rng.range(-18, 18) });
   return {
-    ...LESSON_1,
+    ...FIRST_LIGHT,
     id: 'stress',
     obstacles: [],
     startingWorkers: 100,
     treasures: Array.from({ length: 50 }, (_, i) => ({ id: `t${i}`, weight: 1, ...spot() })),
-    enemies: Array.from({ length: 20 }, spot),
+    pods: [],
+    enemies: Array.from({ length: 20 }, (_, i) => ({
+      ...spot(),
+      kind: (['mossback', 'ramhorn', 'spitter'] as const)[i % 3],
+    })),
   };
 }
 

@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { emptySave, loadSave, recordDay, writeSave, type SaveStorage } from './saveManager';
+import {
+  bestRank,
+  bestScore,
+  hardUnlocked,
+  emptySave,
+  loadSave,
+  recordDay,
+  writeSave,
+  type SaveData,
+  type SaveStorage,
+} from './saveManager';
 
 function memoryStorage(initial?: string): SaveStorage & { value: string | null } {
   return {
@@ -15,11 +25,21 @@ function memoryStorage(initial?: string): SaveStorage & { value: string | null }
 
 const day = {
   levelId: 'lesson-1',
+  difficulty: 'normal',
   stage: 1,
   score: 2500,
   rank: 'Gold',
   workersAlive: 18,
+  workersLost: 1,
   treasureIds: ['shard-1', 'shard-2'],
+  treasuresTotal: 5,
+  enemiesDefeated: 1,
+  enemiesTotal: 2,
+  captainHits: 0,
+  timeLeft: 0,
+  dayLength: 120,
+  bossesDefeated: [],
+  bloomsCollected: 0,
 } as const;
 
 describe('save manager', () => {
@@ -36,6 +56,28 @@ describe('save manager', () => {
     expect(loadSave(memoryStorage('{"version":"0"}'))).toEqual(emptySave());
   });
 
+  it('loads saves written before bestScores, achievements and totals existed', () => {
+    const legacy: Partial<SaveData> = recordDay(emptySave(), day);
+    delete legacy.bestScores;
+    delete legacy.achievements;
+    delete legacy.totals;
+    const loaded = loadSave(memoryStorage(JSON.stringify(legacy)));
+    expect(loaded.bestRanks['lesson-1']).toBe('Gold');
+    expect(loaded.bestScores).toEqual({});
+    expect(loaded.achievements).toEqual({});
+    expect(loaded.totals).toEqual(emptySave().totals);
+  });
+
+  it('rejects a save with an impossible stage', () => {
+    const bad = { ...emptySave(), stage: 0 };
+    expect(loadSave(memoryStorage(JSON.stringify(bad)))).toEqual(emptySave());
+  });
+
+  it('adds every day to the running totals', () => {
+    const two = recordDay(recordDay(emptySave(), day), day);
+    expect(two.totals).toEqual({ days: 2, treasures: 4, enemies: 2, workersLost: 2 });
+  });
+
   it('keeps the best results across days', () => {
     const first = recordDay(emptySave(), day);
     const worse = recordDay(first, {
@@ -46,7 +88,7 @@ describe('save manager', () => {
       treasureIds: ['shard-2', 'shard-3'],
     });
     expect(worse.score).toBe(2500);
-    expect(worse.bestRanks['lesson-1']).toBe('Gold');
+    expect(bestRank(worse, 'lesson-1')).toBe('Gold');
     expect(worse.workerCounts.ember).toBe(18);
     expect(worse.treasuresCollected).toEqual([
       'lesson-1:shard-1',
@@ -54,7 +96,41 @@ describe('save manager', () => {
       'lesson-1:shard-3',
     ]);
     const better = recordDay(worse, { ...day, rank: 'Platinum', score: 3100 });
-    expect(better.bestRanks['lesson-1']).toBe('Platinum');
+    expect(bestRank(better, 'lesson-1')).toBe('Platinum');
     expect(better.score).toBe(3100);
+  });
+
+  it('totals the best score of every lesson', () => {
+    const one = recordDay(emptySave(), day);
+    const two = recordDay(one, { ...day, levelId: 'lesson-2', stage: 2, score: 1000 });
+    expect(two.bestScores).toEqual({ 'lesson-1': 2500, 'lesson-2': 1000 });
+    expect(two.score).toBe(3500);
+  });
+
+  it('keeps Hard bests apart, counts them in the total and opens Hard at Gold', () => {
+    expect(hardUnlocked(emptySave(), 'lesson-1')).toBe(false);
+    const silver = recordDay(emptySave(), { ...day, rank: 'Silver' });
+    expect(hardUnlocked(silver, 'lesson-1')).toBe(false);
+    const gold = recordDay(silver, day);
+    expect(hardUnlocked(gold, 'lesson-1')).toBe(true);
+    const hard = recordDay(gold, { ...day, difficulty: 'hard', rank: 'Bronze', score: 700 });
+    expect(bestRank(hard, 'lesson-1')).toBe('Gold');
+    expect(bestRank(hard, 'lesson-1', 'hard')).toBe('Bronze');
+    expect(bestScore(hard, 'lesson-1', 'hard')).toBe(700);
+    expect(hard.score).toBe(2500 + 700);
+    expect(hard.stage).toBe(gold.stage);
+    const legacy: Partial<SaveData> = { ...gold };
+    delete legacy.bestRanksHard;
+    delete legacy.bestScoresHard;
+    expect(loadSave(memoryStorage(JSON.stringify(legacy))).bestRanksHard).toEqual({});
+  });
+
+  it('unlocks the next lesson at Silver or better, never below', () => {
+    expect(bestRank(emptySave(), 'lesson-1')).toBeNull();
+    expect(recordDay(emptySave(), { ...day, rank: 'Bronze' }).stage).toBe(1);
+    const silver = recordDay(emptySave(), { ...day, rank: 'Silver' });
+    expect(silver.stage).toBe(2);
+    expect(recordDay(silver, { ...day, rank: 'Bronze' }).stage).toBe(2);
+    expect(recordDay(silver, { ...day, levelId: 'lesson-2', stage: 2 }).stage).toBe(3);
   });
 });

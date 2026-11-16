@@ -44,7 +44,7 @@ export function TextSprite({ getText, y }: TextSpriteProps) {
 
   return (
     <sprite position={[0, y, 0]} scale={[2, 1, 1]}>
-      <spriteMaterial map={texture} depthTest={false} transparent />
+      <spriteMaterial map={texture} depthTest={false} depthWrite={false} transparent />
     </sprite>
   );
 }

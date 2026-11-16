@@ -5,7 +5,7 @@ const base: DayStats = {
   treasureValue: 2300,
   treasuresCollected: 6,
   treasuresTotal: 6,
-  timeLeft: 60.9,
+  timeLeft: 59.2,
   workersAlive: 20,
   workersLost: 0,
 };
@@ -37,7 +37,8 @@ describe('evaluateDay', () => {
     const at = (total: number) =>
       evaluateDay({ ...base, treasureValue: total, timeLeft: 0, workersAlive: 0 }, 1000).rank;
     expect(at(1000)).toBe('Platinum');
-    expect(at(800)).toBe('Gold');
+    expect(at(850)).toBe('Gold');
+    expect(at(849)).toBe('Silver');
     expect(at(550)).toBe('Silver');
     expect(at(549)).toBe('Bronze');
     expect(rankValue('Gold')).toBeGreaterThan(rankValue('Silver'));

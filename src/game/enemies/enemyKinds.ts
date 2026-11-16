@@ -1,0 +1,235 @@
+export type EnemyKind =
+  | 'mossback'
+  | 'ramhorn'
+  | 'spitter'
+  | 'gate'
+  | 'gravelmaw'
+  | 'lanternroot'
+  | 'rootknot'
+  | 'bellwether';
+
+/**
+ * How an enemy attacks. `slam` rears up over a ring on the ground; `none` is for
+ * things that only take damage, like gates and root-knots.
+ */
+export type EnemyAttack = 'bite' | 'charge' | 'spit' | 'slam' | 'none';
+
+export interface EnemySpec {
+  name: string;
+  attack: EnemyAttack;
+  hp: number;
+  radius: number;
+  /** Walking speed while hunting; 0 for things rooted in place. */
+  speed: number;
+  /** Distance at which it notices prey. */
+  aggroRange: number;
+  /** How far from home prey may be before the enemy ignores it. */
+  territory: number;
+  /** Telegraph time before the attack lands or launches. */
+  windup: number;
+  /** Time spent recovering after an attack, when it takes full damage. */
+  recover: number;
+  /** Seconds of being clung to before it shakes everyone off. */
+  shakeInterval: number;
+  carcassWeight: number;
+  carcassYield: number;
+  /** Damage taken outside its recovery window, as a fraction. 1 means no armour. */
+  armour: number;
+  /** Health fractions at which it enters its next phase, highest first. */
+  phases: readonly number[];
+  /** Shown with a health bar across the top of the screen. */
+  boss: boolean;
+  /** Chargers only: speed, duration, workers crushed per charge, and recovery after a miss. */
+  chargeSpeed: number;
+  chargeTime: number;
+  trampleKills: number;
+  missRecover: number;
+}
+
+const BASE = {
+  armour: 1,
+  phases: [],
+  boss: false,
+  chargeSpeed: 13,
+  chargeTime: 1.3,
+  trampleKills: 4,
+  missRecover: 0,
+} as const;
+
+const NO_ATTACK = {
+  ...BASE,
+  attack: 'none',
+  speed: 0,
+  aggroRange: 0,
+  territory: 0,
+  windup: 1,
+  recover: 0,
+  shakeInterval: Infinity,
+  carcassWeight: 0,
+  carcassYield: 0,
+} as const;
+
+export const ENEMY_SPECS: Record<EnemyKind, EnemySpec> = {
+  /** Slow grazer. Bites what is in front of it and eats whatever it shakes off. */
+  mossback: {
+    ...BASE,
+    name: 'Mossback',
+    attack: 'bite',
+    hp: 100,
+    radius: 1.1,
+    speed: 3.6,
+    aggroRange: 7,
+    territory: 12,
+    windup: 0.8,
+    recover: 1.6,
+    shakeInterval: 3.2,
+    carcassWeight: 3,
+    carcassYield: 4,
+  },
+  /** Charges in a straight line, trampling the squad, then stands winded. */
+  ramhorn: {
+    ...BASE,
+    name: 'Ramhorn',
+    attack: 'charge',
+    hp: 140,
+    radius: 1.3,
+    speed: 2.6,
+    aggroRange: 10,
+    territory: 16,
+    windup: 0.9,
+    recover: 2.8,
+    missRecover: 2.8,
+    shakeInterval: 5,
+    carcassWeight: 5,
+    carcassYield: 7,
+  },
+  /** Fragile, but lobs globs that flatten whoever stands where they land. */
+  spitter: {
+    ...BASE,
+    name: 'Bogspitter',
+    attack: 'spit',
+    hp: 60,
+    radius: 0.9,
+    speed: 1.6,
+    aggroRange: 11,
+    territory: 14,
+    windup: 0.9,
+    recover: 2.4,
+    shakeInterval: 3.5,
+    carcassWeight: 2,
+    carcassYield: 3,
+  },
+  /** A wall of bramble across a path. Each gate sets its own health. */
+  gate: { ...NO_ATTACK, name: 'Bramble Gate', hp: 150, radius: 0 },
+  /**
+   * Boss. A plated grub that rears over a ring and slams it. Its plates take a
+   * quarter damage; only while it lies winded after a slam does it take full damage.
+   */
+  gravelmaw: {
+    ...BASE,
+    name: 'Gravelmaw',
+    attack: 'slam',
+    hp: 450,
+    radius: 2.4,
+    speed: 2.2,
+    aggroRange: 7,
+    territory: 10,
+    windup: 1.2,
+    recover: 3.5,
+    shakeInterval: 4,
+    carcassWeight: 6,
+    carcassYield: 12,
+    armour: 0.25,
+    phases: [0.5],
+    boss: true,
+  },
+  /** Boss. A rooted bulb, shielded while any of its three root-knots lives. */
+  lanternroot: {
+    ...BASE,
+    name: 'Lanternroot',
+    attack: 'spit',
+    hp: 360,
+    radius: 2.2,
+    speed: 0,
+    aggroRange: 12,
+    territory: 14,
+    windup: 0.9,
+    recover: 2.1,
+    shakeInterval: 5,
+    carcassWeight: 0,
+    carcassYield: 0,
+    phases: [0.5],
+    boss: true,
+  },
+  /** One of the Lanternroot's knots. It withers when beaten and regrows later. */
+  rootknot: { ...NO_ATTACK, name: 'Root-knot', hp: 60, radius: 0.9 },
+  /** Final boss. A towering charger that tolls a bell before every run. */
+  bellwether: {
+    ...BASE,
+    name: 'Bellwether',
+    attack: 'charge',
+    hp: 480,
+    radius: 2,
+    speed: 2.4,
+    aggroRange: 11,
+    territory: 14,
+    windup: 1,
+    recover: 5,
+    missRecover: 1.2,
+    shakeInterval: 5,
+    carcassWeight: 10,
+    carcassYield: 15,
+    armour: 0.2,
+    phases: [0.6, 0.25],
+    boss: true,
+    chargeTime: 1.6,
+    trampleKills: 5,
+  },
+};
+
+/** Values shared by every enemy kind. */
+export const ENEMY = {
+  wanderSpeed: 1.2,
+  wanderRange: 3,
+  shakeStun: 1.6,
+  /** Extra pause after a shake before a biter snaps at the dazed. */
+  shakePause: 0.5,
+  biteRange: 1.4,
+  biteVictims: 3,
+  /** Distance at which a slammer rears up. */
+  slamReach: 2,
+  /** Root-knot regrowth, and how long the core stays open once every knot is down. */
+  knotRegrow: 25,
+  knotRegrowLate: 18,
+  coreOpen: 14,
+  /** Pause before a late-phase Bellwether turns and charges again. */
+  rechargeWindup: 0.6,
+  /** Delay between a Lanternroot's paired globs in its late phase. */
+  secondGlobDelay: 0.5,
+} as const;
+
+export type HazardKind = 'glob' | 'pebble' | 'drip' | 'slam' | 'stomp';
+
+export interface HazardSpec {
+  radius: number;
+  /** Seconds from launch to impact. Slams and stomps use the windup instead. */
+  flight: number;
+  /** Most grounded workers it can kill; 0 for hazards that only stun. */
+  kills: number;
+  /** Stun for workers it does not kill. */
+  stun: number;
+  hurtsCaptain: boolean;
+  /** Peak height of the projectile's arc; 0 for hazards with no projectile. */
+  arc: number;
+  /** Starting height of a projectile that falls straight down. */
+  drop: number;
+}
+
+export const HAZARDS: Record<HazardKind, HazardSpec> = {
+  glob: { radius: 1.7, flight: 1, kills: 5, stun: 0, hurtsCaptain: true, arc: 5, drop: 0 },
+  pebble: { radius: 1.7, flight: 1, kills: 3, stun: 0, hurtsCaptain: true, arc: 4, drop: 0 },
+  /** A dewdrop from overhead: it douses, knocking workers down and off their haul. */
+  drip: { radius: 1.6, flight: 1.5, kills: 0, stun: 3, hurtsCaptain: false, arc: 0, drop: 9 },
+  slam: { radius: 3.6, flight: 1.2, kills: 6, stun: 0, hurtsCaptain: true, arc: 0, drop: 0 },
+  stomp: { radius: 5, flight: 1, kills: 0, stun: 1.6, hurtsCaptain: true, arc: 0, drop: 0 },
+};

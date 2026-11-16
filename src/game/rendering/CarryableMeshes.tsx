@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
-import type { Group, Mesh } from 'three';
+import type { Group, Object3D } from 'three';
 import type { Entity } from '../core/ecs';
 import { useGameStore } from '../core/gameStore';
 import type { Carryable } from '../simulation/components';
@@ -15,8 +15,9 @@ interface CarryableMeshProps {
 
 function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
   const group = useRef<Group>(null);
-  const body = useRef<Mesh>(null);
+  const body = useRef<Object3D>(null);
   const { radius, kind } = carryable;
+  const showCount = useGameStore((state) => state.settings.carrierCounts);
 
   useFrame(({ clock }) => {
     const node = group.current;
@@ -36,14 +37,38 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
       {kind === 'treasure' ? (
         <mesh ref={body} castShadow>
           <octahedronGeometry args={[radius * 1.15]} />
-          <meshStandardMaterial
-            color="#ffd257"
-            emissive="#ff9d1a"
-            emissiveIntensity={0.6}
-            metalness={0.4}
-            roughness={0.3}
+          <meshPhysicalMaterial
+            color="#ffc24a"
+            emissive="#ff8a1a"
+            emissiveIntensity={0.75}
+            metalness={0.2}
+            roughness={0.15}
+            clearcoat={1}
+            envMapIntensity={1.6}
             flatShading
           />
+        </mesh>
+      ) : kind === 'bloom' ? (
+        <group ref={body}>
+          <mesh position={[0, -radius * 0.2, 0]}>
+            <cylinderGeometry args={[radius * 0.25, radius * 0.35, radius * 1.2, 10]} />
+            <meshStandardMaterial color="#e8f4ec" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, radius * 0.45, 0]}>
+            <sphereGeometry args={[radius * 0.95, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial
+              color="#5fe6d2"
+              emissive="#2affd0"
+              emissiveIntensity={1.3}
+              roughness={0.35}
+            />
+          </mesh>
+          <pointLight color="#6affe0" intensity={4} distance={5} decay={2} />
+        </group>
+      ) : kind === 'pod' ? (
+        <mesh ref={body} scale={[1, 1.3, 1]} castShadow>
+          <sphereGeometry args={[radius, 14, 10]} />
+          <meshStandardMaterial color="#ff8a3d" emissive="#ff5a1a" emissiveIntensity={0.9} />
         </mesh>
       ) : (
         <mesh ref={body} scale={[1, 0.55, 1]} castShadow>
@@ -51,15 +76,17 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
           <meshStandardMaterial color="#6d6a58" roughness={1} />
         </mesh>
       )}
-      <TextSprite
-        y={radius * 2 + 1.3}
-        getText={() => `${carryable.carriers.length}/${carryable.weight}`}
-      />
+      {showCount && (
+        <TextSprite
+          y={radius * 2 + 1.3}
+          getText={() => `${carryable.carriers.length}/${carryable.weight}`}
+        />
+      )}
     </group>
   );
 }
 
-/** One mesh per Sunshard and carcass, each labelled with carriers held / carriers needed. */
+/** One mesh per Sunshard, Emberpod and carcass, each labelled with carriers held / carriers needed. */
 export function CarryableMeshes({ sim }: { sim: Simulation }) {
   useGameStore((state) => state.entityVersion);
   return (
