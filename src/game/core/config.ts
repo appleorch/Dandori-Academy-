@@ -50,6 +50,8 @@ export const SAP = { weight: 1, maxCarriers: 2, radius: 0.4, seconds: 30, speedU
 export const LOG = { weight: 2, maxCarriers: 4, radius: 0.6 } as const;
 /** Twins delivered this close together earn this fraction of both values as a bonus. */
 export const TWIN = { window: 10, bonus: 0.5 } as const;
+/** Deliveries this close together build a chain. It is shown, never scored. */
+export const CHAIN = { window: 6 } as const;
 
 export const CARRY = {
   baseSpeed: 2.2,

@@ -7,7 +7,7 @@ const TABS: readonly (readonly [MenuScreen, string])[] = [
   ['menu', 'Lessons'],
   ['journal', 'Journal'],
   ['achievements', 'Achievements'],
-  ['settings', 'Settings & save'],
+  ['settings', 'Wardrobe & settings'],
 ];
 
 /** Knocks on the crest needed to be let in, and how long the Emberlings wait for them. */

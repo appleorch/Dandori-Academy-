@@ -34,6 +34,7 @@ export type SimEventType =
   | 'logPlaced'
   | 'bridgeBuilt'
   | 'beaconLit'
+  | 'chain'
   | 'snuff';
 
 export interface SimEvent {

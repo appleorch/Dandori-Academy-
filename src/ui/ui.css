@@ -1569,3 +1569,256 @@ button.chip.descend {
     display: none;
   }
 }
+
+/* ----- Moment-to-moment feedback ----- */
+
+.chip.split.ahead {
+  color: #7dff9a;
+}
+
+.chip.split.behind {
+  color: #ff8a7a;
+}
+
+.chain-banner {
+  align-self: center;
+  margin-bottom: 8px;
+  padding: 4px 16px;
+  border-radius: 999px;
+  background: rgba(28, 20, 16, 0.75);
+  border: 1px solid rgba(255, 179, 71, 0.6);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  animation: chain-pop 0.35s ease-out;
+}
+
+.chain-banner strong {
+  color: var(--accent);
+  font-size: 1.2em;
+}
+
+@keyframes chain-pop {
+  0% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.95);
+    opacity: 1;
+  }
+}
+
+.urgent-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px 30px rgba(200, 30, 20, 0.45);
+  animation: urgent-pulse 1s ease-in-out infinite;
+}
+
+@keyframes urgent-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ----- Results ----- */
+
+.rank.stamp {
+  display: inline-block;
+  animation: stamp 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) 1.45s both;
+}
+
+@keyframes stamp {
+  0% {
+    transform: scale(3) rotate(-12deg);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotate(-3deg);
+    opacity: 1;
+  }
+}
+
+tr.tally {
+  animation: tally-in 0.3s ease-out both;
+}
+
+@keyframes tally-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+.pb {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+}
+
+.pb.new strong,
+.pb.new {
+  color: #7dff9a;
+}
+
+/* ----- Wardrobe ----- */
+
+.wardrobe h2 small {
+  margin-left: 6px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.outfits {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+button.outfit {
+  margin: 0;
+  padding: 10px 8px;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  background: rgba(255, 246, 220, 0.06);
+  color: var(--ink);
+  border: 1px solid rgba(255, 246, 220, 0.2);
+  font-weight: 400;
+}
+
+button.outfit svg {
+  width: 40px;
+  height: 48px;
+}
+
+button.outfit small {
+  font-size: 0.7rem;
+  line-height: 1.25;
+  opacity: 0.8;
+  text-align: center;
+}
+
+button.outfit.worn {
+  border-color: var(--accent);
+  background: rgba(255, 179, 71, 0.18);
+}
+
+/* ----- Title area ----- */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  margin: 0 0 18px;
+  padding: 26px 20px 20px;
+  border-radius: 14px;
+  text-align: center;
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(255, 122, 26, 0.55), transparent 60%),
+    linear-gradient(180deg, #2a1a12, #1a100c);
+  border: 1px solid rgba(255, 179, 71, 0.4);
+}
+
+.hero-title {
+  position: relative;
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.9rem, 6vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #ffe6b0;
+  text-shadow:
+    0 0 18px rgba(255, 140, 40, 0.7),
+    0 2px 0 #4a2210;
+}
+
+.hero-sub {
+  position: relative;
+  margin: 4px 0 14px;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+button.hero-continue {
+  position: relative;
+  width: min(320px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 2px;
+  font-size: 1.15rem;
+  box-shadow: 0 0 22px rgba(255, 150, 40, 0.45);
+}
+
+button.hero-continue small {
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.hero-embers i {
+  position: absolute;
+  bottom: -6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ffb347;
+  box-shadow: 0 0 6px 2px rgba(255, 140, 40, 0.8);
+  animation: ember-rise 4s linear infinite;
+}
+
+@keyframes ember-rise {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(18px, -190px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-embers,
+  .urgent-vignette {
+    display: none;
+  }
+
+  .rank.stamp,
+  tr.tally,
+  .chain-banner {
+    animation: none;
+  }
+}
+
+/* Results: the medal and the buttons first; the story and targets beside them on wide screens. */
+.panel.results {
+  width: min(460px, 100%);
+}
+
+.results-actions {
+  margin-top: 12px;
+}
+
+@media (min-width: 900px) {
+  .panel.results {
+    width: min(900px, 100%);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+}
+
+/* The briefing sits to one side on wide screens, so the flyover can be seen. */
+@media (min-width: 1000px) {
+  .screen.overlay.briefing {
+    place-items: center start;
+    padding-left: 4vw;
+    background: linear-gradient(90deg, rgba(15, 22, 18, 0.75), rgba(15, 22, 18, 0.05) 60%);
+  }
+}

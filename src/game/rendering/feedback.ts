@@ -4,6 +4,9 @@ import { ParticleSystem, type BurstStyle } from './particles';
 
 export interface Popup {
   text: string;
+  color: string;
+  /** Bigger text for the moments that matter. */
+  big: boolean;
   x: number;
   z: number;
   age: number;
@@ -75,8 +78,21 @@ const REACTIONS: Partial<Record<SimEventType, Reaction>> = {
   twin: { height: 2, burst: style(30, GOLD, 5, 6, 1, 0.16) },
   logPlaced: { height: 0.3, burst: style(14, DUST, 3, 2, 0.5, 0.14) },
   bridgeBuilt: { height: 0.3, burst: style(40, DUST, 5, 3, 0.8, 0.18), shake: 0.3 },
+  chain: { height: 2.2, burst: style(14, GOLD, 3, 6, 0.7, 0.12) },
   beaconLit: { height: 1.8, burst: style(36, EMBER, 4, 6, 1, 0.16) },
   snuff: { height: 1.8, burst: style(30, GLOOM, 3, 2, 1.2, 0.2, -0.1), shake: 0.35 },
+};
+
+/** Hit-stop seconds and camera punch for the moments that should land hard. */
+const WEIGHT: Partial<Record<SimEventType, readonly [number, number]>> = {
+  enemyDefeated: [0.07, 0.35],
+  gateBroken: [0.05, 0.3],
+  shieldDown: [0.09, 0.4],
+  phase: [0.12, 0.5],
+  bridgeBuilt: [0.04, 0.3],
+  twin: [0.05, 0.35],
+  captainHurt: [0.1, 0.2],
+  stomp: [0.06, 0.25],
 };
 
 /** How far to the side a sound must be before it sits fully in one ear. */
@@ -94,6 +110,10 @@ export class Feedback {
   readonly popups: Popup[] = [];
   /** Current camera shake strength in world units. */
   shake = 0;
+  /** Brief zoom-in on big moments, 0 to 1; it eases back by itself. */
+  punch = 0;
+  /** Seconds the simulation holds still, so a big hit lands with weight. */
+  hitstop = 0;
   /** Where the listener stands: the Warden. Sounds are panned and faded from here. */
   listenerX = 0;
   listenerZ = 0;
@@ -104,11 +124,26 @@ export class Feedback {
     audio.play(event.type, {
       pan: Math.max(-1, Math.min(1, dx / PAN_RANGE)),
       gain: Math.max(QUIETEST, 1 - distance / HEARING_RANGE),
+      pitch: event.amount,
     });
+    const weight = WEIGHT[event.type];
+    if (weight) {
+      this.hitstop = Math.max(this.hitstop, weight[0]);
+      this.punch = Math.max(this.punch, weight[1]);
+    }
     const reaction = REACTIONS[event.type];
     if (reaction?.burst) this.particles.burst(event.x, reaction.height, event.z, reaction.burst);
     if (reaction?.shake) this.shake = Math.max(this.shake, reaction.shake);
     if (event.type === 'deliver') this.popup(`+${event.amount}`, event.x, event.z);
+    if (event.type === 'chain') {
+      this.popup(
+        `Chain ×${event.amount}`,
+        event.x + 1.5,
+        event.z - 1.5,
+        '#ffb347',
+        event.amount >= 4,
+      );
+    }
     if (event.type === 'grow') this.popup(`+${event.amount} Emberlings`, event.x, event.z + 1.2);
     if (event.type === 'bloom') this.popup('A Glowcap sprouted!', event.x, event.z);
     if (event.type === 'twin') this.popup(`Twin bonus +${event.amount}`, event.x, event.z + 1.2);
@@ -122,14 +157,16 @@ export class Feedback {
     }
   }
 
-  private popup(text: string, x: number, z: number): void {
+  popup(text: string, x: number, z: number, color = '#ffd257', big = false): void {
     if (this.popups.length >= MAX_POPUPS) this.popups.shift();
-    this.popups.push({ text, x, z, age: 0 });
+    this.popups.push({ text, color, big, x, z, age: 0 });
   }
 
   update(dt: number): void {
     this.particles.update(dt);
     this.shake *= Math.exp(-dt * 7);
+    this.punch *= Math.exp(-dt * 5);
+    this.hitstop = Math.max(0, this.hitstop - dt);
     for (const popup of this.popups) popup.age += dt;
     while (this.popups.length > 0 && this.popups[0].age >= POPUP_SECONDS) this.popups.shift();
   }

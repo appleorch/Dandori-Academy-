@@ -130,7 +130,8 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         fov: 42,
         near: 1,
         far: 320,
-        position: [level.captain.x, 22, level.captain.z + 16],
+        // High above the Warden, so the day opens with a swoop down to the field.
+        position: [level.captain.x, 70, level.captain.z + 44],
       }}
     >
       {quality.postFx ? (

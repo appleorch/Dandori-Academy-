@@ -43,6 +43,15 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
         <div className="chip">
           Sunshards {hud.treasuresCollected}/{hud.treasuresTotal} · {hud.treasureValue} pts
         </div>
+        {hud.split !== null && (
+          <div
+            className={hud.split <= 0 ? 'chip split ahead' : 'chip split behind'}
+            title="Compared with your fastest clear, at the same Sunshard"
+          >
+            PB {hud.split <= 0 ? '−' : '+'}
+            {Math.abs(hud.split).toFixed(1)}s
+          </div>
+        )}
         <div className="chip" aria-label={`Warden health ${hud.captainHp}`}>
           {'♥'.repeat(hud.captainHp) || '0'}
         </div>
@@ -88,6 +97,14 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
         <span className="daybar-sun" style={{ left: `${elapsed * 100}%` }} />
       </div>
       <div className="hud-spacer" />
+      {hud.chain >= 2 && (
+        <div key={hud.chain} className="chain-banner" aria-live="polite">
+          Chain <strong>×{hud.chain}</strong>
+        </div>
+      )}
+      {phase === 'playing' && hud.timeLeft <= 30 && hud.timeLeft > 0 && (
+        <div className="urgent-vignette" aria-hidden="true" />
+      )}
       {phase === 'playing' && nearSecret && (
         <button type="button" className="chip knock" onClick={openPoker}>
           Knock on the little door {!touch && <kbd>E</kbd>}

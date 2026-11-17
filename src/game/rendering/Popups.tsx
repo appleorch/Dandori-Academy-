@@ -15,7 +15,7 @@ const SLOTS = 6;
 const WIDTH = 768;
 const HEIGHT = 192;
 
-function draw(texture: CanvasTexture, text: string): void {
+function draw(texture: CanvasTexture, text: string, color: string): void {
   const context = (texture.image as HTMLCanvasElement).getContext('2d');
   if (!context) return;
   context.clearRect(0, 0, WIDTH, HEIGHT);
@@ -26,7 +26,7 @@ function draw(texture: CanvasTexture, text: string): void {
   context.lineWidth = 20;
   context.strokeStyle = '#1c1410';
   context.strokeText(text, WIDTH / 2, HEIGHT / 2);
-  context.fillStyle = '#ffd257';
+  context.fillStyle = color;
   context.fillText(text, WIDTH / 2, HEIGHT / 2);
   texture.needsUpdate = true;
 }
@@ -61,12 +61,17 @@ export function Popups({ fx }: { fx: Feedback }) {
       const popup = fx.popups[i];
       sprite.visible = popup !== undefined;
       if (!popup) continue;
-      if (drawn.current[i] !== popup.text) {
-        drawn.current[i] = popup.text;
-        draw(textures[i], popup.text);
+      const key = `${popup.color}${popup.text}`;
+      if (drawn.current[i] !== key) {
+        drawn.current[i] = key;
+        draw(textures[i], popup.text, popup.color);
       }
       const progress = popup.age / POPUP_SECONDS;
       sprite.position.set(popup.x, 3 + progress * 2.5, popup.z);
+      // Pops in slightly oversized, then settles.
+      const pop = 1 + Math.max(0, 0.35 - progress) * 1.6;
+      const size = (popup.big ? 1.45 : 1) * pop;
+      sprite.scale.set(5 * size, 1.25 * size, 1);
       (sprite.material as SpriteMaterial).opacity = Math.min(1, (1 - progress) * 2.5);
     }
   });

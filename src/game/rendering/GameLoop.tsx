@@ -7,6 +7,7 @@ import type { InputController } from '../commands/input';
 import { FixedClock } from '../core/clock';
 import { SIM_DT } from '../core/config';
 import { useGameStore } from '../core/gameStore';
+import { splitKey } from '../save/saveManager';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { Simulation } from '../simulation/Simulation';
 import { Coach } from '../story/coach';
@@ -65,6 +66,10 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
   const wasFast = useRef(false);
   // Starts true if the scene remounts after the day already ended (a settings change).
   const finished = useRef(sim.ended !== null);
+  // The splits of the best clear, kept from before this day started.
+  const bestSplits = useRef(
+    useGameStore.getState().save.bestSplits[splitKey(sim.level.id, sim.level.difficulty)] ?? null,
+  );
 
   useEffect(() => input.attach(element), [input, element]);
 
@@ -89,7 +94,9 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
       wasFast.current = fast;
     }
     const before = sim.timeLeft;
-    const steps = clock.advance(delta * (fast ? FAST_FORWARD : 1));
+    const delivered = sim.stats.deliveryTimes.length;
+    // During hit-stop the world holds its breath: no steps run and no time is saved up.
+    const steps = fx.hitstop > 0 ? 0 : clock.advance(delta * (fast ? FAST_FORWARD : 1));
     fx.listenerX = sim.captainTransform.x;
     fx.listenerZ = sim.captainTransform.z;
     for (let i = 0; i < steps && !sim.ended; i++) {
@@ -97,6 +104,20 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
       for (const event of sim.events) fx.handle(event);
     }
     fx.update(delta);
+    // Each Sunshard home is compared with the same shard on the best clear so far.
+    for (let i = delivered; i < sim.stats.deliveryTimes.length; i++) {
+      const best = bestSplits.current?.[i];
+      if (best === undefined) continue;
+      const diff = sim.stats.deliveryTimes[i] - best;
+      const { x, z } = sim.level.kiln;
+      fx.popup(
+        `${diff <= 0 ? '−' : '+'}${Math.abs(diff).toFixed(1)}s`,
+        x - 2,
+        z + 2,
+        diff <= 0 ? '#7dff9a' : '#ff8a7a',
+      );
+      store.setSplit(diff);
+    }
     audio.setWhistle(sim.captainState.whistleRadius > 0 && !sim.ended);
     if (before > LAST_CALL_SECONDS && sim.timeLeft <= LAST_CALL_SECONDS) audio.play('warning');
     if (sim.timeLeft <= TICKING_SECONDS && Math.ceil(before) !== Math.ceil(sim.timeLeft)) {

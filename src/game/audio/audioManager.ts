@@ -44,6 +44,7 @@ export type SoundName =
   | 'logPlaced'
   | 'bridgeBuilt'
   | 'beaconLit'
+  | 'chain'
   | 'snuff'
   | 'warning'
   | 'tick'
@@ -569,6 +570,14 @@ class AudioManager {
         [587, 740, 880, 1175].forEach((hz, i) => this.bell(out, hz, 0.6, 0.18, i * 0.09));
         for (let i = 0; i < 6; i++) this.bell(out, rand(2600, 4400), 0.08, 0.08, 0.3 + i * 0.05);
         break;
+      case 'chain': {
+        // Each link of the chain rings a step higher up the scale.
+        const step = Math.min(10, (options?.pitch ?? 2) - 2);
+        const hz = 784 * 2 ** ([0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17][step] / 12);
+        this.bell(out, hz, 0.5, 0.16);
+        this.bell(out, hz * 1.5, 0.4, 0.08, 0.05);
+        break;
+      }
       case 'yourTurn':
         this.bell(out, 659, 0.35, 0.09);
         this.bell(out, 880, 0.45, 0.09, 0.12);

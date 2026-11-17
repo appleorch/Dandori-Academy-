@@ -42,6 +42,10 @@ export interface SimStats {
   enemiesDefeated: number;
   bossesDefeated: string[];
   bloomsCollected: number;
+  /** Seconds into the day at which each Sunshard arrived, in order: the day's splits. */
+  deliveryTimes: number[];
+  /** Longest run of deliveries each within CHAIN.window of the last. */
+  bestChain: number;
 }
 
 export interface WorkerCounts {
@@ -77,6 +81,9 @@ export class Simulation {
   readonly hatchAt: Point;
   /** Seconds of Sap left; while positive every haul moves faster. */
   sapTimer = 0;
+  /** Deliveries in the current chain, and when the last one arrived. */
+  chain = 0;
+  lastDelivery = -Infinity;
   /** Twins that arrived alone, waiting for their partner. */
   readonly twinArrivals = new Map<string, { time: number; value: number }>();
   /** Every solid box: the lesson's walls, water, unbuilt bridges, and gates not yet broken. */
@@ -140,6 +147,8 @@ export class Simulation {
       enemiesDefeated: 0,
       bossesDefeated: [],
       bloomsCollected: 0,
+      deliveryTimes: [],
+      bestChain: 0,
     };
 
     this.captain = this.ecs.create();

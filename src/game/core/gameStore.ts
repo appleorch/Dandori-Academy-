@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { evaluateDay, type ScoreBreakdown } from '../dandori/scoring';
 import { grantAchievement, unlockAchievements } from '../progression/achievements';
 import {
+  bestClearTime,
   bestScore,
   discover,
   emptySave,
@@ -15,6 +16,7 @@ import { damageTaken } from '../enemies/combat';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { DayEnd, Simulation } from '../simulation/Simulation';
 import { LEVELS } from '../world/level';
+import { CHAIN } from './config';
 import { penaltyPerLoss, type Difficulty } from './difficulty';
 import { loadSettings, writeSettings, DEFAULT_SETTINGS, type Settings } from './settings';
 
@@ -45,6 +47,9 @@ export interface HudSnapshot {
   treasuresTotal: number;
   captainHp: number;
   boss: BossSnapshot | null;
+  /** Seconds ahead (negative) or behind (positive) the best clear at the last delivery, or null. */
+  split: number | null;
+  chain: number;
 }
 
 export interface BossSnapshot {
@@ -67,6 +72,10 @@ export interface DayResult {
   firstClear: boolean;
   /** Seconds of the day used. */
   elapsed: number;
+  /** Clear time of this day when every shard came home, and the record it was measured against. */
+  clearTime: number | null;
+  previousBest: number | null;
+  bestChain: number;
   enemiesDefeated: number;
   workersAlive: number;
   /** Ids of achievements earned by this day. */
@@ -121,6 +130,7 @@ interface GameStore {
   /** Replaces all progress, for loading a save file or erasing progress. */
   replaceSave: (save: SaveData) => void;
   publish: (sim: Simulation) => void;
+  setSplit: (split: number) => void;
   finishDay: (sim: Simulation, reason: DayEnd) => void;
 }
 
@@ -145,6 +155,8 @@ function snapshot(sim: Simulation): HudSnapshot {
     treasuresTotal: sim.stats.treasuresTotal,
     captainHp: sim.captainState.hp,
     boss: bossSnapshot(sim),
+    split: null,
+    chain: sim.chain >= 2 && sim.elapsed - sim.lastDelivery <= CHAIN.window ? sim.chain : 0,
   };
 }
 
@@ -283,11 +295,18 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ save: checked });
     },
 
-    publish: (sim) => set({ hud: snapshot(sim), entityVersion: sim.entityVersion }),
+    publish: (sim) =>
+      set((state) => ({
+        hud: { ...snapshot(sim), split: state.hud?.split ?? null },
+        entityVersion: sim.entityVersion,
+      })),
+
+    setSplit: (split) => set((state) => (state.hud ? { hud: { ...state.hud, split } } : {})),
 
     finishDay: (sim, reason) => {
       const { level, stats } = sim;
       const workersAlive = sim.workers.size;
+      const cleared = stats.treasuresCollected.length === stats.treasuresTotal;
       const score = evaluateDay(
         {
           treasureValue: stats.treasureValue,
@@ -318,6 +337,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         dayLength: level.dayLength,
         bossesDefeated: stats.bossesDefeated,
         bloomsCollected: stats.bloomsCollected,
+        splits: cleared ? stats.deliveryTimes : undefined,
       };
       const previous = get().save;
       const { save, unlocked } = unlockAchievements(recordDay(previous, day), day, new Date());
@@ -328,7 +348,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         hint: null,
         nearSecret: false,
         nearDescent: null,
-        hud: snapshot(sim),
+        hud: get().hud ?? snapshot(sim),
         save,
         result: {
           reason,
@@ -342,6 +362,9 @@ export const useGameStore = create<GameStore>((set, get) => {
             bestScore(previous, level.id, 'normal') === 0 &&
             bestScore(previous, level.id, 'hard') === 0,
           elapsed: sim.elapsed,
+          clearTime: cleared ? sim.elapsed : null,
+          previousBest: bestClearTime(previous, level.id, level.difficulty),
+          bestChain: stats.bestChain,
           enemiesDefeated: stats.enemiesDefeated,
           workersAlive,
           difficulty: level.difficulty,

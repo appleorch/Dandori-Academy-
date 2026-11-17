@@ -1,5 +1,7 @@
 import { useFrame } from '@react-three/fiber';
+import { useRef } from 'react';
 import type { InputController } from '../commands/input';
+import { useGameStore } from '../core/gameStore';
 import type { Feedback } from '../rendering/feedback';
 import type { Simulation } from '../simulation/Simulation';
 
@@ -8,6 +10,11 @@ interface CameraRigProps {
   input: InputController;
   fx: Feedback;
 }
+
+/** How far the view leans toward where the Warden is aiming, as a share of the aim distance. */
+const LOOK_AHEAD = 0.28;
+/** How much closer a full camera punch brings the view, as a share of the zoom. */
+const PUNCH = 0.12;
 
 /** Middle of the idle Emberlings, or the Kiln when nobody is idle: where Tab looks. */
 function idleSpot(sim: Simulation): { x: number; z: number } {
@@ -24,16 +31,46 @@ function idleSpot(sim: Simulation): { x: number; z: number } {
   return count > 0 ? { x: x / count, z: z / count } : sim.level.kiln;
 }
 
-/** Fixed-angle overhead camera that eases after the captain. The wheel changes the distance,
- * hits shake it, and holding Tab swings it over to the idle Emberlings. */
+/**
+ * Fixed-angle overhead camera that eases after the captain and leans a little toward
+ * where it is aiming. The wheel changes the distance, big moments punch it in, hits
+ * shake it, and holding Tab swings it over to the idle Emberlings. While the briefing
+ * is up it circles high over the whole field, so the player sees the day's map first.
+ */
 export function CameraRig({ sim, input, fx }: CameraRigProps): null {
+  const lean = useRef({ x: 0, z: 0 });
+
   useFrame(({ camera, clock }, delta) => {
-    const target = input.peek ? idleSpot(sim) : sim.captainTransform;
+    const { level } = sim;
+    if (useGameStore.getState().briefing) {
+      const span = Math.max(level.width, level.depth);
+      const angle = clock.elapsedTime * 0.08;
+      const height = span * 0.75;
+      const ease = 1 - Math.exp(-delta * 1.5);
+      camera.position.x += (Math.sin(angle) * span * 0.18 - camera.position.x) * ease;
+      camera.position.y += (height - camera.position.y) * ease;
+      camera.position.z +=
+        (height * 0.55 + Math.cos(angle) * span * 0.1 - camera.position.z) * ease;
+      camera.lookAt(0, 0, 0);
+      return;
+    }
+
+    const captain = sim.captainTransform;
+    const peek = input.peek;
+    const target = peek ? idleSpot(sim) : captain;
+    // The lean is eased on its own, so a flick of the mouse does not jerk the view.
+    const leanTo = peek ? 0 : LOOK_AHEAD;
+    const follow = 1 - Math.exp(-delta * 3);
+    lean.current.x += ((sim.cursor.x - captain.x) * leanTo - lean.current.x) * follow;
+    lean.current.z += ((sim.cursor.z - captain.z) * leanTo - lean.current.z) * follow;
+
     const ease = 1 - Math.exp(-delta * 6);
-    const { zoom } = input;
-    camera.position.x += (target.x - camera.position.x) * ease;
+    const zoom = input.zoom * (1 - fx.punch * PUNCH);
+    const x = target.x + lean.current.x;
+    const z = target.z + lean.current.z;
+    camera.position.x += (x - camera.position.x) * ease;
     camera.position.y += (zoom * 0.85 - camera.position.y) * ease;
-    camera.position.z += (target.z + zoom * 0.6 - camera.position.z) * ease;
+    camera.position.z += (z + zoom * 0.6 - camera.position.z) * ease;
     camera.lookAt(camera.position.x, 0, camera.position.z - zoom * 0.6);
     // Shake is applied after aiming, so the view jolts without drifting.
     camera.position.x += Math.sin(clock.elapsedTime * 71) * fx.shake;

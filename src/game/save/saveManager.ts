@@ -42,6 +42,11 @@ export interface SaveData {
   totals: SaveTotals;
   /** Ids of side lessons whose way down has been found. */
   discovered: string[];
+  /**
+   * Splits of the fastest clear per lesson and difficulty (key `id` or `id:hard`): the time
+   * each Sunshard arrived. The last entry is the clear time.
+   */
+  bestSplits: Record<string, number[]>;
 }
 
 export interface DayRecord {
@@ -63,6 +68,8 @@ export interface DayRecord {
   /** Kinds of boss beaten during the day. */
   bossesDefeated: readonly string[];
   bloomsCollected: number;
+  /** Arrival time of each Sunshard, when every one came home; otherwise empty. */
+  splits?: readonly number[];
 }
 
 /** The subset of the Web Storage API the save manager needs. */
@@ -82,6 +89,7 @@ export function emptySave(): SaveData {
     achievements: {},
     totals: { days: 0, treasures: 0, enemies: 0, workersLost: 0 },
     discovered: [],
+    bestSplits: {},
   };
 }
 
@@ -105,6 +113,40 @@ function parseTotals(value: unknown): SaveTotals {
     if (typeof entry === 'number' && Number.isFinite(entry) && entry >= 0) totals[key] = entry;
   }
   return totals;
+}
+
+function parseSplits(value: unknown): Record<string, number[]> {
+  if (!isRecord(value)) return {};
+  const splits: Record<string, number[]> = {};
+  for (const [key, times] of Object.entries(value)) {
+    if (
+      Array.isArray(times) &&
+      times.length > 0 &&
+      times.every((t) => typeof t === 'number' && Number.isFinite(t))
+    ) {
+      splits[key] = times as number[];
+    }
+  }
+  return splits;
+}
+
+/** Where a lesson's best splits are kept for a difficulty. */
+export function splitKey(levelId: string, difficulty: Difficulty): string {
+  return difficulty === 'hard' ? `${levelId}:hard` : levelId;
+}
+
+/** The splits record with `splits` kept if they finish faster than the stored ones. */
+function fasterSplits(
+  record: Record<string, number[]>,
+  key: string,
+  splits: readonly number[] | undefined,
+): Record<string, number[]> {
+  if (!splits || splits.length === 0) return record;
+  const best = record[key];
+  if (best && best.length === splits.length && best[best.length - 1] <= splits[splits.length - 1]) {
+    return record;
+  }
+  return { ...record, [key]: [...splits] };
 }
 
 /** Validates parsed JSON and fills in fields added after version 1 first shipped. */
@@ -139,6 +181,7 @@ export function parseSave(value: unknown): SaveData | null {
     discovered: Array.isArray(value.discovered)
       ? value.discovered.filter((id): id is string => typeof id === 'string')
       : [],
+    bestSplits: parseSplits(value.bestSplits),
   };
 }
 
@@ -223,6 +266,7 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
     bestScoresHard,
     achievements: save.achievements,
     discovered: save.discovered,
+    bestSplits: fasterSplits(save.bestSplits, splitKey(day.levelId, day.difficulty), day.splits),
     totals: {
       days: save.totals.days + 1,
       treasures: save.totals.treasures + day.treasureIds.length,
@@ -236,4 +280,14 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
 export function discover(save: SaveData, levelId: string): SaveData {
   if (save.discovered.includes(levelId)) return save;
   return { ...save, discovered: [...save.discovered, levelId] };
+}
+
+/** The fastest clear time on record for a lesson, or null. */
+export function bestClearTime(
+  save: SaveData,
+  levelId: string,
+  difficulty: Difficulty,
+): number | null {
+  const splits = save.bestSplits[splitKey(levelId, difficulty)];
+  return splits ? splits[splits.length - 1] : null;
 }

@@ -93,6 +93,11 @@ On a phone or tablet the game shows touch controls instead:
 - **Proctor Ashwick** offers a line of advice now and then: the controls in the first lessons,
   and after that what you seem to be missing (idle Emberlings, a winded boss, dazed workers
   about to be eaten). Settings can turn it off.
+- **Personal bests and chains**: each Sunshard delivered is compared with the same shard on your
+  fastest clear of that lesson (green ahead, red behind), and deliveries within six seconds of
+  each other build a chain. Neither changes the score; both are there to chase.
+- **Wardrobe**: outfits for the Warden, earned with medals and feats, chosen under Wardrobe &
+  settings (`src/game/progression/outfits.ts`).
 - **Emberpods** are light orange hauls. One carrier takes a pod home, where it hatches into two
   new Emberlings.
 - You can throw over walls. Hauls cannot go over them, so they take the long way home.

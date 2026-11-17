@@ -31,6 +31,17 @@ export function LessonSelect() {
   const hard = difficulty === 'hard';
   const lastStage = LEVELS.find((level) => level.id === lastPlayed)?.stage ?? 1;
 
+  // Continue: the first open lesson not yet passed, or the last one played once everything is.
+  const next =
+    MAIN_LEVELS.find((level) => {
+      if (level.stage > save.stage) return false;
+      const rank = bestRank(save, level.id);
+      return rank === null || rank === 'Bronze';
+    }) ??
+    LEVELS.find((level) => level.id === lastPlayed) ??
+    MAIN_LEVELS[0];
+  const fresh = save.totals.days === 0;
+
   const lockReason = (level: LevelDefinition): string | null => {
     if (level.side) {
       if (!save.discovered.includes(level.id)) {
@@ -50,6 +61,31 @@ export function LessonSelect() {
     <main className="screen">
       <div className="panel wide">
         <MenuNav />
+        <header className="hero">
+          <span className="hero-embers" aria-hidden="true">
+            {Array.from({ length: 14 }, (_, i) => (
+              <i
+                key={i}
+                style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.53) % 4}s` }}
+              />
+            ))}
+          </span>
+          <p className="hero-title">Dandori Academy</p>
+          <p className="hero-sub">
+            {fresh ? 'Your first day at the Academy.' : `Academy total ${save.score} pts`}
+          </p>
+          <button
+            type="button"
+            className="hero-continue"
+            onClick={() => startDay(next.id)}
+            autoFocus
+          >
+            {fresh ? 'Begin the first lesson' : 'Continue'}
+            <small>
+              {next.stage}. {next.name}
+            </small>
+          </button>
+        </header>
         <div className="lesson-head">
           <h1>Choose a lesson</h1>
           <span className="segmented" role="radiogroup" aria-label="Mode">
@@ -112,7 +148,6 @@ export function LessonSelect() {
                         type="button"
                         className="lesson"
                         disabled={locked !== null}
-                        autoFocus={level.id === lastPlayed}
                         onClick={() => startDay(level.id)}
                       >
                         <span className="lesson-number">{level.stage}</span>

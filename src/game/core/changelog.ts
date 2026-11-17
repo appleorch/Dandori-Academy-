@@ -8,6 +8,20 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.14.0',
+    date: '2026-11-17',
+    changes: [
+      'Personal-best splits: every Sunshard you bring home is compared with the same shard on your fastest clear, shown at the Kiln and as a PB chip on the HUD. Results show your clear time against your best.',
+      'Delivery chains: Sunshards and Glowcaps arriving within six seconds of each other build a chain, with a rising chime and a banner. It is for show, and the results show your longest chain.',
+      'Big moments hit harder: a brief freeze and a camera punch when an enemy falls, a gate breaks, a shield drops, a bridge is finished or a boss changes phase.',
+      'The camera leans a little toward where you aim, swoops down at the start of a day, and circles the whole map while the briefing is up. The briefing now sits to one side on wide screens so the map can be seen.',
+      'The last thirty seconds pulse red at the edges of the screen.',
+      'Results tally up line by line and the medal stamps down with its fanfare. On wide screens the medal and buttons sit beside the journal and targets, so nothing is scrolled out of view.',
+      'Wardrobe: eight outfits for the Warden, earned with medals, boss wins, Hard mode and one less obvious place. Choose one under Wardrobe & settings.',
+      'The lesson list opens with a title and a Continue button that takes you to the next lesson to pass.',
+    ],
+  },
+  {
     version: '0.13.0',
     date: '2026-11-17',
     changes: [

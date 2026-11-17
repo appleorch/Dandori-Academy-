@@ -1,12 +1,15 @@
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import type { Group } from 'three';
+import { useGameStore } from '../core/gameStore';
+import { wornOutfit } from '../progression/outfits';
 import type { Simulation } from '../simulation/Simulation';
 
-/** The Warden. Blinks while invulnerable after a hit. */
+/** The Warden, in the outfit the player chose. Blinks while invulnerable after a hit. */
 export function CaptainMesh({ sim }: { sim: Simulation }) {
   const group = useRef<Group>(null);
   const stride = useRef(0);
+  const look = useGameStore((state) => wornOutfit(state.save, state.settings.outfit));
 
   useFrame(() => {
     const node = group.current;
@@ -26,11 +29,11 @@ export function CaptainMesh({ sim }: { sim: Simulation }) {
       {/* Suit */}
       <mesh position={[0, 0.62, 0]} castShadow>
         <capsuleGeometry args={[0.36, 0.45, 8, 18]} />
-        <meshStandardMaterial color="#2f6f8f" roughness={0.55} />
+        <meshStandardMaterial color={look.suit} roughness={0.55} />
       </mesh>
       <mesh position={[0, 0.5, 0]} castShadow>
         <torusGeometry args={[0.37, 0.06, 8, 24]} />
-        <meshStandardMaterial color="#c9a24a" metalness={0.6} roughness={0.35} />
+        <meshStandardMaterial color={look.trim} metalness={0.6} roughness={0.35} />
       </mesh>
       {/* Pack with a lamp */}
       <mesh position={[0, 0.78, -0.36]} castShadow>
@@ -43,7 +46,7 @@ export function CaptainMesh({ sim }: { sim: Simulation }) {
       </mesh>
       <mesh position={[0.18, 1.4, -0.38]}>
         <sphereGeometry args={[0.07, 10, 8]} />
-        <meshBasicMaterial color={[3, 2.2, 0.8]} toneMapped={false} />
+        <meshBasicMaterial color={look.lamp} toneMapped={false} />
       </mesh>
       {/* Head and glass dome */}
       <mesh position={[0, 1.36, 0]} castShadow>
@@ -71,16 +74,16 @@ export function CaptainMesh({ sim }: { sim: Simulation }) {
       {/* Wide-brimmed hat */}
       <mesh position={[0, 1.78, 0]} castShadow>
         <coneGeometry args={[0.66, 0.36, 28]} />
-        <meshStandardMaterial color="#e8c15a" roughness={0.7} />
+        <meshStandardMaterial color={look.hat} roughness={0.7} />
       </mesh>
       {/* Hand lantern */}
       <mesh position={[0.44, 0.78, 0.26]}>
         <sphereGeometry args={[0.12, 12, 10]} />
-        <meshBasicMaterial color={[2.4, 1.9, 0.8]} toneMapped={false} />
+        <meshBasicMaterial color={look.lamp} toneMapped={false} />
       </mesh>
       <pointLight
         position={[0.44, 0.9, 0.3]}
-        color="#ffd890"
+        color={look.lamp}
         intensity={3}
         distance={5}
         decay={2}
