@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { audio } from '../game/audio/audioManager';
 import { useGameStore, type BossSnapshot } from '../game/core/gameStore';
 import { formatTime } from './format';
+import { SprocketPortrait } from './Portrait';
 import { rankTargets } from '../game/dandori/targets';
 import { LEVELS, type LevelDefinition } from '../game/world/level';
 
@@ -19,6 +20,7 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
   const phase = useGameStore((state) => state.phase);
   const pause = useGameStore((state) => state.pause);
   const hint = useGameStore((state) => state.hint);
+  const sprocket = useGameStore((state) => state.sprocket);
   const nearSecret = useGameStore((state) => state.nearSecret);
   const openPoker = useGameStore((state) => state.openPoker);
   const nearDescent = useGameStore((state) => state.nearDescent);
@@ -114,6 +116,15 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
         <button type="button" className="chip knock descend" onClick={() => startDay(below.id)}>
           Go down to {below.name} (leaves this lesson) {!touch && <kbd>E</kbd>}
         </button>
+      )}
+      {phase === 'playing' && sprocket && (
+        <div key={sprocket.id} className={`sprocket-banner ${sprocket.mood}`} role="status">
+          <SprocketPortrait mood={sprocket.mood} />
+          <p>
+            <strong>Headmaster Sprocket</strong>
+            {sprocket.text}
+          </p>
+        </div>
       )}
       {phase === 'playing' && hint && (
         <p className="coach" role="status">

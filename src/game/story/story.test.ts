@@ -40,7 +40,7 @@ describe('the story', () => {
 
   it('gives each term its own setting', () => {
     const themes = CHAPTERS.map((chapter) => LEVELS[chapter.from - 1].theme);
-    expect(themes).toEqual(['meadow', 'autumn', 'marsh', 'dusk', 'cave', 'cave']);
+    expect(themes).toEqual(['meadow', 'autumn', 'marsh', 'dusk', 'cave', 'terrarium', 'cave']);
   });
 
   it('opens and closes with a few pages', () => {

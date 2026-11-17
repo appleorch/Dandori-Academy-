@@ -6,9 +6,11 @@ import { useGameStore } from '../core/gameStore';
 import { CameraRig } from '../camera/CameraRig';
 import type { InputController } from '../commands/input';
 import { Simulation } from '../simulation/Simulation';
+import { heightAt } from '../world/heightMap';
 import type { GraphicsLevel } from '../core/settings';
 import type { LevelDefinition } from '../world/level';
 import { AimArc } from './AimArc';
+import { Architecture } from './Architecture';
 import { Beacons } from './Beacons';
 import { Atmosphere } from './Atmosphere';
 import { CaptainMesh } from './CaptainMesh';
@@ -69,10 +71,11 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   const pauseOnBlur = useGameStore((state) => state.settings.pauseOnBlur);
 
   useEffect(() => {
+    fx.ground = (x, z) => heightAt(level, x, z);
     const created = new Simulation(level);
     setSim(created);
     return () => created.dispose();
-  }, [level]);
+  }, [level, fx]);
 
   useEffect(() => {
     input.zoomSpeed = zoomSpeed;
@@ -140,7 +143,8 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         <OverlayInMainPass />
       )}
       <Terrain level={level} />
-      <Scenery level={level} />
+      <Architecture level={level} />
+      <Scenery level={level} sim={sim ?? undefined} />
       {sim && (
         <>
           <GameLoop sim={sim} input={input} fx={fx} />

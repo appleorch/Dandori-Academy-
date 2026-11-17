@@ -10,6 +10,7 @@ const KEYBOARD: ControlList = [
   ['Q', 'Dismiss the squad'],
   ['Shift', 'Hold to fast-forward the day'],
   ['Tab', 'Hold to look at your idle Emberlings'],
+  ['V', 'Tactical view: pull right out over the whole course'],
   ['Esc', 'Pause (then R restarts the lesson)'],
   ['Wheel', 'Zoom'],
 ];
@@ -21,6 +22,7 @@ const TOUCH: ControlList = [
   ['Charge button', 'Send the whole squad to where you last aimed'],
   ['Dismiss button', 'Dismiss the squad'],
   ['Fast-forward button', 'Hold to hurry the day along'],
+  ['Map button', 'Tactical view over the whole course'],
   ['Pinch', 'Zoom'],
 ];
 

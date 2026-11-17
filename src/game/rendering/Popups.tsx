@@ -67,7 +67,7 @@ export function Popups({ fx }: { fx: Feedback }) {
         draw(textures[i], popup.text, popup.color);
       }
       const progress = popup.age / POPUP_SECONDS;
-      sprite.position.set(popup.x, 3 + progress * 2.5, popup.z);
+      sprite.position.set(popup.x, popup.ground + 3 + progress * 2.5, popup.z);
       // Pops in slightly oversized, then settles.
       const pop = 1 + Math.max(0, 0.35 - progress) * 1.6;
       const size = (popup.big ? 1.45 : 1) * pop;

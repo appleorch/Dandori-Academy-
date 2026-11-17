@@ -7,6 +7,8 @@ export interface Popup {
   color: string;
   /** Bigger text for the moments that matter. */
   big: boolean;
+  /** Height of the ground where it was earned. */
+  ground: number;
   x: number;
   z: number;
   age: number;
@@ -114,6 +116,8 @@ export class Feedback {
   punch = 0;
   /** Seconds the simulation holds still, so a big hit lands with weight. */
   hitstop = 0;
+  /** Height of the ground at a point, so effects on raised terraces sit on them. */
+  ground: (x: number, z: number) => number = () => 0;
   /** Where the listener stands: the Warden. Sounds are panned and faded from here. */
   listenerX = 0;
   listenerZ = 0;
@@ -132,7 +136,10 @@ export class Feedback {
       this.punch = Math.max(this.punch, weight[1]);
     }
     const reaction = REACTIONS[event.type];
-    if (reaction?.burst) this.particles.burst(event.x, reaction.height, event.z, reaction.burst);
+    if (reaction?.burst) {
+      const lift = this.ground(event.x, event.z);
+      this.particles.burst(event.x, reaction.height + lift, event.z, reaction.burst);
+    }
     if (reaction?.shake) this.shake = Math.max(this.shake, reaction.shake);
     if (event.type === 'deliver') this.popup(`+${event.amount}`, event.x, event.z);
     if (event.type === 'chain') {
@@ -159,7 +166,7 @@ export class Feedback {
 
   popup(text: string, x: number, z: number, color = '#ffd257', big = false): void {
     if (this.popups.length >= MAX_POPUPS) this.popups.shift();
-    this.popups.push({ text, color, big, x, z, age: 0 });
+    this.popups.push({ text, color, big, x, z, ground: this.ground(x, z), age: 0 });
   }
 
   update(dt: number): void {

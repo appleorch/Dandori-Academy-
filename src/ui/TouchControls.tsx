@@ -87,6 +87,16 @@ export function TouchControls({ input }: { input: InputController }) {
       >
         ▶▶
       </button>
+      <button
+        type="button"
+        className="touch-button map"
+        aria-label="Tactical view"
+        onPointerDown={() => {
+          input.tactical = !input.tactical;
+        }}
+      >
+        Map
+      </button>
       <div className="touch-buttons">
         <button
           type="button"

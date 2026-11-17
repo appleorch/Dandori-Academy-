@@ -8,6 +8,8 @@ import { HARD_UNLOCK_RANK, hardUnlocked, UNLOCK_RANK } from '../game/save/saveMa
 import type { DayEnd } from '../game/simulation/Simulation';
 import { LEVELS, MAIN_LEVELS, type LevelDefinition } from '../game/world/level';
 import { RankTargets } from './RankTargets';
+import { SprocketPortrait } from './Portrait';
+import { evaluation } from '../game/story/headmaster';
 
 const HEADLINES: Record<DayEnd, string> = {
   allCollected: 'Every Sunshard is home',
@@ -107,6 +109,13 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
             {HEADLINES[result.reason]}
           </p>
           <h1 className={`rank stamp rank-${score.rank.toLowerCase()}`}>{score.rank}</h1>
+          <figure className="speech verdict">
+            <SprocketPortrait mood={score.rank === 'Bronze' ? 'muse' : 'cheer'} />
+            <div>
+              <blockquote>{evaluation(score.rank, level.id)}</blockquote>
+              <figcaption>Headmaster Sprocket</figcaption>
+            </div>
+          </figure>
           <table>
             <tbody>
               <TallyRow
@@ -151,7 +160,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
                   : `Earn ${UNLOCK_RANK} or better to open the next lesson.`}
               </p>
             )}
-            {level.id === 'the-undercroft' && result.reason === 'allCollected' && (
+            {level.id === 'restoration-day' && result.reason === 'allCollected' && (
               <button type="button" onClick={() => showStory('epilogue')} data-primary>
                 Read the ending
               </button>

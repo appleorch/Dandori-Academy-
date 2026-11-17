@@ -19,7 +19,7 @@ export function JournalScreen() {
   const save = useGameStore((state) => state.save);
   const showStory = useGameStore((state) => state.showStory);
   const written = LEVELS.filter((level) => passed(save, level.id)).length;
-  const finished = passed(save, 'the-undercroft');
+  const finished = passed(save, 'restoration-day');
 
   return (
     <main className="screen">

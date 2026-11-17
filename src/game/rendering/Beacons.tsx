@@ -6,6 +6,7 @@ import { BEACON } from '../core/config';
 import { useGameStore } from '../core/gameStore';
 import type { Point } from '../navigation/NavGrid';
 import type { Simulation } from '../simulation/Simulation';
+import { heightAt } from '../world/heightMap';
 import { TextSprite } from './TextSprite';
 import { themeOf } from './theme';
 
@@ -14,7 +15,7 @@ import { themeOf } from './theme';
  * surroundings and draws the ring that marks where hauls are delivered; in the dark,
  * a wider ring shows how far its glow reaches.
  */
-function BeaconMesh({ beacon, dark }: { beacon: Beacon; dark: boolean }) {
+function BeaconMesh({ beacon, dark, ground }: { beacon: Beacon; dark: boolean; ground: number }) {
   const flames = useRef<Group>(null);
   const light = useRef<PointLight>(null);
   const bowl = useRef<MeshStandardMaterial>(null);
@@ -46,7 +47,7 @@ function BeaconMesh({ beacon, dark }: { beacon: Beacon; dark: boolean }) {
   });
 
   return (
-    <group position={[beacon.x, 0, beacon.z]}>
+    <group position={[beacon.x, ground, beacon.z]}>
       <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.45, 0.7, 1, 8]} />
         <meshStandardMaterial color="#6a6a78" roughness={0.9} flatShading />
@@ -214,7 +215,7 @@ function Lantern({ sim, power }: { sim: Simulation; power: number }) {
   useFrame(({ clock }) => {
     if (!light.current) return;
     const { x, z } = sim.captainTransform;
-    light.current.position.set(x, 3.6, z);
+    light.current.position.set(x, heightAt(sim.level, x, z) + 3.6, z);
     light.current.intensity = power + Math.sin(clock.elapsedTime * 9) * power * 0.05;
   });
   return <pointLight ref={light} color="#ffd9a0" distance={30} decay={1.2} />;
@@ -226,7 +227,12 @@ export function Beacons({ sim }: { sim: Simulation }) {
   return (
     <>
       {sim.beacons.map((beacon) => (
-        <BeaconMesh key={`${beacon.x}:${beacon.z}`} beacon={beacon} dark={look.lantern > 0} />
+        <BeaconMesh
+          key={`${beacon.x}:${beacon.z}`}
+          beacon={beacon}
+          dark={look.lantern > 0}
+          ground={heightAt(sim.level, beacon.x, beacon.z)}
+        />
       ))}
       {look.lantern > 0 && <Lantern sim={sim} power={look.lantern} />}
       {sim.level.secret && <SecretDoor at={sim.level.secret} />}

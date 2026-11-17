@@ -20,6 +20,8 @@ import { ENEMY, ENEMY_SPECS, type EnemyKind } from '../enemies/enemyKinds';
 import type { Box } from '../navigation/NavGrid';
 import type { Enemy } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
+import type { GateSpawn } from '../world/levelTypes';
+import { heightAt } from '../world/heightMap';
 
 const BAR_WIDTH = 2.2;
 /** Seconds a hit makes an enemy glow. */
@@ -527,6 +529,69 @@ function GateBody({ box }: { box: Box }) {
   );
 }
 
+/**
+ * A crystal gate: a wall of faceted crystal grown across an old doorway of the Academy,
+ * glowing from inside, set in a frame of carved stone with a keystone over the top.
+ */
+function CrystalGateBody({ box }: { box: Box }) {
+  const long = box.w >= box.d;
+  const span = long ? box.w : box.d;
+  const count = Math.max(4, Math.round(span * 1.4));
+  return (
+    <>
+      {Array.from({ length: count }, (_, i) => {
+        const t = (i + 0.5) / count - 0.5;
+        const along = t * span;
+        const height = 1.4 + ((i * 0.618) % 1) * 1.6;
+        const lean = Math.sin(i * 2.7) * 0.25;
+        return (
+          <mesh
+            key={i}
+            position={[
+              long ? along : Math.sin(i) * 0.2,
+              height / 2,
+              long ? Math.sin(i) * 0.2 : along,
+            ]}
+            rotation={long ? [lean, i, 0] : [0, i, lean]}
+            castShadow
+          >
+            <coneGeometry args={[0.32 + ((i * 0.37) % 1) * 0.2, height, 6]} />
+            <meshPhysicalMaterial
+              color={i % 3 ? '#a8e8ff' : '#d0b0ff'}
+              emissive={i % 3 ? '#3ab8ff' : '#8a5aff'}
+              emissiveIntensity={0.7}
+              transparent
+              opacity={0.82}
+              roughness={0.05}
+              clearcoat={1}
+              flatShading
+            />
+          </mesh>
+        );
+      })}
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          position={[long ? side * (span / 2 + 0.3) : 0, 1.6, long ? 0 : side * (span / 2 + 0.3)]}
+          castShadow
+        >
+          <boxGeometry args={[0.6, 3.2, 0.6]} />
+          <meshStandardMaterial color="#d8ccb4" roughness={0.9} />
+        </mesh>
+      ))}
+      <mesh position={[0, 3.35, 0]} castShadow>
+        <boxGeometry args={long ? [span + 1.2, 0.4, 0.7] : [0.7, 0.4, span + 1.2]} />
+        <meshStandardMaterial color="#cfc2a8" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 3.6, 0]}>
+        <octahedronGeometry args={[0.3]} />
+        <meshBasicMaterial color={[2.2, 1.6, 0.6]} toneMapped={false} />
+      </mesh>
+      <pointLight position={[0, 1.6, 0]} color="#7acaff" intensity={4} distance={6} decay={1.8} />
+    </>
+  );
+}
+
 /** Cave vermin: a low, glossy carapace on six quick legs, with eyes that shine in the dark. */
 function SkitterBody({ r, gait, jaw }: { r: number; gait: Gait; jaw: React.Ref<Group> }) {
   return (
@@ -748,7 +813,7 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
     last.current = { x: transform.x, z: transform.z, hp: enemy.hp };
     gait.phase += moved * (5 / Math.max(0.6, r));
     gait.stride += ((moved > 0.004 ? 1 : 0) - gait.stride) * Math.min(1, delta * 8);
-    node.position.set(transform.x, 0, transform.z);
+    node.position.set(transform.x, heightAt(sim.level, transform.x, transform.z), transform.z);
     model.rotation.set(0, enemy.shape ? 0 : transform.facing, 0);
     model.position.set(0, 0, 0);
     model.scale.setScalar(1);
@@ -886,7 +951,12 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
         {enemy.kind === 'bellwether' && <BellwetherBody r={r} bell={bell} gait={gait} />}
         {enemy.kind === 'skitter' && <SkitterBody r={r} gait={gait} jaw={jaw} />}
         {enemy.kind === 'snuffer' && <SnufferBody r={r} gait={gait} belly={belly} />}
-        {enemy.shape && <GateBody box={enemy.shape} />}
+        {enemy.shape &&
+          ((enemy.shape as GateSpawn).style === 'crystal' ? (
+            <CrystalGateBody box={enemy.shape} />
+          ) : (
+            <GateBody box={enemy.shape} />
+          ))}
         {enemy.kind === 'mound' && (
           <MoundBody
             r={r}

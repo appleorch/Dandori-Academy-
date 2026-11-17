@@ -1,10 +1,13 @@
 import { useFrame } from '@react-three/fiber';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import type { Group, Object3D } from 'three';
 import type { Entity } from '../core/ecs';
 import { useGameStore } from '../core/gameStore';
 import type { Carryable } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
+import { heightAt } from '../world/heightMap';
+import { relicFor, type Relic } from '../story/relics';
+import { RelicModel } from './models/RelicModel';
 import { TextSprite } from './TextSprite';
 
 const RUNES = ['#7fe3ff', '#ff8af0', '#b6ff6a', '#ffd257'];
@@ -17,65 +20,28 @@ function runeColor(rune: string): string {
 }
 
 /** The haul itself, by kind: shard, Dewglass, Lodestone, Glowcap, pod, Sapdrop, Span-log or carcass. */
-function HaulBody({ carryable }: { carryable: Carryable }) {
+function HaulBody({ carryable, relic }: { carryable: Carryable; relic: Relic }) {
   const { radius, kind, variant } = carryable;
-  if (kind === 'treasure' && variant === 'dewglass') {
-    return (
-      <>
-        <mesh castShadow>
-          <icosahedronGeometry args={[radius * 1.1, 0]} />
-          <meshPhysicalMaterial
-            color={carryable.cracked ? '#9fb8c4' : '#d8f4ff'}
-            transparent
-            opacity={0.75}
-            roughness={0.05}
-            clearcoat={1}
-            envMapIntensity={2.4}
-            emissive="#4fb8ff"
-            emissiveIntensity={carryable.cracked ? 0.05 : 0.35}
-            flatShading
-          />
-        </mesh>
-        {carryable.cracked && (
-          <mesh scale={1.02}>
-            <icosahedronGeometry args={[radius * 1.1, 0]} />
-            <meshBasicMaterial color="#2a3a44" wireframe />
-          </mesh>
-        )}
-      </>
-    );
-  }
-  if (kind === 'treasure' && variant === 'lodestone') {
-    return (
-      <>
-        <mesh castShadow>
-          <dodecahedronGeometry args={[radius * 1.1, 0]} />
-          <meshStandardMaterial color="#4a4f58" metalness={0.6} roughness={0.45} flatShading />
-        </mesh>
-        {[0, 1, 2].map((i) => (
-          <mesh key={i} rotation={[i * 1.1, i * 2.1, 0]} scale={[1.12, 0.06, 1.12]}>
-            <sphereGeometry args={[radius, 12, 6]} />
-            <meshStandardMaterial color="#ffc24a" emissive="#ff8a1a" emissiveIntensity={0.8} />
-          </mesh>
-        ))}
-      </>
-    );
-  }
   if (kind === 'treasure') {
     return (
-      <mesh castShadow>
-        <octahedronGeometry args={[radius * 1.15]} />
-        <meshPhysicalMaterial
-          color="#ffc24a"
-          emissive="#ff8a1a"
-          emissiveIntensity={0.75}
-          metalness={0.2}
-          roughness={0.15}
-          clearcoat={1}
-          envMapIntensity={1.6}
-          flatShading
-        />
-      </mesh>
+      <>
+        <RelicModel relic={relic} r={radius} cracked={carryable.cracked} />
+        {carryable.cracked && (
+          // Hairline cracks across a damaged fragile relic.
+          <mesh scale={1.04}>
+            <icosahedronGeometry args={[radius * 1.05, 1]} />
+            <meshBasicMaterial color="#2a3a44" wireframe transparent opacity={0.5} />
+          </mesh>
+        )}
+        {variant === 'lodestone' &&
+          // A Lodestone's pull, shown as glowing rings turning round it.
+          [0, 1, 2].map((i) => (
+            <mesh key={i} rotation={[i * 1.1, i * 2.1, 0]} scale={[1.25, 0.04, 1.25]}>
+              <sphereGeometry args={[radius, 16, 6]} />
+              <meshStandardMaterial color="#ffc24a" emissive="#ff8a1a" emissiveIntensity={0.8} />
+            </mesh>
+          ))}
+      </>
     );
   }
   if (kind === 'bloom') {
@@ -99,11 +65,53 @@ function HaulBody({ carryable }: { carryable: Carryable }) {
     );
   }
   if (kind === 'pod') {
+    // An Emberpod: a seed case of glowing segments in a cup of green sepals, with a curled tip.
     return (
-      <mesh scale={[1, 1.3, 1]} castShadow>
-        <sphereGeometry args={[radius, 14, 10]} />
-        <meshStandardMaterial color="#ff8a3d" emissive="#ff5a1a" emissiveIntensity={0.9} />
-      </mesh>
+      <group>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <mesh
+            key={i}
+            position={[
+              Math.sin((i / 5) * Math.PI * 2) * radius * 0.28,
+              0,
+              Math.cos((i / 5) * Math.PI * 2) * radius * 0.28,
+            ]}
+            scale={[0.55, 1.25, 0.55]}
+            castShadow
+          >
+            <sphereGeometry args={[radius, 12, 10]} />
+            <meshStandardMaterial
+              color="#ff8a3d"
+              emissive="#ff5a1a"
+              emissiveIntensity={0.9}
+              roughness={0.4}
+            />
+          </mesh>
+        ))}
+        {[0, 1, 2, 3, 4].map((i) => (
+          <mesh
+            key={`s${i}`}
+            position={[
+              Math.sin((i / 5) * Math.PI * 2 + 0.6) * radius * 0.6,
+              -radius * 0.75,
+              Math.cos((i / 5) * Math.PI * 2 + 0.6) * radius * 0.6,
+            ]}
+            rotation={[
+              Math.cos((i / 5) * Math.PI * 2 + 0.6) * 0.9,
+              0,
+              -Math.sin((i / 5) * Math.PI * 2 + 0.6) * 0.9,
+            ]}
+            scale={[0.5, 0.15, 1]}
+          >
+            <sphereGeometry args={[radius * 0.7, 8, 6]} />
+            <meshStandardMaterial color="#4f8a3c" roughness={0.7} />
+          </mesh>
+        ))}
+        <mesh position={[0, radius * 1.3, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <torusGeometry args={[radius * 0.18, radius * 0.06, 6, 12, Math.PI * 1.5]} />
+          <meshStandardMaterial color="#5a8a3a" roughness={0.7} />
+        </mesh>
+      </group>
     );
   }
   if (kind === 'sap') {
@@ -189,6 +197,10 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
   const body = useRef<Object3D>(null);
   const { radius, kind } = carryable;
   const showCount = useGameStore((state) => state.settings.carrierCounts);
+  const relic = useMemo(
+    () => relicFor(sim.level.id, carryable.id, carryable.variant),
+    [sim, carryable],
+  );
 
   useFrame(({ clock }) => {
     const node = group.current;
@@ -197,11 +209,16 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
     node.visible = transform !== undefined;
     if (!transform) return;
     const lifted = carryable.carriers.length >= carryable.weight;
-    node.position.set(transform.x, 0, transform.z);
+    node.position.set(transform.x, heightAt(sim.level, transform.x, transform.z), transform.z);
     body.current.position.y =
       radius + (lifted ? 0.35 + Math.sin(clock.elapsedTime * 10) * 0.05 : 0);
-    if (kind === 'treasure' && carryable.variant !== 'lodestone') {
-      body.current.rotation.y = clock.elapsedTime * 0.8;
+    if (kind === 'treasure') {
+      // Relics turn slowly and bob on their carriers' shoulders; a Lodestone only creeps.
+      const turn = carryable.variant === 'lodestone' ? 0.2 : 0.6;
+      body.current.rotation.y = clock.elapsedTime * turn + entity;
+      body.current.rotation.z = lifted
+        ? Math.sin(clock.elapsedTime * 5.5 + entity * 1.7) * 0.06
+        : 0;
     }
     if (kind === 'sap') body.current.position.y += Math.sin(clock.elapsedTime * 3) * 0.08;
   });
@@ -220,7 +237,7 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
         </mesh>
       )}
       <group ref={body}>
-        <HaulBody carryable={carryable} />
+        <HaulBody carryable={carryable} relic={relic} />
       </group>
       {showCount && (
         <TextSprite

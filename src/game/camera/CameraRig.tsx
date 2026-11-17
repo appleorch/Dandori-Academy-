@@ -4,6 +4,7 @@ import type { InputController } from '../commands/input';
 import { useGameStore } from '../core/gameStore';
 import type { Feedback } from '../rendering/feedback';
 import type { Simulation } from '../simulation/Simulation';
+import { heightAt } from '../world/heightMap';
 
 interface CameraRigProps {
   sim: Simulation;
@@ -39,6 +40,7 @@ function idleSpot(sim: Simulation): { x: number; z: number } {
  */
 export function CameraRig({ sim, input, fx }: CameraRigProps): null {
   const lean = useRef({ x: 0, z: 0 });
+  const lift = useRef(0);
 
   useFrame(({ camera, clock }, delta) => {
     const { level } = sim;
@@ -57,21 +59,30 @@ export function CameraRig({ sim, input, fx }: CameraRigProps): null {
 
     const captain = sim.captainTransform;
     const peek = input.peek;
-    const target = peek ? idleSpot(sim) : captain;
+    const tactical = input.tactical;
+    // The tactical view looks down on the middle of the course, between it and the Warden.
+    const target = tactical
+      ? { x: captain.x * 0.35, z: captain.z * 0.35 }
+      : peek
+        ? idleSpot(sim)
+        : captain;
     // The lean is eased on its own, so a flick of the mouse does not jerk the view.
-    const leanTo = peek ? 0 : LOOK_AHEAD;
+    const leanTo = peek || tactical ? 0 : LOOK_AHEAD;
     const follow = 1 - Math.exp(-delta * 3);
     lean.current.x += ((sim.cursor.x - captain.x) * leanTo - lean.current.x) * follow;
     lean.current.z += ((sim.cursor.z - captain.z) * leanTo - lean.current.z) * follow;
 
-    const ease = 1 - Math.exp(-delta * 6);
-    const zoom = input.zoom * (1 - fx.punch * PUNCH);
+    const ease = 1 - Math.exp(-delta * (tactical ? 3 : 6));
+    const overview = Math.max(level.width * 0.5, level.depth * 0.75);
+    const zoom = (tactical ? overview : input.zoom) * (1 - fx.punch * PUNCH);
     const x = target.x + lean.current.x;
     const z = target.z + lean.current.z;
+    // The view rises with the ground under it, so a terrace never fills the screen.
+    lift.current += (heightAt(sim.level, target.x, target.z) - lift.current) * ease;
     camera.position.x += (x - camera.position.x) * ease;
-    camera.position.y += (zoom * 0.85 - camera.position.y) * ease;
+    camera.position.y += (zoom * 0.85 + lift.current - camera.position.y) * ease;
     camera.position.z += (z + zoom * 0.6 - camera.position.z) * ease;
-    camera.lookAt(camera.position.x, 0, camera.position.z - zoom * 0.6);
+    camera.lookAt(camera.position.x, lift.current, camera.position.z - zoom * 0.6);
     // Shake is applied after aiming, so the view jolts without drifting.
     camera.position.x += Math.sin(clock.elapsedTime * 71) * fx.shake;
     camera.position.y += Math.sin(clock.elapsedTime * 93) * fx.shake * 0.6;

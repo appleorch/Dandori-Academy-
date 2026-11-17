@@ -1,6 +1,7 @@
 import type { Difficulty } from '../core/difficulty';
 import { rankValue, type Rank } from '../dandori/scoring';
 import { bestRank, type DayRecord, type SaveData } from '../save/saveManager';
+import { recoveredRelics, RELICS } from '../story/relics';
 import { LEVELS } from '../world/level';
 
 export interface Achievement {
@@ -153,6 +154,22 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
       return rank !== null && rankValue(rank) >= rankValue('Silver');
     },
   },
+  {
+    id: 'restorer',
+    name: 'Restorer',
+    description: 'Earn Silver or better on Restoration Day, the last of the Grand Curriculum.',
+    earned: (save) => {
+      const rank = bestRank(save, 'restoration-day');
+      return rank !== null && rankValue(rank) >= rankValue('Silver');
+    },
+  },
+  counter(
+    'curator',
+    'Curator',
+    'Recover every Relic of Harmony for the Field Guide.',
+    RELICS.length,
+    (s) => recoveredRelics(s.treasuresCollected).size,
+  ),
   counter('hardened', 'Hardened', 'Earn Silver or better on Hard in any lesson.', 1, (s) =>
     lessonsAtLeast(s, 'Silver', 'hard'),
   ),

@@ -48,3 +48,47 @@ export function TindlePortrait() {
     </svg>
   );
 }
+
+/**
+ * Headmaster Professor Sprocket: round spectacles, a white moustache, and a tall top hat with
+ * a clock set into its band and a sprig growing out of the top.
+ */
+export function SprocketPortrait({ mood = 'cheer' }: { mood?: 'cheer' | 'alarm' | 'muse' }) {
+  return (
+    <svg
+      className={`portrait sprocket ${mood}`}
+      viewBox="0 0 64 64"
+      role="img"
+      aria-label="Headmaster Sprocket"
+    >
+      <circle cx="32" cy="32" r="31" fill="#2a2440" stroke="#e8c15a" strokeWidth="2" />
+      <path d="M12 63c2-14 10-19 20-19s18 5 20 19z" fill="#5a2a3a" />
+      <path d="M27 44l5 6 5-6z" fill="#fff6dc" />
+      <path d="M31 47h2v8h-2z" fill="#e8c15a" />
+      <circle cx="32" cy="33" r="11.5" fill="#f2c6a0" />
+      <circle cx="26.5" cy="31" r="4.2" fill="#dff4ff" stroke="#c89a48" strokeWidth="1.6" />
+      <circle cx="37.5" cy="31" r="4.2" fill="#dff4ff" stroke="#c89a48" strokeWidth="1.6" />
+      <circle cx="26.5" cy="31.5" r={mood === 'alarm' ? 2.2 : 1.3} fill="#2a1c14" />
+      <circle cx="37.5" cy="31.5" r={mood === 'alarm' ? 2.2 : 1.3} fill="#2a1c14" />
+      <path d="M30.7 31h2.6" stroke="#c89a48" strokeWidth="1.4" />
+      <path d="M24 38c3 2 5 1 8-1 3 2 5 3 8 1-1 3-4 4-8 2-4 2-7 1-8-2z" fill="#f4f0e8" />
+      {mood === 'alarm' ? (
+        <ellipse cx="32" cy="41.5" rx="2.4" ry="2" fill="#5a1c1c" />
+      ) : (
+        <path
+          d="M29 41.5c2 1.4 4 1.4 6 0"
+          stroke="#5a1c1c"
+          strokeWidth="1.4"
+          fill="none"
+          strokeLinecap="round"
+        />
+      )}
+      <rect x="20" y="20" width="24" height="3" rx="1.5" fill="#1c1824" />
+      <rect x="24" y="4" width="16" height="17" rx="1" fill="#221c2c" />
+      <rect x="24" y="15" width="16" height="3.5" fill="#8a2a3a" />
+      <circle cx="32" cy="10.5" r="4" fill="#f4e8c8" stroke="#e8c15a" strokeWidth="1.2" />
+      <path d="M32 10.5V8M32 10.5h2" stroke="#2a1c14" strokeWidth="0.9" strokeLinecap="round" />
+      <path d="M37 4c2-3 5-3 6-1-2 1-4 2-6 1z" fill="#6ab04a" />
+    </svg>
+  );
+}

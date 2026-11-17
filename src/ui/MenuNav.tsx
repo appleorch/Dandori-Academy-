@@ -6,6 +6,7 @@ import { ACHIEVEMENTS } from '../game/progression/achievements';
 const TABS: readonly (readonly [MenuScreen, string])[] = [
   ['menu', 'Lessons'],
   ['journal', 'Journal'],
+  ['guide', 'Field Guide'],
   ['achievements', 'Achievements'],
   ['settings', 'Wardrobe & settings'],
 ];

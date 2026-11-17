@@ -23,6 +23,8 @@ export interface Settings {
   musicVolume: number;
   /** Proctor Ashwick's advice during a day. */
   hints: boolean;
+  /** Headmaster Sprocket's running commentary. */
+  commentary: boolean;
   /** The story briefing shown before each day begins. */
   briefings: boolean;
   /** Set once the prologue has been read or skipped. */
@@ -41,6 +43,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sfxVolume: 0.7,
   musicVolume: 0.35,
   hints: true,
+  commentary: true,
   briefings: true,
   seenIntro: false,
   outfit: 'cadet',
@@ -68,6 +71,7 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
     'healthBars',
     'pauseOnBlur',
     'hints',
+    'commentary',
     'briefings',
     'seenIntro',
   ] as const) {

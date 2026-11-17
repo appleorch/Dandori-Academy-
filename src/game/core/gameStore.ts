@@ -16,6 +16,7 @@ import { damageTaken } from '../enemies/combat';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { DayEnd, Simulation } from '../simulation/Simulation';
 import { LEVELS } from '../world/level';
+import type { Line } from '../story/headmaster';
 import { CHAIN } from './config';
 import { penaltyPerLoss, type Difficulty } from './difficulty';
 import { loadSettings, writeSettings, DEFAULT_SETTINGS, type Settings } from './settings';
@@ -32,7 +33,7 @@ function deviceDefaults(): Settings {
 }
 
 /** Screens reachable from the main menu. */
-export type MenuScreen = 'menu' | 'achievements' | 'settings' | 'journal';
+export type MenuScreen = 'menu' | 'achievements' | 'settings' | 'journal' | 'guide';
 export type GamePhase = MenuScreen | 'story' | 'playing' | 'results';
 
 /** Low-frequency copy of simulation state for the HUD. */
@@ -97,6 +98,8 @@ interface GameStore {
   briefing: boolean;
   /** Proctor Ashwick's current line of advice, or null. */
   hint: string | null;
+  /** The Headmaster's latest remark; `id` changes with every new one. */
+  sprocket: (Line & { id: number }) | null;
   /** True while the Warden stands at the little door. */
   nearSecret: boolean;
   /** Id of the side lesson whose way down the Warden is standing at, or null. */
@@ -119,6 +122,7 @@ interface GameStore {
   /** Dismisses the briefing and starts the clock. */
   beginDay: () => void;
   setHint: (hint: string | null) => void;
+  say: (line: Line) => void;
   setNearSecret: (near: boolean) => void;
   /** The Warden is at a way down (or has left it): the side lesson is found for good. */
   setNearDescent: (levelId: string | null) => void;
@@ -209,6 +213,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     paused: false,
     briefing: false,
     hint: null,
+    sprocket: null,
     nearSecret: false,
     nearDescent: null,
     pokerOpen: false,
@@ -227,6 +232,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         paused: false,
         briefing: state.settings.briefings,
         hint: null,
+        sprocket: null,
         nearSecret: false,
         nearDescent: null,
         hud: null,
@@ -247,6 +253,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       }),
 
     beginDay: () => set({ briefing: false }),
+
+    say: (line) => set((state) => ({ sprocket: { ...line, id: (state.sprocket?.id ?? 0) + 1 } })),
 
     setHint: (hint) => {
       if (hint !== get().hint) set({ hint });

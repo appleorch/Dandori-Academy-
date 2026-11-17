@@ -7,6 +7,7 @@ import type { Point } from '../navigation/NavGrid';
 import { createMover, steerTo } from '../navigation/steering';
 import type { Enemy, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
+import { heightAt } from './heightMap';
 
 /**
  * The test player used to measure every lesson: see `playGreedy`. It lives outside the
@@ -60,7 +61,8 @@ function reachable(sim: Simulation, entity: Entity): boolean {
 function walkDistance(sim: Simulation, x: number, z: number): number {
   const from = sim.captainTransform;
   const line = Math.hypot(x - from.x, z - from.z);
-  if (sim.level.theme !== 'cave') return line;
+  // On flat open ground the eye is good enough; terraces and tunnels need the walk.
+  if (sim.level.theme !== 'cave' && !sim.level.plateaus?.length) return line;
   const dist = sim.squadField.dist[sim.nav.cellIndexAt(x, z)];
   return Number.isFinite(dist) ? dist : 1000 + line;
 }
@@ -342,7 +344,10 @@ export function playGreedy(sim: Simulation, watch?: (tick: number, job: Entity) 
       const dist = Math.hypot(spot.x - base.x, spot.z - base.z);
       input.cursorX = at.x;
       input.cursorZ = at.z;
-      if (dist > THROW_DISTANCE || !sim.nav.lineOfSight(base.x, base.z, spot.x, spot.z)) {
+      // Emberlings fly over a cliff edge, so a job just above one is thrown to from below.
+      const upCliff = heightAt(sim.level, spot.x, spot.z) > heightAt(sim.level, base.x, base.z);
+      const clear = upCliff || sim.nav.lineOfSight(base.x, base.z, spot.x, spot.z);
+      if (dist > THROW_DISTANCE || !clear) {
         steerTo(sim.nav, mover, sim.anchor, spot.x, spot.z, 1 / 60, dir);
         input.moveX = dir.x;
         input.moveZ = dir.z;

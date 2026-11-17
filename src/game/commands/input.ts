@@ -23,7 +23,7 @@ export const NO_INPUT: InputState = {
 };
 
 const MIN_ZOOM = 14;
-const MAX_ZOOM = 44;
+const MAX_ZOOM = 60;
 const DEFAULT_ZOOM = 26;
 /** Tall, narrow screens see little to the sides, so they start further out. */
 const PORTRAIT_ZOOM = 38;
@@ -65,6 +65,8 @@ export class InputController {
   private interactQueued = false;
   /** True while the on-screen fast-forward button is held. */
   fastButton = false;
+  /** The tactical view: the camera pulls right out to show the whole course. Toggled with V. */
+  tactical = false;
 
   /** Fast-forward: Shift, or the on-screen button. */
   get fast(): boolean {
@@ -122,6 +124,7 @@ export class InputController {
       if (event.code === 'KeyQ' && !event.repeat) this.dismissQueued = true;
       if (event.code === 'KeyF' && !event.repeat) this.rushQueued = true;
       if (event.code === 'KeyE' && !event.repeat) this.interactQueued = true;
+      if (event.code === 'KeyV' && !event.repeat) this.tactical = !this.tactical;
       if (event.code === 'Space' || event.code === 'Tab') event.preventDefault();
       this.keys.add(event.code);
     };

@@ -75,11 +75,22 @@ export const CHAPTERS: readonly Chapter[] = [
       'Both fires burning. The tall one cried a bit and blamed the smoke. Table is open late tonight, Warden. Bring chips.',
   },
   {
+    id: 'curriculum',
+    label: 'Final examinations',
+    title: 'The Grand Curriculum',
+    from: 23,
+    to: 27,
+    intro:
+      'With the First Ember lit, the founders\u2019 Terrarium has woken: miles of overgrown glasshouse gardens under the hill, their Relics of Harmony scattered through the ruins. Headmaster Sprocket has set five examinations in it. Pass them all and the Grand Botanical & Clockwork Academy is whole again.',
+    margin:
+      'Five exams, one day each, and the Headmaster talked through all of them. We have started a sweepstake on his catchphrases. I have \u201cmarvellous\u201d.',
+  },
+  {
     id: 'depths',
     label: 'Below',
     title: 'The Depths',
-    from: 23,
-    to: 25,
+    from: 28,
+    to: 30,
     intro:
       'The Undercroft is bigger than the school above it. There are old ways down in the far fields, half grown over, and each one leads to a part of it nobody has mapped.',
     margin:
@@ -250,18 +261,51 @@ Object.assign(LESSON_STORY, {
   },
 } satisfies Record<string, LessonStory>);
 
+Object.assign(LESSON_STORY, {
+  'terrace-gardens': {
+    briefing:
+      'The Headmaster has been planning these examinations for forty years, Warden, so please look impressed. The terraces are cliffs to you and a short hop to an Emberling. What they lift comes down by the stairs. Plan for that.',
+    journal:
+      'Threw a whole squad up a cliff and walked round to meet them at the bottom of the stairs, relic and all. The Headmaster applauded from the gallery. He applauds a lot.',
+  },
+  'the-long-drop': {
+    briefing:
+      'Up is a long walk and down is a short fall. The ledges only go one way. A Warden who throws a crew up and lets the ledges bring the relics home will be back in time for tea.',
+    journal:
+      'Spent the first minute walking up, felt clever, then spent the next minute watching relics tip off the ledge and land almost at the Kiln. Should have done that from the start.',
+  },
+  'crystal-conservatory': {
+    briefing:
+      'The doorways are grown shut with crystal. Do not break every one because you can. Break the ones that save more than they cost, and light the outposts beyond them.',
+    journal:
+      'Broke two doors and left the third. Lit both outposts, and the relics stopped at the nearest flame instead of trekking all the way back. The glass roof was humming by the end of the day.',
+  },
+  'clockwork-causeway': {
+    briefing:
+      'Two ways over. The causeway is short and wet and watched. The bridge is safe and has to be built first. Neither is wrong. Doing both at once, badly, is wrong.',
+    journal:
+      'Built the bridge with the first crew and sent the light hauls over the causeway between drips. The Bogspitters never got a clean shot. I will be hearing that sprinkler in my sleep.',
+  },
+  'restoration-day': {
+    briefing:
+      'Everything you have, Warden, on the whole Terrarium in one day. The Headmaster has invited the town. He has invited the town before checking with me. Please do not let them see a Bronze.',
+    journal:
+      'Every relic home, the Gravelmaw down, and the whole glasshouse lit up like a lantern. The Headmaster cried. So did Ashwick, and blamed the pollen. I did not blame anything.',
+  },
+} satisfies Record<string, LessonStory>);
+
 /** Shown once, before the first lesson. */
 export const PROLOGUE: readonly string[] = [
-  'High on a hill above the valley stands the Dandori Academy, and at its heart the Great Kiln. While the Kiln burns, the frost keeps to the mountains and the dark keeps to the ground.',
-  'The Kiln eats Sunshards: splinters of a fallen star, scattered across the valley floor. It gives back Emberlings, sparks with legs, who will carry anything for whoever holds the whistle.',
-  'This year the frost came early and the fire is low. The Academy has one cadet left to train. A Warden does not carry shards. A Warden decides who does, and in what order. They call that dandori.',
+  'High on a hill above the valley stands the Grand Botanical & Clockwork Academy (everyone calls it the Dandori Academy), half greenhouse, half clockwork, and at its heart the Great Kiln. While the Kiln burns, the frost keeps to the mountains and the dark keeps to the ground.',
+  'The Kiln eats Sunshards: splinters of a fallen star. The founders set them into the things they made, the Relics of Harmony, and lost most of them when the old Terrarium under the hill went dark. The Kiln gives back Emberlings, sparks with legs and leafy heads, who will carry anything for whoever holds the whistle.',
+  'This year the frost came early and the fire is low. Headmaster Sprocket has one cadet left to train, and Proctor Ashwick to make sure it is done properly. A Warden does not carry relics. A Warden decides who does, and in what order. They call that dandori.',
 ];
 
-/** Shown after the Undercroft is first cleared. */
+/** Shown after the last of the Grand Curriculum is first cleared. */
 export const EPILOGUE: readonly string[] = [
-  'The First Ember went into the Great Kiln at dawn, and the fire that came out of it could be seen from the mountains. Down in the Undercroft the old beacons burn again, one after another, all the way to the bottom.',
-  'Proctor Ashwick retired that spring. He left the pocket watch on your desk with a note: "You never needed it. Try to be on time anyway."',
-  'There is one door in the Undercroft that is not on any plan of the school. The Emberlings say there is nothing behind it. They say it very quickly, and all at once.',
+  'The last relic went into the Great Kiln on the evening of Restoration Day, and the old Terrarium lit from end to end: every pane of glass under the hill, every gear in the clock towers, turning together for the first time in a hundred years.',
+  'Headmaster Sprocket gave a speech. It was very long and mostly about gears. Proctor Ashwick retired that spring, and left the pocket watch on your desk with a note: \u201cYou never needed it. Try to be on time anyway.\u201d',
+  'The Field Guide cabinet is nearly full now. There is one shelf left empty, with a label in the founders\u2019 own hand that just says \u201cnext\u201d. The Emberlings say they have no idea what it means. They say it very quickly, and all at once.',
 ];
 
 export function chapterOf(stage: number): Chapter {

@@ -69,7 +69,7 @@ function mix(a: Rgb, b: Rgb, t: number): Rgb {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 }
 
-interface Painted {
+export interface Painted {
   color: Texture;
   bump: Texture;
 }
@@ -173,15 +173,89 @@ export function soilTextures(): Painted {
   });
 }
 
-let cached: { grass: Painted; stone: Painted; clay: Painted; soil: Painted } | null = null;
+/**
+ * Old brickwork for ruined walls: staggered courses of weathered brick in pale mortar, with
+ * moss creeping into the joints. One repeat is four courses of two bricks.
+ */
+export function brickTextures(): Painted {
+  const tone = octaves(131, 8, 3);
+  const moss = octaves(149, 4, 3);
+  return paint(256, (u, v) => {
+    const course = Math.floor(v * 4);
+    const along = u * 2 + (course % 2) * 0.5;
+    const brick = Math.floor(along);
+    const fu = along - brick;
+    const fv = v * 4 - course;
+    const joint = fu < 0.05 || fu > 0.95 || fv < 0.08 || fv > 0.92;
+    // Each brick its own shade.
+    const shade = ((brick * 37 + course * 61) % 17) / 17;
+    const t = fractal(tone, u, v);
+    let rgb = mix([150, 92, 70], [196, 140, 104], shade * 0.6 + t * 0.4);
+    if (joint) rgb = [206, 196, 172];
+    const green = Math.max(0, fractal(moss, u, v) - 0.55) * 3;
+    rgb = mix(rgb, [88, 128, 62], Math.min(0.85, green * (joint ? 1.4 : 0.7)));
+    return { rgb, height: joint ? 0.15 : 0.6 + t * 0.4 };
+  });
+}
+
+/** Cliff faces: horizontal strata of warm stone, darker in the cracks between layers. */
+export function cliffTextures(): Painted {
+  const grain = octaves(163, 6, 4);
+  const layers = octaves(173, 3, 2);
+  return paint(256, (u, v) => {
+    const g = fractal(grain, u, v);
+    const wobble = fractal(layers, u, v) * 0.18;
+    const band = (v * 5 + wobble) % 1;
+    const crack = band < 0.06 ? 1 : 0;
+    let rgb = mix(
+      [128, 110, 92],
+      [184, 166, 138],
+      g * 0.7 + (Math.floor(v * 5 + wobble) % 2) * 0.3,
+    );
+    rgb = mix(rgb, [70, 58, 48], crack * 0.8);
+    return { rgb, height: g * 0.7 + 0.3 - crack * 0.5 };
+  });
+}
+
+/** Woven wicker for the baskets Emberlings carry: an over-under weave of reed. */
+export function weaveTextures(): Painted {
+  const grain = octaves(191, 16, 2);
+  return paint(128, (u, v) => {
+    const row = Math.floor(v * 8);
+    const col = Math.floor(u * 8);
+    const over = (row + col) % 2 === 0;
+    const fu = u * 8 - col;
+    const fv = v * 8 - row;
+    // Each strand bulges in the middle and dips at its ends.
+    const swell = over ? Math.sin(fu * Math.PI) : Math.sin(fv * Math.PI);
+    const g = fractal(grain, u, v);
+    const rgb = mix([120, 82, 40], [214, 170, 100], swell * 0.7 + g * 0.3);
+    return { rgb, height: swell };
+  });
+}
+
+interface Textures {
+  grass: Painted;
+  stone: Painted;
+  clay: Painted;
+  soil: Painted;
+  brick: Painted;
+  cliff: Painted;
+  weave: Painted;
+}
+
+let cached: Textures | null = null;
 
 /** All textures, painted once and shared by every scene. */
-export function gameTextures(): { grass: Painted; stone: Painted; clay: Painted; soil: Painted } {
+export function gameTextures(): Textures {
   cached ??= {
     grass: grassTextures(),
     stone: stoneTextures(),
     clay: clayTextures(),
     soil: soilTextures(),
+    brick: brickTextures(),
+    cliff: cliffTextures(),
+    weave: weaveTextures(),
   };
   return cached;
 }

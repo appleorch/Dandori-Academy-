@@ -44,7 +44,9 @@ export class FlowField {
       const cx = current % cols;
       const cz = Math.floor(current / cols);
       for (const [dx, dz] of NEIGHBORS) {
-        if (!nav.canStep(cx, cz, dx, dz)) continue;
+        // Agents walk the field from `next` back to `current`, so that is the step to check.
+        if (nav.isBlockedCell(cx + dx, cz + dz)) continue;
+        if (!nav.canStep(cx + dx, cz + dz, -dx, -dz)) continue;
         const next = (cz + dz) * cols + cx + dx;
         const step = dx !== 0 && dz !== 0 ? Math.SQRT2 : 1;
         const nextDist = dist[current] + step;

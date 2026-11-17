@@ -8,13 +8,19 @@ import {
   type Settings,
 } from '../game/core/settings';
 
-type ToggleKey = 'carrierCounts' | 'healthBars' | 'pauseOnBlur' | 'hints' | 'briefings';
+type ToggleKey =
+  'carrierCounts' | 'healthBars' | 'pauseOnBlur' | 'hints' | 'commentary' | 'briefings';
 
 const TOGGLES: readonly (readonly [ToggleKey, string, string])[] = [
   ['carrierCounts', 'Carrier counts', 'Show carriers held and needed above each Sunshard.'],
   ['healthBars', 'Health bars', 'Show a wounded enemy’s health.'],
   ['pauseOnBlur', 'Pause when away', 'Pause the day when you switch to another tab or window.'],
   ['hints', 'Advice from Ashwick', 'Short tips during a day about what you may be missing.'],
+  [
+    'commentary',
+    'Headmaster\u2019s commentary',
+    'Professor Sprocket\u2019s remarks on chains, relics and emergencies.',
+  ],
   ['briefings', 'Briefings', 'Show the story and the lesson\u2019s goals before each day begins.'],
 ];
 

@@ -12,7 +12,15 @@ export function updateCaptain(sim: Simulation, input: InputState, dt: number): v
   if (length > 0) {
     const dirX = input.moveX / length;
     const dirZ = input.moveZ / length;
+    const fromX = transform.x;
+    const fromZ = transform.z;
     sim.physics.moveCaptain(dirX * CAPTAIN.speed * dt, dirZ * CAPTAIN.speed * dt, transform);
+    // The physics world has no ledges; the nav grid does, and it has the last word.
+    if (sim.nav.climbsBetween(fromX, fromZ, transform.x, transform.z)) {
+      transform.x = fromX;
+      transform.z = fromZ;
+      sim.physics.placeCaptain(transform);
+    }
     transform.facing = Math.atan2(dirX, dirZ);
   }
 

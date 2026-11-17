@@ -72,7 +72,9 @@ export function LessonSelect() {
           </span>
           <p className="hero-title">Dandori Academy</p>
           <p className="hero-sub">
-            {fresh ? 'Your first day at the Academy.' : `Academy total ${save.score} pts`}
+            {fresh
+              ? 'The Grand Botanical & Clockwork Academy. Your first day.'
+              : `The Grand Botanical & Clockwork Academy \u00b7 ${save.score} pts`}
           </p>
           <button
             type="button"

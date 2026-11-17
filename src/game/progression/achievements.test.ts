@@ -114,6 +114,7 @@ describe('achievements', () => {
       'honor-roll',
       'graduate',
       'first-ember',
+      'restorer',
       'dandori-master',
     ]);
   });

@@ -8,6 +8,23 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.15.0',
+    date: '2026-11-17',
+    changes: [
+      'The Grand Curriculum: five final examinations (lessons 23 to 27) in the old Terrarium under the Academy, each at least three times the size of an early lesson. Terrace Gardens, The Long Drop, Crystal Conservatory, Clockwork Causeway and Restoration Day each add one routing idea of their own.',
+      'Raised terraces with cliffs and stone stairways. Emberlings can be thrown up a cliff, but what they carry has to come down by the stairs or off a ledge.',
+      'One-way ledges: hauls and the Warden can drop off them, and nobody can climb back up. They are the fast way home.',
+      'Crystal gates seal off whole wings; outposts beyond them move your base forward once they are lit.',
+      'The Relics of Harmony: every Sunshard is now set into a named relic, such as the Sun-Drenched Pocketwatch, the Gilded Acorn or the Porcelain Teacup, each modelled and announced by name as it comes home. The new Field Guide shows every relic you have recovered, turning on a stand.',
+      'Headmaster Sprocket of the Grand Botanical & Clockwork Academy comments on your day: openings, chains, rare relics, disasters and milestones, and gives a verdict on the results screen. He can be turned off in Settings.',
+      'Emberlings rebuilt: legs and feet that step with their speed, arms, woven baskets, and a leafy head-sprout on a spring. They lean into turns, look round and chat when idle, flip through the air with wind trails, squash on landing, heave together under a load, sweat under heavy ones, and leap back with wide eyes when danger comes.',
+      'The Warden rebuilt too: stepping legs, swinging arms, a sprung hat and pack lamp, and flapping coat tails.',
+      'The world is older: long walls are now ruined brickwork with moss on top, and the fields have broken pillars, stone arches, half-buried brass gears and fallen leaves. Grass parts round the Warden and the squad.',
+      'V (or the Map button) pulls the camera out to a tactical view of the whole course. Markers at the edge of the screen point home and to the nearest relic nobody has lifted.',
+      'Side lessons are renumbered 28 to 30. Two new achievements: Restorer and Curator.',
+    ],
+  },
+  {
     version: '0.14.0',
     date: '2026-11-17',
     changes: [

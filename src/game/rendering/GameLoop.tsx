@@ -10,7 +10,10 @@ import { useGameStore } from '../core/gameStore';
 import { splitKey } from '../save/saveManager';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { Simulation } from '../simulation/Simulation';
+import { heightAt } from '../world/heightMap';
 import { Coach } from '../story/coach';
+import { Headmaster } from '../story/headmaster';
+import { relicFor } from '../story/relics';
 import type { Feedback } from './feedback';
 
 const HUD_INTERVAL_FRAMES = 6;
@@ -60,6 +63,7 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
     () =>
       new Coach(typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches),
   );
+  const [headmaster] = useState(() => new Headmaster(sim));
   const frame = useRef(0);
   const walked = useRef(0);
   const lastSpot = useRef({ x: sim.captainTransform.x, z: sim.captainTransform.z });
@@ -75,7 +79,17 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
 
   useFrame(({ camera }, delta) => {
     probe.set(input.pointerX, input.pointerY, 0.5).unproject(camera).sub(camera.position);
-    const t = -camera.position.y / probe.y;
+    // Where the pointer meets the ground: first the flat floor, then the height found there,
+    // twice, which settles onto a terrace top or a ramp.
+    let t = -camera.position.y / probe.y;
+    for (let i = 0; i < 2; i++) {
+      const lift = heightAt(
+        sim.level,
+        camera.position.x + probe.x * t,
+        camera.position.z + probe.z * t,
+      );
+      t = (lift - camera.position.y) / probe.y;
+    }
     // Dragging the on-screen whistle button aims relative to the captain instead.
     const aim = input.aimOffset;
     const cursorX = aim ? sim.captainTransform.x + aim.x : camera.position.x + probe.x * t;
@@ -102,8 +116,17 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
     for (let i = 0; i < steps && !sim.ended; i++) {
       sim.step(input.sample(cursorX, cursorZ));
       for (const event of sim.events) fx.handle(event);
+      headmaster.events(sim.events);
     }
     fx.update(delta);
+    // Each relic home is announced by name, and logged in the Field Guide by the save.
+    for (let i = delivered; i < sim.stats.treasuresCollected.length; i++) {
+      const id = sim.stats.treasuresCollected[i];
+      const spawn = sim.level.treasures.find((t) => t.id === id);
+      const relic = relicFor(sim.level.id, id, spawn?.variant);
+      fx.popup(relic.name, sim.level.kiln.x, sim.level.kiln.z - 3, '#fff2c8');
+      headmaster.relic(relic);
+    }
     // Each Sunshard home is compared with the same shard on the best clear so far.
     for (let i = delivered; i < sim.stats.deliveryTimes.length; i++) {
       const best = bestSplits.current?.[i];
@@ -172,6 +195,8 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
     if (frame.current % HUD_INTERVAL_FRAMES === 0) {
       const seconds = steps * SIM_DT * HUD_INTERVAL_FRAMES;
       store.setHint(store.settings.hints ? coach.update(sim, seconds) : null);
+      const line = headmaster.update(seconds);
+      if (line && store.settings.commentary) store.say(line);
       const { boss, intensity } = mood(sim);
       audio.playMusic(boss ? 'boss' : sim.level.theme);
       audio.setMusicMood(intensity, sim.timeLeft <= LAST_CALL_SECONDS);

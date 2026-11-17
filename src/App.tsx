@@ -7,6 +7,7 @@ import { forDifficulty, LEVELS } from './game/world/level';
 import { PokerRoom } from './poker/PokerRoom';
 import { AchievementsScreen } from './ui/AchievementsScreen';
 import { Briefing } from './ui/Briefing';
+import { FieldGuide } from './ui/FieldGuide';
 import { Hud } from './ui/Hud';
 import { JournalScreen } from './ui/JournalScreen';
 import { LessonSelect } from './ui/LessonSelect';
@@ -91,6 +92,7 @@ export function App() {
       {phase === 'achievements' && <AchievementsScreen />}
       {phase === 'settings' && <SettingsScreen />}
       {phase === 'journal' && <JournalScreen />}
+      {phase === 'guide' && <FieldGuide />}
       {phase === 'story' && <StoryScreen />}
       {inGame && (
         <div className="game">

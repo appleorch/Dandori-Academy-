@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import type { Group, Mesh, MeshStandardMaterial } from 'three';
 import type { LevelDefinition } from '../world/level';
+import { wallLook } from './Architecture';
 import { rockGeometry } from './rocks';
 import { gameTextures, turfTextures } from './textures';
 import { themeOf } from './theme';
@@ -106,7 +107,10 @@ export function Terrain({ level }: { level: LevelDefinition }) {
   const ROCK_HEIGHT = look.rockHeight;
   const floor = look.stoneFloor ? stone : turfTextures(look.turf);
   const rocks = useMemo(
-    () => level.obstacles.map((box) => ({ box, geometry: rockGeometry(box, ROCK_HEIGHT) })),
+    () =>
+      level.obstacles
+        .filter((box) => wallLook(level, box) === 'rock')
+        .map((box) => ({ box, geometry: rockGeometry(box, ROCK_HEIGHT) })),
     [level, ROCK_HEIGHT],
   );
   const [fieldMap, outerMap, fieldBump] = useMemo(() => {

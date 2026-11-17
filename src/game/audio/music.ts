@@ -4,7 +4,8 @@
  * lowest intensity it plays at, which is how the tune thickens when a fight starts.
  */
 
-export type TrackName = 'menu' | 'meadow' | 'autumn' | 'marsh' | 'dusk' | 'cave' | 'boss' | 'poker';
+export type TrackName =
+  'menu' | 'meadow' | 'autumn' | 'marsh' | 'dusk' | 'cave' | 'terrarium' | 'boss' | 'poker';
 
 /** 0: calm (briefings, quiet moments). 1: a normal working day. 2: danger close by. */
 export type Intensity = 0 | 1 | 2;
@@ -94,6 +95,51 @@ const SONGS: Record<TrackName, Song> = {
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
       ],
       order: [0, 2, 1, 2, 0, 2, 1, 2],
+    },
+  },
+  /**
+   * The Grand Curriculum, in the old Terrarium: a clockwork waltz. Ticking mallets keep
+   * the time, bells carry the tune, and the bass turns over like a slow gear.
+   */
+  terrarium: {
+    bpm: 96,
+    swing: 0.5,
+    root: 62,
+    scale: MAJOR,
+    bars: [0, 4, 5, 3, 0, 4, 1, 4],
+    chord: TRIAD,
+    echo: 0.3,
+    pad: { from: 0, volume: 0.04, octave: -1, cutoff: 1000 },
+    bass: {
+      from: 1,
+      volume: 0.19,
+      octave: -2,
+      steps: [0, _, _, _, 2, _, _, _, 1, _, _, _, 2, _, _, _],
+    },
+    arp: {
+      from: 0,
+      volume: 0.08,
+      octave: 1,
+      voice: 'mallet',
+      steps: [0, _, 2, _, 1, _, 2, _, 0, _, 2, _, 1, _, 3, _],
+    },
+    lead: {
+      from: 1,
+      volume: 0.1,
+      octave: 1,
+      voice: 'bell',
+      phrases: [
+        [4, _, _, _, _, _, 5, _, 4, _, 2, _, _, _, _, _],
+        [0, _, _, _, 2, _, _, _, 4, _, _, _, 7, _, _, _],
+        [9, _, _, _, 7, _, _, _, 5, _, 4, _, 2, _, _, _],
+        [4, _, _, _, 2, _, _, _, 1, _, _, _, _, _, _, _],
+      ],
+      order: [0, 1, 2, 3, 0, 1, 2, 3],
+    },
+    drums: {
+      hat: { from: 0, pattern: 'x.o.x.o.x.o.x.o.', volume: 0.03 },
+      kick: { from: 2, pattern: 'x.......x.......', volume: 0.28 },
+      snare: { from: 2, pattern: '....x.......x...', volume: 0.12 },
     },
   },
   /** Term one: bright, plucked and unhurried. */

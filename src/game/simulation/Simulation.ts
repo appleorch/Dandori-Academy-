@@ -128,6 +128,7 @@ export class Simulation {
       ...(level.bridges ?? []),
     ];
     this.nav = new NavGrid(level.width, level.depth, this.walls);
+    this.nav.setLedges(level.ledges ?? []);
     this.physics = new PhysicsWorld(level.width, level.depth, this.walls, level.captain, SIM_DT);
     this.rng = new Rng(level.seed);
     this.kilnField = new FlowField(this.nav);

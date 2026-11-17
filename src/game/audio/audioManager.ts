@@ -78,7 +78,8 @@ export type SoundName =
   | 'voice';
 
 /** Where the game is: it sets the reverb and the ambience. */
-export type AudioScene = 'meadow' | 'autumn' | 'marsh' | 'dusk' | 'cave' | 'room' | 'menu';
+export type AudioScene =
+  'meadow' | 'autumn' | 'marsh' | 'dusk' | 'cave' | 'terrarium' | 'room' | 'menu';
 
 export interface PlayOptions {
   /** Stereo position, -1 (left) to 1 (right). */
@@ -108,6 +109,7 @@ const SCENES: Record<AudioScene, SceneSound> = {
   marsh: { reverb: 0.18, tail: 1.6, gap: [0.8, 2.6] },
   dusk: { reverb: 0.14, tail: 1.4, gap: [1, 3] },
   cave: { reverb: 0.45, tail: 3.2, gap: [1.2, 4] },
+  terrarium: { reverb: 0.22, tail: 1.8, gap: [1, 3.2] },
   room: { reverb: 0.22, tail: 0.9, gap: [0.3, 1.4] },
 };
 
@@ -673,6 +675,17 @@ class AudioManager {
       } else {
         const hz = rand(4200, 5200);
         for (let i = 0; i < 6; i++) this.tone(voice, hz, hz, 0.03, 'sine', 0.025, i * 0.055);
+      }
+    } else if (scene === 'terrarium') {
+      if (roll < 0.5) {
+        // Old clockwork somewhere in the glasshouse: a few ticks and a soft chime.
+        for (let i = 0; i < 4; i++) this.tone(voice, 2200, 1800, 0.02, 'square', 0.015, i * 0.25);
+        if (roll < 0.15) this.bell(voice, rand(1200, 1800), 0.8, 0.03, 1);
+      } else {
+        const base = rand(2600, 3800);
+        for (let i = 0; i < 3; i++) {
+          this.tone(voice, base, base * rand(1.05, 1.25), 0.07, 'sine', 0.045, i * 0.11);
+        }
       }
     } else if (scene === 'dusk') {
       if (roll < 0.7) {
