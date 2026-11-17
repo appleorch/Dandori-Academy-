@@ -119,16 +119,19 @@ const GRASS_MID: Rgb = [92, 146, 58];
 const GRASS_LIGHT: Rgb = [140, 182, 76];
 const SOIL: Rgb = [122, 98, 64];
 
-/** Lawn: patchy greens, short blade streaks and the odd bare patch of soil. */
-export function grassTextures(): Painted {
+/** Three shades of ground cover, darkest first. */
+export type Turf = readonly [Rgb, Rgb, Rgb];
+
+/** Lawn: patchy shades of the turf, short blade streaks and the odd bare patch of soil. */
+export function grassTextures(turf: Turf = [GRASS_DARK, GRASS_MID, GRASS_LIGHT]): Painted {
   const broad = octaves(11, 4, 4);
   const blades = octaves(23, 64, 2);
   const patches = octaves(37, 3, 3);
   return paint(512, (u, v) => {
     const tone = fractal(broad, u, v);
     const streak = fractal(blades, u, v * 0.35);
-    let rgb = mix(GRASS_DARK, GRASS_MID, Math.min(1, tone * 1.5));
-    rgb = mix(rgb, GRASS_LIGHT, Math.max(0, streak - 0.5) * 1.6);
+    let rgb = mix(turf[0], turf[1], Math.min(1, tone * 1.5));
+    rgb = mix(rgb, turf[2], Math.max(0, streak - 0.5) * 1.6);
     const bare = Math.max(0, fractal(patches, u, v) - 0.74) * 4;
     rgb = mix(rgb, SOIL, Math.min(0.85, bare));
     return { rgb, height: 0.35 + streak * 0.5 - bare * 0.3 };
@@ -181,4 +184,17 @@ export function gameTextures(): { grass: Painted; stone: Painted; clay: Painted;
     soil: soilTextures(),
   };
   return cached;
+}
+
+const turfs = new Map<string, Painted>();
+
+/** Ground cover painted in a setting's own colours, once per setting. */
+export function turfTextures(turf: Turf): Painted {
+  const key = turf.flat().join(',');
+  let painted = turfs.get(key);
+  if (!painted) {
+    painted = grassTextures(turf);
+    turfs.set(key, painted);
+  }
+  return painted;
 }

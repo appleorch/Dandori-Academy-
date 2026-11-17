@@ -104,11 +104,15 @@ export function Minimap({ sim }: { sim: Simulation }) {
       ink.fill();
     };
     ink.clearRect(0, 0, MAP_WIDTH, height);
-    ink.fillStyle = 'rgba(40, 70, 40, 0.85)';
+    const cave = sim.level.theme === 'cave';
+    ink.fillStyle = cave ? 'rgba(70, 74, 96, 0.9)' : 'rgba(40, 70, 40, 0.85)';
     ink.fillRect(0, 0, MAP_WIDTH, height);
-    for (const wall of sim.level.obstacles) box(wall, '#8a8f98');
-    for (const water of sim.level.water ?? []) box(water, '#3d86b0');
-    for (const site of sim.bridges) box(site.box, site.built ? '#8a6a46' : '#3d86b0');
+    const wet = cave ? '#08080e' : '#3d86b0';
+    for (const wall of sim.level.obstacles) box(wall, cave ? '#1c1e2a' : '#8a8f98');
+    for (const water of sim.level.water ?? []) box(water, wet);
+    for (const site of sim.bridges) box(site.box, site.built ? '#8a6a46' : wet);
+    for (const beacon of sim.beacons)
+      dot(beacon.x, beacon.z, 3, beacon.lit ? '#ffc06a' : '#6aa8ff');
     for (const [, enemy] of sim.enemies.entries()) if (enemy.shape) box(enemy.shape, '#4a5a22');
     const { kiln } = sim.level;
     dot(kiln.x, kiln.z, 4, '#ffb347');

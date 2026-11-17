@@ -25,6 +25,7 @@ const THORN: Rgb = [0.35, 0.28, 0.18];
 const GLOW: Rgb = [0.4, 1, 0.9];
 const SOIL: Rgb = [0.45, 0.33, 0.2];
 const SAPGOLD: Rgb = [1, 0.75, 0.25];
+const GLOOM: Rgb = [0.3, 0.3, 0.5];
 
 function style(
   count: number,
@@ -74,7 +75,15 @@ const REACTIONS: Partial<Record<SimEventType, Reaction>> = {
   twin: { height: 2, burst: style(30, GOLD, 5, 6, 1, 0.16) },
   logPlaced: { height: 0.3, burst: style(14, DUST, 3, 2, 0.5, 0.14) },
   bridgeBuilt: { height: 0.3, burst: style(40, DUST, 5, 3, 0.8, 0.18), shake: 0.3 },
+  beaconLit: { height: 1.8, burst: style(36, EMBER, 4, 6, 1, 0.16) },
+  snuff: { height: 1.8, burst: style(30, GLOOM, 3, 2, 1.2, 0.2, -0.1), shake: 0.35 },
 };
+
+/** How far to the side a sound must be before it sits fully in one ear. */
+const PAN_RANGE = 18;
+/** Sounds fade with distance from the Warden, down to this floor. */
+const HEARING_RANGE = 70;
+const QUIETEST = 0.3;
 
 /**
  * Turns simulation events into what the player sees, hears and feels: sounds,
@@ -85,9 +94,17 @@ export class Feedback {
   readonly popups: Popup[] = [];
   /** Current camera shake strength in world units. */
   shake = 0;
+  /** Where the listener stands: the Warden. Sounds are panned and faded from here. */
+  listenerX = 0;
+  listenerZ = 0;
 
   handle(event: SimEvent): void {
-    audio.play(event.type);
+    const dx = event.x - this.listenerX;
+    const distance = Math.hypot(dx, event.z - this.listenerZ);
+    audio.play(event.type, {
+      pan: Math.max(-1, Math.min(1, dx / PAN_RANGE)),
+      gain: Math.max(QUIETEST, 1 - distance / HEARING_RANGE),
+    });
     const reaction = REACTIONS[event.type];
     if (reaction?.burst) this.particles.burst(event.x, reaction.height, event.z, reaction.burst);
     if (reaction?.shake) this.shake = Math.max(this.shake, reaction.shake);
@@ -98,6 +115,8 @@ export class Feedback {
     if (event.type === 'sap') this.popup('Sap! Hauls speed up', event.x, event.z + 1.2);
     if (event.type === 'crack') this.popup('Cracked!', event.x, event.z);
     if (event.type === 'bridgeBuilt') this.popup('Bridge built!', event.x, event.z);
+    if (event.type === 'beaconLit') this.popup('Beacon lit!', event.x, event.z);
+    if (event.type === 'snuff') this.popup('Snuffed out!', event.x, event.z);
     if (event.type === 'logPlaced' && event.amount > 0) {
       this.popup(`${event.amount} more log${event.amount === 1 ? '' : 's'}`, event.x, event.z);
     }

@@ -64,3 +64,9 @@ export const KILN = {
   spawnInterval: 0.25,
   spawnRing: 2.2,
 } as const;
+
+/**
+ * A beacon is cold until the Warden walks up to it. Lit, it takes deliveries like the
+ * Kiln, and its glow strips the Snuffer's armour.
+ */
+export const BEACON = { lightRange: 2.4, glow: 10 } as const;

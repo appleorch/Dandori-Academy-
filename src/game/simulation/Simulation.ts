@@ -18,6 +18,7 @@ import { updateWhistle } from '../whistle/whistleSystem';
 import { dismissSquad, rushSquad } from '../workers/squad';
 import { updateWorkers } from '../workers/workerSystem';
 import { shardCount, type LevelDefinition } from '../world/level';
+import { Beacon, updateBeacons } from '../carry/beacon';
 import { BridgeSite } from '../carry/bridgeSite';
 import {
   spawnEnemy,
@@ -70,6 +71,10 @@ export class Simulation {
   readonly captainMaxHp: number;
   /** Bridge sites, in the lesson's order. */
   readonly bridges: BridgeSite[];
+  /** Beacons, in the lesson's order: second drop-offs once the Warden lights them. */
+  readonly beacons: Beacon[];
+  /** Where the next new Emberlings appear: the Kiln, or the beacon that took the last pod. */
+  readonly hatchAt: Point;
   /** Seconds of Sap left; while positive every haul moves faster. */
   sapTimer = 0;
   /** Twins that arrived alone, waiting for their partner. */
@@ -124,6 +129,8 @@ export class Simulation {
     this.bridges = (level.bridges ?? []).map(
       (bridge) => new BridgeSite(bridge, bridge.bank, bridge.needs, this.nav),
     );
+    this.beacons = (level.beacons ?? []).map((spot) => new Beacon(spot.x, spot.z, this.nav));
+    this.hatchAt = { ...level.kiln };
     this.timeLeft = level.dayLength;
     this.stats = {
       treasureValue: 0,
@@ -196,6 +203,7 @@ export class Simulation {
     this.kilnField.compute(this.nav.cellIndexAt(this.level.kiln.x, this.level.kiln.z));
     this.squadField.invalidate();
     for (const site of this.bridges) site.refresh();
+    for (const beacon of this.beacons) beacon.refresh();
   }
 
   /** Advances the day by one fixed step. Does nothing once the day has ended. */
@@ -205,6 +213,7 @@ export class Simulation {
     this.tick++;
     this.events.length = 0;
     updateCaptain(this, input, dt);
+    updateBeacons(this);
     updateWhistle(this, input, dt);
     updateThrowing(this, input, dt);
     if (input.dismiss) dismissSquad(this);

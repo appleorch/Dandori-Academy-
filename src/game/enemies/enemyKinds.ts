@@ -7,7 +7,9 @@ export type EnemyKind =
   | 'gravelmaw'
   | 'lanternroot'
   | 'rootknot'
-  | 'bellwether';
+  | 'bellwether'
+  | 'skitter'
+  | 'snuffer';
 
 /**
  * How an enemy attacks. `slam` rears up over a ring on the ground; `none` is for
@@ -45,6 +47,8 @@ export interface EnemySpec {
   chargeTime: number;
   trampleKills: number;
   missRecover: number;
+  /** Biters only: workers eaten per bite. */
+  biteVictims: number;
 }
 
 const BASE = {
@@ -55,6 +59,7 @@ const BASE = {
   chargeTime: 1.3,
   trampleKills: 4,
   missRecover: 0,
+  biteVictims: 3,
 } as const;
 
 const NO_ATTACK = {
@@ -188,6 +193,47 @@ export const ENEMY_SPECS: Record<EnemyKind, EnemySpec> = {
     chargeTime: 1.6,
     trampleKills: 5,
   },
+  /** Small, quick and weak cave vermin that hunts in packs. One bite takes one Emberling. */
+  skitter: {
+    ...BASE,
+    name: 'Skitter',
+    attack: 'bite',
+    hp: 28,
+    radius: 0.6,
+    speed: 4.6,
+    aggroRange: 8,
+    territory: 13,
+    windup: 0.55,
+    recover: 1.3,
+    shakeInterval: 2.6,
+    carcassWeight: 1,
+    carcassYield: 2,
+    biteVictims: 1,
+  },
+  /**
+   * Boss of the Undercroft. A pale, blind slammer. In the dark nothing hurts it;
+   * inside the glow of a lit beacon it is merely armoured, and open while it lies winded
+   * after a slam. As its health falls it snuffs the beacons around it and calls Skitters
+   * out of the walls.
+   */
+  snuffer: {
+    ...BASE,
+    name: 'The Snuffer',
+    attack: 'slam',
+    hp: 520,
+    radius: 2.2,
+    speed: 2.3,
+    aggroRange: 8,
+    territory: 11,
+    windup: 1.2,
+    recover: 3,
+    shakeInterval: 4,
+    carcassWeight: 6,
+    carcassYield: 10,
+    armour: 0.3,
+    phases: [0.66, 0.33],
+    boss: true,
+  },
 };
 
 /** Values shared by every enemy kind. */
@@ -198,7 +244,6 @@ export const ENEMY = {
   /** Extra pause after a shake before a biter snaps at the dazed. */
   shakePause: 0.5,
   biteRange: 1.4,
-  biteVictims: 3,
   /** Distance at which a slammer rears up. */
   slamReach: 2,
   /** Root-knot regrowth, and how long the core stays open once every knot is down. */
@@ -209,6 +254,9 @@ export const ENEMY = {
   rechargeWindup: 0.6,
   /** Delay between a Lanternroot's paired globs in its late phase. */
   secondGlobDelay: 0.5,
+  /** Reach of the Snuffer's breath over lit beacons, and the Skitters each breath calls. */
+  snuffRange: 18,
+  snuffBrood: 2,
 } as const;
 
 export type HazardKind = 'glob' | 'pebble' | 'drip' | 'slam' | 'stomp';

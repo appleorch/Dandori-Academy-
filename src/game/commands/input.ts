@@ -62,6 +62,26 @@ export class InputController {
   private rightDown = false;
   private dismissQueued = false;
   private rushQueued = false;
+  private interactQueued = false;
+  /** True while the on-screen fast-forward button is held. */
+  fastButton = false;
+
+  /** Fast-forward: Shift, or the on-screen button. */
+  get fast(): boolean {
+    return this.fastButton || this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+  }
+
+  /** Look at idle Emberlings: Tab. */
+  get peek(): boolean {
+    return this.keys.has('Tab');
+  }
+
+  /** True once per press of the interact key (E). */
+  takeInteract(): boolean {
+    const queued = this.interactQueued;
+    this.interactQueued = false;
+    return queued;
+  }
 
   /** A controller with a starting zoom that suits the screen's shape. */
   static forScreen(width: number, height: number): InputController {
@@ -83,6 +103,7 @@ export class InputController {
     this.stickX = 0;
     this.stickZ = 0;
     this.whistleButton = false;
+    this.fastButton = false;
     this.aimOffset = null;
   }
 
@@ -100,7 +121,8 @@ export class InputController {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.code === 'KeyQ' && !event.repeat) this.dismissQueued = true;
       if (event.code === 'KeyF' && !event.repeat) this.rushQueued = true;
-      if (event.code === 'Space') event.preventDefault();
+      if (event.code === 'KeyE' && !event.repeat) this.interactQueued = true;
+      if (event.code === 'Space' || event.code === 'Tab') event.preventDefault();
       this.keys.add(event.code);
     };
     const onKeyUp = (event: KeyboardEvent): void => {

@@ -8,12 +8,14 @@ import {
   type Settings,
 } from '../game/core/settings';
 
-type ToggleKey = 'carrierCounts' | 'healthBars' | 'pauseOnBlur';
+type ToggleKey = 'carrierCounts' | 'healthBars' | 'pauseOnBlur' | 'hints' | 'briefings';
 
 const TOGGLES: readonly (readonly [ToggleKey, string, string])[] = [
   ['carrierCounts', 'Carrier counts', 'Show carriers held and needed above each Sunshard.'],
   ['healthBars', 'Health bars', 'Show a wounded enemy’s health.'],
   ['pauseOnBlur', 'Pause when away', 'Pause the day when you switch to another tab or window.'],
+  ['hints', 'Advice from Ashwick', 'Short tips during a day about what you may be missing.'],
+  ['briefings', 'Briefings', 'Show the story and the lesson\u2019s goals before each day begins.'],
 ];
 
 const GRAPHICS_HINTS: Record<GraphicsLevel, string> = {
@@ -40,7 +42,7 @@ const RANGES: readonly RangeSetting[] = [
   {
     key: 'sfxVolume',
     label: 'Sound effects',
-    hint: 'Throws, whistles, bites and deliveries.',
+    hint: 'Throws, whistles, Emberling voices and the sounds of each setting.',
     min: 0,
     max: 1,
     step: 0.05,
@@ -49,7 +51,7 @@ const RANGES: readonly RangeSetting[] = [
   {
     key: 'musicVolume',
     label: 'Music',
-    hint: 'The tune that plays during a day.',
+    hint: 'A different tune for each term, the bosses and the menus.',
     min: 0,
     max: 1,
     step: 0.05,
@@ -70,8 +72,9 @@ const RANGES: readonly RangeSetting[] = [
 export function SettingsPanel() {
   const settings = useGameStore((state) => state.settings);
   const updateSettings = useGameStore((state) => state.updateSettings);
+  // Having read the prologue is remembered, not a preference to restore.
   const isDefault = (Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]).every(
-    (key) => settings[key] === DEFAULT_SETTINGS[key],
+    (key) => key === 'seenIntro' || settings[key] === DEFAULT_SETTINGS[key],
   );
 
   return (
@@ -136,7 +139,7 @@ export function SettingsPanel() {
         type="button"
         className="secondary small"
         disabled={isDefault}
-        onClick={() => updateSettings(DEFAULT_SETTINGS)}
+        onClick={() => updateSettings({ ...DEFAULT_SETTINGS, seenIntro: settings.seenIntro })}
       >
         Restore default settings
       </button>

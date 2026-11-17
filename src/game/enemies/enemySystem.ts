@@ -5,7 +5,14 @@ import { moveAgent, steerTo } from '../navigation/steering';
 import type { Enemy, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { killWorker, setIdle } from '../workers/squad';
-import { spawnCarcass, spawnHazard, spawnPod, spawnSap, spawnTreasure } from '../world/spawn';
+import {
+  spawnCarcass,
+  spawnEnemy,
+  spawnHazard,
+  spawnPod,
+  spawnSap,
+  spawnTreasure,
+} from '../world/spawn';
 import { ENEMY, ENEMY_SPECS, HAZARDS, type EnemySpec } from './enemyKinds';
 
 const dir = { x: 0, z: 0 };
@@ -18,6 +25,8 @@ function windupOf(sim: Simulation, spec: EnemySpec): number {
 const PEBBLES = 3;
 const PEBBLE_SCATTER = 8;
 const PEBBLE_STAGGER = 0.4;
+/** A shaken-off worker never lands further than this, by foot, from the enemy that threw it. */
+const SHAKE_REACH = 10;
 
 function walk(
   sim: Simulation,
@@ -112,7 +121,7 @@ function bite(sim: Simulation, enemy: Enemy, at: Transform): void {
   const mouthZ = at.z + Math.cos(at.facing) * enemy.radius;
   let eaten = 0;
   for (const [entity, worker] of sim.workers.entries()) {
-    if (eaten >= ENEMY.biteVictims) break;
+    if (eaten >= ENEMY_SPECS[enemy.kind].biteVictims) break;
     if (worker.state === 'thrown' || worker.state === 'attacking') continue;
     const prey = sim.transforms.require(entity);
     if (Math.hypot(prey.x - mouthX, prey.z - mouthZ) <= ENEMY.biteRange) {
@@ -177,6 +186,15 @@ function shakeOff(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform)
     const distance = enemy.radius + sim.rng.range(1, 2);
     transform.x = at.x + Math.sin(worker.slot) * distance;
     transform.z = at.z + Math.cos(worker.slot) * distance;
+    // Never through a wall: if the nearest open ground is a long walk away, it is another room.
+    const ground = sim.nav.nearestWalkable(transform.x, transform.z);
+    const here = sim.kilnField.dist[sim.nav.cellIndexAt(at.x, at.z)];
+    const there = sim.kilnField.dist[sim.nav.cellIndexAt(ground.x, ground.z)];
+    if (!(Math.abs(there - here) < SHAKE_REACH)) {
+      const near = sim.nav.nearestWalkable(at.x, at.z);
+      transform.x = near.x;
+      transform.z = near.z;
+    }
     setIdle(sim, shaken[i], worker);
     worker.stun = ENEMY.shakeStun;
     if (i === 0) {
@@ -365,6 +383,21 @@ function updatePhase(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transfo
   if (phase > enemy.phase) {
     enemy.phase = phase;
     sim.emit('phase', at.x, at.z);
+    if (enemy.kind === 'snuffer') snuff(sim, at);
+  }
+}
+
+/** The Snuffer's breath: nearby beacons go dark and Skitters crawl out of the walls. */
+function snuff(sim: Simulation, at: Transform): void {
+  for (const beacon of sim.beacons) {
+    if (!beacon.lit || Math.hypot(beacon.x - at.x, beacon.z - at.z) > ENEMY.snuffRange) continue;
+    beacon.lit = false;
+    sim.emit('snuff', beacon.x, beacon.z);
+  }
+  for (let i = 0; i < ENEMY.snuffBrood; i++) {
+    const angle = sim.rng.range(0, Math.PI * 2);
+    const spot = sim.nav.nearestWalkable(at.x + Math.sin(angle) * 5, at.z + Math.cos(angle) * 5);
+    spawnEnemy(sim, spot.x, spot.z, 'skitter');
   }
 }
 

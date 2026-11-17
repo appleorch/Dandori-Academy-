@@ -8,7 +8,9 @@ const KEYBOARD: ControlList = [
   ['Right mouse / Space', 'Whistle workers back'],
   ['F / Middle mouse', 'Charge: send the whole squad to the cursor'],
   ['Q', 'Dismiss the squad'],
-  ['Esc', 'Pause'],
+  ['Shift', 'Hold to fast-forward the day'],
+  ['Tab', 'Hold to look at your idle Emberlings'],
+  ['Esc', 'Pause (then R restarts the lesson)'],
   ['Wheel', 'Zoom'],
 ];
 
@@ -18,6 +20,7 @@ const TOUCH: ControlList = [
   ['Whistle button', 'Hold to call workers; drag to move the call'],
   ['Charge button', 'Send the whole squad to where you last aimed'],
   ['Dismiss button', 'Dismiss the squad'],
+  ['Fast-forward button', 'Hold to hurry the day along'],
   ['Pinch', 'Zoom'],
 ];
 

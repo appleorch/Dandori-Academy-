@@ -4,21 +4,22 @@ import { MeshStandardMaterial, type Group } from 'three';
 import type { Box } from '../navigation/NavGrid';
 import type { Simulation } from '../simulation/Simulation';
 import { TextSprite } from './TextSprite';
+import { themeOf, type ThemeLook } from './theme';
 
 /** Water that gently shimmers: one shared material whose glow pulses. */
-function useWaterMaterial(): MeshStandardMaterial {
+function useWaterMaterial(look: ThemeLook): MeshStandardMaterial {
   const material = useMemo(
     () =>
       new MeshStandardMaterial({
-        color: '#3d86b0',
-        emissive: '#1f5a7a',
+        color: look.water,
+        emissive: look.waterGlow,
         emissiveIntensity: 0.25,
         roughness: 0.08,
         metalness: 0.1,
         transparent: true,
         opacity: 0.88,
       }),
-    [],
+    [look],
   );
   useFrame(({ clock }) => {
     material.emissiveIntensity = 0.22 + Math.sin(clock.elapsedTime * 1.7) * 0.06;
@@ -92,7 +93,7 @@ function BridgeDeck({ box, built }: { box: Box; built: () => boolean }) {
 
 /** Rivers, bridge sites with their log drop-off marker, and decks once built. */
 export function WaterAndBridges({ sim }: { sim: Simulation }) {
-  const material = useWaterMaterial();
+  const material = useWaterMaterial(themeOf(sim.level.theme));
   const water = sim.level.water ?? [];
   return (
     <>

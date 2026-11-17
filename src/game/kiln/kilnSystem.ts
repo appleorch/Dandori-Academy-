@@ -10,8 +10,8 @@ export function updateKiln(sim: Simulation, dt: number): void {
 
   const angle = sim.rng.range(0, Math.PI * 2);
   const spot = sim.nav.nearestWalkable(
-    sim.level.kiln.x + Math.sin(angle) * KILN.spawnRing,
-    sim.level.kiln.z + Math.cos(angle) * KILN.spawnRing,
+    sim.hatchAt.x + Math.sin(angle) * KILN.spawnRing,
+    sim.hatchAt.z + Math.cos(angle) * KILN.spawnRing,
   );
   spawnWorker(sim, spot.x, spot.z, 'idle');
   sim.emit('spawn', spot.x, spot.z);

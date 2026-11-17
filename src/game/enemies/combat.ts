@@ -1,6 +1,7 @@
 import type { Entity } from '../core/ecs';
 import type { Enemy, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
+import { BEACON } from '../core/config';
 import { ENEMY_SPECS } from './enemyKinds';
 
 /** Distance from a point to an enemy's surface: its circle, or a gate's rectangle. */
@@ -13,8 +14,12 @@ export function enemyReach(enemy: Enemy, at: Transform, x: number, z: number): n
   return Math.hypot(at.x - x, at.z - z) - enemy.radius;
 }
 
-/** True while a Lanternroot still has a living root-knot. */
+/** True while nothing can hurt it: a Lanternroot with a living root-knot, or a Snuffer in the dark. */
 export function isShielded(sim: Simulation, entity: Entity, enemy: Enemy): boolean {
+  if (enemy.kind === 'snuffer') {
+    const at = sim.transforms.get(entity);
+    return at !== undefined && !inBeaconLight(sim, at.x, at.z);
+  }
   if (enemy.kind !== 'lanternroot') return false;
   for (const [, knot] of sim.enemies.entries()) {
     if (knot.parent === entity && knot.hp > 0) return true;
@@ -26,6 +31,13 @@ export function isShielded(sim: Simulation, entity: Entity, enemy: Enemy): boole
 export function damageTaken(sim: Simulation, entity: Entity, enemy: Enemy): number {
   if (isShielded(sim, entity, enemy)) return 0;
   return enemy.state === 'recover' ? 1 : ENEMY_SPECS[enemy.kind].armour;
+}
+
+/** True inside the glow of any lit beacon. */
+export function inBeaconLight(sim: Simulation, x: number, z: number): boolean {
+  return sim.beacons.some(
+    (beacon) => beacon.lit && Math.hypot(beacon.x - x, beacon.z - z) <= BEACON.glow,
+  );
 }
 
 /** Whether workers should bother attacking it: alive, and not fully shielded. */

@@ -109,6 +109,12 @@ describe('achievements', () => {
       bestRanks: Object.fromEntries(LEVELS.map((level) => [level.id, 'Platinum'])),
     };
     const ids = unlockAchievements(allPlatinum, null, now).unlocked.map((a) => a.id);
-    expect(ids).toEqual(['platinum-student', 'honor-roll', 'graduate', 'dandori-master']);
+    expect(ids).toEqual([
+      'platinum-student',
+      'honor-roll',
+      'graduate',
+      'first-ember',
+      'dandori-master',
+    ]);
   });
 });

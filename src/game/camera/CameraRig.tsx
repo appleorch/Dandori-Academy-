@@ -9,11 +9,26 @@ interface CameraRigProps {
   fx: Feedback;
 }
 
+/** Middle of the idle Emberlings, or the Kiln when nobody is idle: where Tab looks. */
+function idleSpot(sim: Simulation): { x: number; z: number } {
+  let x = 0;
+  let z = 0;
+  let count = 0;
+  for (const [entity, worker] of sim.workers.entries()) {
+    if (worker.state !== 'idle') continue;
+    const at = sim.transforms.require(entity);
+    x += at.x;
+    z += at.z;
+    count++;
+  }
+  return count > 0 ? { x: x / count, z: z / count } : sim.level.kiln;
+}
+
 /** Fixed-angle overhead camera that eases after the captain. The wheel changes the distance,
- * and hits shake it. */
+ * hits shake it, and holding Tab swings it over to the idle Emberlings. */
 export function CameraRig({ sim, input, fx }: CameraRigProps): null {
   useFrame(({ camera, clock }, delta) => {
-    const target = sim.captainTransform;
+    const target = input.peek ? idleSpot(sim) : sim.captainTransform;
     const ease = 1 - Math.exp(-delta * 6);
     const { zoom } = input;
     camera.position.x += (target.x - camera.position.x) * ease;

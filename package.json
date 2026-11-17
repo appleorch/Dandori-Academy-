@@ -1,7 +1,7 @@
 {
   "name": "dandori-academy",
   "private": true,
-  "version": "0.11.0",
+  "version": "0.12.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "build:docs": "tsc --noEmit && vite build --outDir docs --emptyOutDir"
+    "build:docs": "tsc --noEmit && vite build --outDir docs --emptyOutDir",
+    "balance": "VITE_BALANCE=1 vitest run src/game/world/balance.report.test.ts -u"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

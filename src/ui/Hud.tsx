@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { audio } from '../game/audio/audioManager';
 import { useGameStore, type BossSnapshot } from '../game/core/gameStore';
 import { formatTime } from './format';
 import { rankTargets } from '../game/dandori/targets';
@@ -7,6 +9,7 @@ const GUARD_TEXT: Record<BossSnapshot['guard'], string> = {
   open: 'Open: full damage!',
   armoured: 'Armoured',
   shielded: 'Shielded: break the root-knots',
+  dark: 'In the dark: light a beacon nearby',
 };
 
 /** In-day overlay: clock, treasure progress, a day bar marked with each rank's deadline, where
@@ -15,6 +18,12 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
   const hud = useGameStore((state) => state.hud);
   const phase = useGameStore((state) => state.phase);
   const pause = useGameStore((state) => state.pause);
+  const hint = useGameStore((state) => state.hint);
+  const nearSecret = useGameStore((state) => state.nearSecret);
+  const openPoker = useGameStore((state) => state.openPoker);
+  useEffect(() => {
+    if (hint) audio.play('hint');
+  }, [hint]);
   if (!hud) return null;
   const elapsed = 1 - hud.timeLeft / level.dayLength;
 
@@ -76,6 +85,16 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
         <span className="daybar-sun" style={{ left: `${elapsed * 100}%` }} />
       </div>
       <div className="hud-spacer" />
+      {phase === 'playing' && nearSecret && (
+        <button type="button" className="chip knock" onClick={openPoker}>
+          Knock on the little door {!touch && <kbd>E</kbd>}
+        </button>
+      )}
+      {phase === 'playing' && hint && (
+        <p className="coach" role="status">
+          <strong>Ashwick</strong> {hint}
+        </p>
+      )}
       <div className="hud-row bottom">
         <div className="chip">
           <span className="dot squad" /> Squad {hud.squad}

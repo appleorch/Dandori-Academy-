@@ -1,4 +1,8 @@
+import { useEffect } from 'react';
+import { audio, type SoundName } from '../game/audio/audioManager';
 import { useGameStore } from '../game/core/gameStore';
+import { LESSON_STORY } from '../game/story/story';
+import { formatTime } from './format';
 import { findAchievement } from '../game/progression/achievements';
 import { HARD_UNLOCK_RANK, hardUnlocked, UNLOCK_RANK } from '../game/save/saveManager';
 import type { DayEnd } from '../game/simulation/Simulation';
@@ -12,11 +16,25 @@ const HEADLINES: Record<DayEnd, string> = {
   wipedOut: 'No Emberlings remain',
 };
 
+const STINGERS: Record<string, SoundName> = {
+  Platinum: 'rankPlatinum',
+  Gold: 'rankGold',
+  Silver: 'rankSilver',
+  Bronze: 'rankBronze',
+};
+
 export function ResultsScreen({ level }: { level: LevelDefinition }) {
   const result = useGameStore((state) => state.result);
   const save = useGameStore((state) => state.save);
   const startDay = useGameStore((state) => state.startDay);
   const showScreen = useGameStore((state) => state.showScreen);
+  const showStory = useGameStore((state) => state.showStory);
+  const rank = result?.score.rank;
+  const failed = result !== null && result.reason !== 'allCollected' && rank === 'Bronze';
+  // The fanfare matches the medal; a day that fell apart gets something more rueful.
+  useEffect(() => {
+    if (rank) audio.play(failed ? 'fail' : STINGERS[rank]);
+  }, [rank, failed]);
   if (!result) return null;
   const { score } = result;
   const hard = level.difficulty === 'hard';
@@ -58,7 +76,17 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
             </tr>
           </tbody>
         </table>
+        <p className="day-stats">
+          Day finished in {formatTime(result.elapsed)} · {result.workersAlive} Emberlings home ·{' '}
+          {result.enemiesDefeated} {result.enemiesDefeated === 1 ? 'enemy' : 'enemies'} defeated
+        </p>
         {result.isBestScore && <p className="best">New best score</p>}
+        {result.reason === 'allCollected' && LESSON_STORY[level.id] && (
+          <blockquote className="journal-note">
+            <small>{result.firstClear ? 'New journal entry' : 'From the journal'}</small>
+            {LESSON_STORY[level.id].journal}
+          </blockquote>
+        )}
         {result.unlockedNext && next && <p className="best">Unlocked: {next.name}</p>}
         {result.achievements.length > 0 && (
           <div className="unlocks">
@@ -89,6 +117,11 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
               : `Earn ${UNLOCK_RANK} or better to open the next lesson.`}
           </p>
         )}
+        {!next && result.reason === 'allCollected' && (
+          <button type="button" onClick={() => showStory('epilogue')} autoFocus>
+            Read the ending
+          </button>
+        )}
         {next && nextUnlocked && (
           <button type="button" onClick={() => startDay(next.id)} autoFocus>
             Next lesson: {next.name}
@@ -100,7 +133,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
           onClick={() => startDay(level.id)}
           autoFocus={!nextUnlocked}
         >
-          Try again
+          Try again <kbd>R</kbd>
         </button>
         <button type="button" className="secondary" onClick={() => showScreen('menu')}>
           All lessons

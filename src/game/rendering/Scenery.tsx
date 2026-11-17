@@ -3,6 +3,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Color, MeshStandardMaterial, Object3D, type InstancedMesh, type Material } from 'three';
 import { Rng } from '../core/rng';
 import type { LevelDefinition } from '../world/level';
+import { themeOf, type ThemeLook } from './theme';
 
 interface Placement {
   x: number;
@@ -12,9 +13,6 @@ interface Placement {
   shade: number;
 }
 
-const GRASS = [new Color('#4f8a3c'), new Color('#7fb04f')];
-const BLOOMS = [new Color('#fff2b0'), new Color('#ff9ec4'), new Color('#bfe3ff')];
-const LEAVES = [new Color('#2f5d34'), new Color('#4a8040')];
 const dummy = new Object3D();
 const tint = new Color();
 
@@ -122,7 +120,7 @@ function margins(level: LevelDefinition, rng: Rng, count: number): Placement[] {
 }
 
 /** One oversized clover: three round leaves on a stalk, taller than the Warden. */
-function Clover({ spot }: { spot: Placement }) {
+function Clover({ spot, color }: { spot: Placement; color: string }) {
   return (
     <group position={[spot.x, 0, spot.z]} rotation={[0, spot.turn, 0]} scale={spot.scale}>
       <mesh position={[0, 1.1, 0]} castShadow>
@@ -137,15 +135,16 @@ function Clover({ spot }: { spot: Placement }) {
           castShadow
         >
           <circleGeometry args={[0.72, 18]} />
-          <meshStandardMaterial color="#5f9a3e" roughness={0.6} side={2} />
+          <meshStandardMaterial color={color} roughness={0.6} side={2} />
         </mesh>
       ))}
     </group>
   );
 }
 
-function Mushroom({ spot }: { spot: Placement }) {
-  const cap = spot.shade < 0.5 ? '#d9573c' : '#e9d3a8';
+function Mushroom({ spot, look }: { spot: Placement; look: ThemeLook }) {
+  const cap = look.mushroomCaps[spot.shade < 0.5 ? 0 : 1];
+  const glow = look.glowingMushrooms;
   return (
     <group position={[spot.x, 0, spot.z]} scale={spot.scale * 0.8}>
       <mesh position={[0, 0.45, 0]} castShadow>
@@ -154,8 +153,38 @@ function Mushroom({ spot }: { spot: Placement }) {
       </mesh>
       <mesh position={[0, 0.9, 0]} castShadow>
         <sphereGeometry args={[0.55, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={cap} roughness={0.55} />
+        <meshStandardMaterial
+          color={cap}
+          emissive={glow ? cap : '#000000'}
+          emissiveIntensity={glow ? 1.4 : 0}
+          roughness={0.55}
+        />
       </mesh>
+    </group>
+  );
+}
+
+/** A cluster of glowing crystals, for the dark. */
+function Crystals({ spot }: { spot: Placement }) {
+  const color = spot.shade < 0.5 ? '#6ae0ff' : '#b08aff';
+  return (
+    <group position={[spot.x, 0, spot.z]} rotation={[0, spot.turn, 0]} scale={spot.scale}>
+      {[0, 1, 2].map((i) => (
+        <mesh
+          key={i}
+          position={[Math.sin(i * 2.1) * 0.3, 0.45 + (i === 0 ? 0.25 : 0), Math.cos(i * 2.1) * 0.3]}
+          rotation={[Math.sin(i * 2.1) * 0.35, 0, Math.cos(i * 2.1) * 0.35]}
+        >
+          <coneGeometry args={[0.2, i === 0 ? 1.5 : 0.95, 5]} />
+          <meshStandardMaterial
+            color={color}
+            emissive={color}
+            emissiveIntensity={1.1}
+            roughness={0.2}
+            flatShading
+          />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -207,67 +236,99 @@ function ScatterMesh({ spots, palette, y, shadow = false, material, children }: 
  * flowers, pebbles, oversized clover and mushrooms, dewdrops and a tree line.
  */
 export function Scenery({ level }: { level: LevelDefinition }) {
-  const { grass, blooms, pebbles, trees, clovers, mushrooms, drops } = useMemo(() => {
+  const look = themeOf(level.theme);
+  const { grass, blooms, pebbles, trees, clovers, mushrooms, drops, spires } = useMemo(() => {
     const rng = new Rng(level.seed * 977 + 13);
     const area = level.width * level.depth;
+    const cave = look.stoneFloor;
     return {
-      grass: scatter(level, rng, Math.min(5000, Math.round(area * 1.6))),
-      blooms: scatter(level, rng, Math.round(area / 30)),
-      pebbles: scatter(level, rng, Math.round(area / 45)),
-      trees: treeLine(level, rng),
-      clovers: margins(level, rng, Math.round(area / 90)),
-      mushrooms: margins(level, rng, Math.round(area / 220)),
-      drops: margins(level, rng, Math.round(area / 160)),
+      grass: scatter(level, rng, Math.round(Math.min(5000, area * 1.6) * look.bladeDensity)),
+      blooms: cave ? [] : scatter(level, rng, Math.round(area / 30)),
+      pebbles: scatter(level, rng, Math.round(area / (cave ? 25 : 45))),
+      trees: look.trees ? treeLine(level, rng) : [],
+      clovers: cave ? [] : margins(level, rng, Math.round(area / 90)),
+      mushrooms: margins(level, rng, Math.round(area / (cave ? 110 : 220))),
+      drops: cave ? [] : margins(level, rng, Math.round(area / 160)),
+      spires: cave ? margins(level, rng, Math.round(area / 70)) : [],
     };
-  }, [level]);
+  }, [level, look]);
   const wind = useMemo(windyMaterial, []);
+  const palettes = useMemo(
+    () => ({
+      blades: look.blades.map((hex) => new Color(hex)),
+      flowers: look.flowers.map((hex) => new Color(hex)),
+      canopy: look.canopy.map((hex) => new Color(hex)),
+      trunk: look.trunk.map((hex) => new Color(hex)),
+      pebble: look.stoneFloor
+        ? [new Color('#4a4e60'), new Color('#6a6e84')]
+        : [new Color('#8a8f98'), new Color('#b3b7bd')],
+      drop: [new Color('#e8f6ff'), new Color('#ffffff')],
+      spire: [new Color('#4a4e62'), new Color('#62667c')],
+    }),
+    [look],
+  );
   useFrame(({ clock }) => {
     wind.time.value = clock.elapsedTime;
   });
 
   return (
     <group>
-      <ScatterMesh spots={grass} palette={GRASS} y={0.2} material={wind.material}>
-        <coneGeometry args={[0.07, 0.5, 3]} />
-      </ScatterMesh>
-      <ScatterMesh spots={blooms} palette={BLOOMS} y={0.14}>
-        <sphereGeometry args={[0.1, 6, 5]} />
-        <meshStandardMaterial roughness={0.8} />
-      </ScatterMesh>
-      <ScatterMesh spots={pebbles} palette={[new Color('#8a8f98'), new Color('#b3b7bd')]} y={0.08}>
+      {grass.length > 0 && (
+        <ScatterMesh spots={grass} palette={palettes.blades} y={0.2} material={wind.material}>
+          <coneGeometry args={[0.07, 0.5, 3]} />
+        </ScatterMesh>
+      )}
+      {blooms.length > 0 && (
+        <ScatterMesh spots={blooms} palette={palettes.flowers} y={0.14}>
+          <sphereGeometry args={[0.1, 6, 5]} />
+          <meshStandardMaterial roughness={0.8} />
+        </ScatterMesh>
+      )}
+      <ScatterMesh spots={pebbles} palette={palettes.pebble} y={0.08}>
         <dodecahedronGeometry args={[0.2, 0]} />
         <meshStandardMaterial roughness={1} flatShading />
       </ScatterMesh>
-      <ScatterMesh spots={drops} palette={[new Color('#e8f6ff'), new Color('#ffffff')]} y={0.22}>
-        <sphereGeometry args={[0.24, 16, 12]} />
-        <meshPhysicalMaterial
-          transparent
-          opacity={0.55}
-          roughness={0.04}
-          clearcoat={1}
-          envMapIntensity={2.2}
-          depthWrite={false}
-        />
-      </ScatterMesh>
-      <ScatterMesh
-        spots={trees}
-        palette={[new Color('#4a3524'), new Color('#5b4636')]}
-        y={1.2}
-        shadow
-      >
-        <cylinderGeometry args={[0.28, 0.4, 2.4, 7]} />
-        <meshStandardMaterial roughness={1} />
-      </ScatterMesh>
-      <ScatterMesh spots={trees} palette={LEAVES} y={3.4} shadow>
-        <icosahedronGeometry args={[1.8, 1]} />
-        <meshStandardMaterial roughness={1} flatShading />
-      </ScatterMesh>
+      {drops.length > 0 && (
+        <ScatterMesh spots={drops} palette={palettes.drop} y={0.22}>
+          <sphereGeometry args={[0.24, 16, 12]} />
+          <meshPhysicalMaterial
+            transparent
+            opacity={0.55}
+            roughness={0.04}
+            clearcoat={1}
+            envMapIntensity={2.2}
+            depthWrite={false}
+          />
+        </ScatterMesh>
+      )}
+      {spires.length > 0 && (
+        <ScatterMesh spots={spires} palette={palettes.spire} y={0.8} shadow>
+          <coneGeometry args={[0.38, 1.6, 6]} />
+          <meshStandardMaterial roughness={0.9} flatShading />
+        </ScatterMesh>
+      )}
+      {trees.length > 0 && (
+        <>
+          <ScatterMesh spots={trees} palette={palettes.trunk} y={1.2} shadow>
+            <cylinderGeometry args={[0.28, 0.4, 2.4, 7]} />
+            <meshStandardMaterial roughness={1} />
+          </ScatterMesh>
+          <ScatterMesh spots={trees} palette={palettes.canopy} y={3.4} shadow>
+            <icosahedronGeometry args={[1.8, 1]} />
+            <meshStandardMaterial roughness={1} flatShading />
+          </ScatterMesh>
+        </>
+      )}
       {clovers.map((spot, i) => (
-        <Clover key={i} spot={spot} />
+        <Clover key={i} spot={spot} color={look.clover} />
       ))}
-      {mushrooms.map((spot, i) => (
-        <Mushroom key={i} spot={spot} />
-      ))}
+      {mushrooms.map((spot, i) =>
+        look.stoneFloor && i % 3 === 0 ? (
+          <Crystals key={i} spot={spot} />
+        ) : (
+          <Mushroom key={i} spot={spot} look={look} />
+        ),
+      )}
     </group>
   );
 }

@@ -21,6 +21,12 @@ export interface Settings {
   sfxVolume: number;
   /** Music volume, 0 to 1. */
   musicVolume: number;
+  /** Proctor Ashwick's advice during a day. */
+  hints: boolean;
+  /** The story briefing shown before each day begins. */
+  briefings: boolean;
+  /** Set once the prologue has been read or skipped. */
+  seenIntro: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -32,6 +38,9 @@ export const DEFAULT_SETTINGS: Settings = {
   pauseOnBlur: true,
   sfxVolume: 0.7,
   musicVolume: 0.35,
+  hints: true,
+  briefings: true,
+  seenIntro: false,
 };
 
 export const ZOOM_SPEED_MIN = 0.25;
@@ -51,7 +60,14 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
   // Settings saved before quality levels existed had a shadows switch instead.
   if (graphics) settings.graphics = graphics;
   else if (raw.shadows === false) settings.graphics = 'low';
-  for (const key of ['carrierCounts', 'healthBars', 'pauseOnBlur'] as const) {
+  for (const key of [
+    'carrierCounts',
+    'healthBars',
+    'pauseOnBlur',
+    'hints',
+    'briefings',
+    'seenIntro',
+  ] as const) {
     if (typeof raw[key] === 'boolean') settings[key] = raw[key];
   }
   if (typeof raw.zoomSpeed === 'number' && Number.isFinite(raw.zoomSpeed)) {

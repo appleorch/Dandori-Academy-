@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { evaluateDay, type ScoreBreakdown } from '../dandori/scoring';
-import { unlockAchievements } from '../progression/achievements';
+import { grantAchievement, unlockAchievements } from '../progression/achievements';
 import {
   bestScore,
   emptySave,
@@ -29,8 +29,8 @@ function deviceDefaults(): Settings {
 }
 
 /** Screens reachable from the main menu. */
-export type MenuScreen = 'menu' | 'achievements' | 'settings';
-export type GamePhase = MenuScreen | 'playing' | 'results';
+export type MenuScreen = 'menu' | 'achievements' | 'settings' | 'journal';
+export type GamePhase = MenuScreen | 'story' | 'playing' | 'results';
 
 /** Low-frequency copy of simulation state for the HUD. */
 export interface HudSnapshot {
@@ -51,7 +51,7 @@ export interface BossSnapshot {
   /** Remaining health, 0 to 1. */
   health: number;
   /** 'open' while it takes full damage, 'armoured' while it takes reduced damage, 'shielded' while it takes none. */
-  guard: 'open' | 'armoured' | 'shielded';
+  guard: 'open' | 'armoured' | 'shielded' | 'dark';
 }
 
 export interface DayResult {
@@ -62,6 +62,12 @@ export interface DayResult {
   isBestScore: boolean;
   /** True when this day opened the next lesson for the first time. */
   unlockedNext: boolean;
+  /** True the first time the lesson is finished at all: its journal entry is new. */
+  firstClear: boolean;
+  /** Seconds of the day used. */
+  elapsed: number;
+  enemiesDefeated: number;
+  workersAlive: number;
   /** Ids of achievements earned by this day. */
   achievements: string[];
   difficulty: Difficulty;
@@ -77,6 +83,16 @@ interface GameStore {
   runId: number;
   /** While true the simulation does not advance and the pause menu shows. */
   paused: boolean;
+  /** While true the day has not begun: the briefing is showing over the field. */
+  briefing: boolean;
+  /** Proctor Ashwick's current line of advice, or null. */
+  hint: string | null;
+  /** True while the Warden stands at the little door. */
+  nearSecret: boolean;
+  /** True while the back room is open, over whatever screen was showing. */
+  pokerOpen: boolean;
+  /** Which pages the story screen is showing. */
+  storyKind: 'prologue' | 'epilogue';
   hud: HudSnapshot | null;
   /** Mirrors Simulation.entityVersion so entity lists re-render when it changes. */
   entityVersion: number;
@@ -87,6 +103,15 @@ interface GameStore {
   showScreen: (screen: MenuScreen) => void;
   pause: () => void;
   resume: () => void;
+  showStory: (kind: 'prologue' | 'epilogue') => void;
+  /** Dismisses the briefing and starts the clock. */
+  beginDay: () => void;
+  setHint: (hint: string | null) => void;
+  setNearSecret: (near: boolean) => void;
+  openPoker: () => void;
+  closePoker: () => void;
+  /** Grants an achievement earned outside a day. Returns true if it is new. */
+  grant: (id: string) => boolean;
   updateSettings: (patch: Partial<Settings>) => void;
   /** Replaces all progress, for loading a save file or erasing progress. */
   replaceSave: (save: SaveData) => void;
@@ -118,15 +143,30 @@ function snapshot(sim: Simulation): HudSnapshot {
   };
 }
 
+/** Distance within which a boss's health bar appears before it has been touched. */
+const BOSS_BAR_RANGE = 32;
+
 function bossSnapshot(sim: Simulation): BossSnapshot | null {
   for (const [entity, enemy] of sim.enemies.entries()) {
     const spec = ENEMY_SPECS[enemy.kind];
     if (!spec.boss) continue;
+    // A boss far across a big map keeps its bar to itself until it is met or hurt.
+    const at = sim.transforms.require(entity);
+    const captain = sim.captainTransform;
+    const far = Math.hypot(at.x - captain.x, at.z - captain.z) > BOSS_BAR_RANGE;
+    if (far && enemy.hp >= enemy.maxHp && !enemy.alert) continue;
     const taken = damageTaken(sim, entity, enemy);
     return {
       name: spec.name,
       health: Math.max(0, enemy.hp / enemy.maxHp),
-      guard: taken === 0 ? 'shielded' : taken < 1 ? 'armoured' : 'open',
+      guard:
+        taken === 0
+          ? enemy.kind === 'snuffer'
+            ? 'dark'
+            : 'shielded'
+          : taken < 1
+            ? 'armoured'
+            : 'open',
     };
   }
   return null;
@@ -140,18 +180,25 @@ export const useGameStore = create<GameStore>((set, get) => {
   // Grant anything an older save already qualifies for, such as rank milestones.
   const initial = unlockAchievements(storage ? loadSave(storage) : emptySave(), null, new Date());
   if (initial.unlocked.length > 0) persist(initial.save);
+  const settings = storage ? loadSettings(storage, deviceDefaults()) : deviceDefaults();
 
   return {
-    phase: 'menu',
+    // A brand new player is told how things stand before seeing the lesson list.
+    phase: settings.seenIntro || initial.save.totals.days > 0 ? 'menu' : 'story',
+    storyKind: 'prologue',
     levelId: LEVELS[0].id,
     playDifficulty: 'normal',
     runId: 0,
     paused: false,
+    briefing: false,
+    hint: null,
+    nearSecret: false,
+    pokerOpen: false,
     hud: null,
     entityVersion: 0,
     result: null,
     save: initial.save,
-    settings: storage ? loadSettings(storage, deviceDefaults()) : deviceDefaults(),
+    settings,
 
     startDay: (levelId) =>
       set((state) => ({
@@ -160,11 +207,48 @@ export const useGameStore = create<GameStore>((set, get) => {
         playDifficulty: state.settings.difficulty,
         runId: state.runId + 1,
         paused: false,
+        briefing: state.settings.briefings,
+        hint: null,
+        nearSecret: false,
         hud: null,
         result: null,
       })),
 
-    showScreen: (screen) => set({ phase: screen, paused: false, hud: null, result: null }),
+    showScreen: (screen) =>
+      set({ phase: screen, paused: false, briefing: false, hint: null, hud: null, result: null }),
+
+    showStory: (kind) =>
+      set({
+        phase: 'story',
+        storyKind: kind,
+        paused: false,
+        briefing: false,
+        hud: null,
+        result: null,
+      }),
+
+    beginDay: () => set({ briefing: false }),
+
+    setHint: (hint) => {
+      if (hint !== get().hint) set({ hint });
+    },
+
+    setNearSecret: (near) => {
+      if (near !== get().nearSecret) set({ nearSecret: near });
+    },
+
+    openPoker: () => set((state) => ({ pokerOpen: true, paused: state.phase === 'playing' })),
+
+    closePoker: () => set({ pokerOpen: false }),
+
+    grant: (id) => {
+      const before = get().save;
+      const save = grantAchievement(before, id, new Date());
+      if (save === before) return false;
+      persist(save);
+      set({ save });
+      return true;
+    },
 
     pause: () => {
       if (get().phase === 'playing') set({ paused: true });
@@ -225,6 +309,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({
         phase: 'results',
         paused: false,
+        hint: null,
+        nearSecret: false,
         hud: snapshot(sim),
         save,
         result: {
@@ -234,6 +320,13 @@ export const useGameStore = create<GameStore>((set, get) => {
           treasuresTotal: stats.treasuresTotal,
           isBestScore: score.total > bestScore(previous, level.id, level.difficulty),
           unlockedNext: save.stage > previous.stage && level.stage < LEVELS.length,
+          firstClear:
+            stats.treasuresCollected.length === stats.treasuresTotal &&
+            bestScore(previous, level.id, 'normal') === 0 &&
+            bestScore(previous, level.id, 'hard') === 0,
+          elapsed: sim.elapsed,
+          enemiesDefeated: stats.enemiesDefeated,
+          workersAlive,
           difficulty: level.difficulty,
           achievements: unlocked.map((achievement) => achievement.id),
         },

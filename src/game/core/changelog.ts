@@ -8,6 +8,24 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.12.0',
+    date: '2026-11-17',
+    changes: [
+      'A story: four terms and an ending. Proctor Ashwick briefs you before every day, a journal fills in as lessons are passed, and the lessons are grouped by term.',
+      'A dungeon lesson, The Undercroft (22): dark tunnels and rooms, a chasm to bridge, rubble to break, packs of Skitters, and a new boss, the Snuffer, which can only be hurt inside the glow of a lit beacon.',
+      'Beacons: walk up to a cold beacon to light it. Hauls then go to the nearest light instead of all the way back to the Kiln, and new Emberlings hatch where their pod was delivered.',
+      'Each term has its own setting: spring meadow, autumn, misty marsh, dusk, and the cave, with its own ground, trees, sky, weather in the air and music.',
+      'New sound: effects are placed left and right by where they happen, with reverb to suit the setting, Emberling voices, footsteps, ambience (birds, wind, frogs, crickets, dripping rock) and a medal fanfare for each rank.',
+      'New music: a tune for each term, the menus and boss fights. It adds drums when danger is close and speeds up for the last thirty seconds.',
+      'Advice during a day from Proctor Ashwick: controls in the first lessons, then only what you seem to be missing. It can be turned off in Settings.',
+      'Hold Shift to fast-forward, hold Tab to look at your idle Emberlings, and press R on the pause or results screen to restart.',
+      'A boss far across a big map no longer shows its health bar until you meet it.',
+      'Difficulty re-measured on every lesson with the test player (see BALANCE.md). Platinum is tighter on Gravelmaw\u2019s Pit, Rush Hour, The Bellwether and Graduation Day, and a little more forgiving on Final Exam and Glass River.',
+      'Fix: an enemy shaking Emberlings off next to a thin wall could drop them on the far side of it.',
+      'There is said to be a small door somewhere under the Academy. The Emberlings deny it.',
+    ],
+  },
+  {
     version: '0.11.0',
     date: '2026-11-16',
     changes: [

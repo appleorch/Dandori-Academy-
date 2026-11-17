@@ -4,6 +4,10 @@ import { POINTS_PER_SECOND, POINTS_PER_WORKER } from '../dandori/scoring';
 import type { EnemyKind } from '../enemies/enemyKinds';
 import type { ShardVariant } from '../simulation/components';
 import type { Box, Point } from '../navigation/NavGrid';
+import { carve, rectBox, type Rect } from './carve';
+
+/** The look and sound of a lesson's setting. It changes nothing about the rules. */
+export type LevelTheme = 'meadow' | 'autumn' | 'marsh' | 'dusk' | 'cave';
 
 export interface TreasureSpawn extends Point {
   id: string;
@@ -64,8 +68,9 @@ export interface LevelDefinition {
   dayLength: number;
   /**
    * Seconds into the day by which every Sunshard must be home, with no Emberlings
-   * lost, to earn Platinum. Set 10% slower than the greedy test bot (30% on the first
-   * three lessons), so a planned day beats it and a sloppy one does not.
+   * lost, to earn Platinum. Set about 10% slower than the greedy test bot (30% on the
+   * first three lessons, 20% on boss fights, which vary more), so a planned day beats it
+   * and a sloppy one does not. `npm run balance` measures every lesson into BALANCE.md.
    */
   platinumTime: number;
   /** Score that earns Platinum. Derived from `platinumTime`; see `withPar`. */
@@ -93,6 +98,11 @@ export interface LevelDefinition {
   logs?: Point[];
   /** Sapdrops: delivered to the Kiln, they speed up every haul for a while. */
   saps?: Point[];
+  /** Beacons: cold until the Warden reaches them, then a second place to deliver hauls. */
+  beacons?: Point[];
+  theme: LevelTheme;
+  /** A small door in the rock. Something is going on behind it. */
+  secret?: Point;
 }
 
 const MANY_HANDS: LevelSpec = {
@@ -420,7 +430,7 @@ const FINAL_EXAM: LevelSpec = {
   width: 90,
   depth: 56,
   dayLength: 560,
-  platinumTime: 315,
+  platinumTime: 345,
   seed: 10,
   startingWorkers: 20,
   captain: { x: -40, z: 2 },
@@ -558,7 +568,7 @@ const GRAVELMAWS_PIT: LevelSpec = {
   width: 56,
   depth: 40,
   dayLength: 300,
-  platinumTime: 150,
+  platinumTime: 135,
   seed: 13,
   startingWorkers: 12,
   captain: { x: -21, z: 2 },
@@ -639,7 +649,7 @@ const RUSH_HOUR: LevelSpec = {
   width: 90,
   depth: 50,
   dayLength: 520,
-  platinumTime: 375,
+  platinumTime: 320,
   seed: 15,
   startingWorkers: 18,
   captain: { x: -39, z: 2 },
@@ -696,7 +706,7 @@ const THE_BELLWETHER: LevelSpec = {
   width: 70,
   depth: 44,
   dayLength: 420,
-  platinumTime: 240,
+  platinumTime: 180,
   seed: 16,
   startingWorkers: 16,
   captain: { x: -28, z: 2 },
@@ -902,8 +912,8 @@ const GLASS_RIVER: LevelSpec = {
     'A long river with two bridge sites and two crossings, one under falling drips. Dewglass cracks if its crew breaks up: build the bridges and clear the way before you lift it.',
   width: 104,
   depth: 68,
-  dayLength: 600,
-  platinumTime: 490,
+  dayLength: 660,
+  platinumTime: 540,
   seed: 20,
   startingWorkers: 16,
   captain: { x: -41, z: 2 },
@@ -968,7 +978,7 @@ const GRADUATION_DAY: LevelSpec = {
   width: 120,
   depth: 80,
   dayLength: 1000,
-  platinumTime: 845,
+  platinumTime: 700,
   seed: 21,
   startingWorkers: 22,
   captain: { x: -21, z: 2 },
@@ -1034,8 +1044,118 @@ const GRADUATION_DAY: LevelSpec = {
   ],
 };
 
-/** A lesson as written, before its par score is derived. */
-type LevelSpec = Omit<LevelDefinition, 'parScore' | 'difficulty'>;
+/** The Undercroft's rooms and corridors; everything else is rock. */
+const UNDERCROFT_ROOMS: readonly Rect[] = [
+  [-50, -8, -36, 8], // entry hall, with the Kiln
+  [-36, -2, -26, 2],
+  [-26, -8, -12, 8], // the crossing
+  [-22, -20, -18, -8],
+  [-30, -32, -4, -20], // drip gallery
+  [-4, -28, 2, -24],
+  [2, -32, 14, -18], // north store
+  [4, -18, 8, -8],
+  [-22, 8, -18, 18],
+  [-30, 18, -6, 32], // skitter nest
+  [-34, 24, -30, 28],
+  [-44, 20, -34, 32], // the alcove behind the rubble
+  [-12, -2, 0, 2],
+  [0, -8, 30, 8], // chasm hall
+  [24, -14, 28, -8],
+  [20, -26, 32, -14], // rune room
+  [22, 8, 26, 14],
+  [14, 14, 32, 30], // cellar
+  [30, -2, 34, 2],
+  [34, -14, 50, 14], // the vault
+];
+
+const THE_UNDERCROFT: LevelSpec = {
+  id: 'the-undercroft',
+  stage: 22,
+  name: 'The Undercroft',
+  theme: 'cave',
+  brief:
+    "A dungeon under the Academy, dark and full of turnings. Walk up to a cold beacon to light it: hauls then go to the nearest light instead of all the way back. Bridge the chasm, break the rubble, and fight the Snuffer inside a beacon's glow.",
+  width: 104,
+  depth: 68,
+  dayLength: 620,
+  platinumTime: 380,
+  seed: 22,
+  startingWorkers: 12,
+  captain: { x: -43, z: 2 },
+  kiln: { x: -46, z: 0 },
+  obstacles: carve(104, 68, UNDERCROFT_ROOMS),
+  gates: [
+    { ...rectBox([-34, 24, -30, 28]), hp: 120 },
+    { ...rectBox([30, -2, 34, 2]), hp: 200 },
+  ],
+  water: [rectBox([12, -8, 18, -3]), rectBox([12, 3, 18, 8])],
+  bridges: [{ ...rectBox([12, -3, 18, 3]), bank: { x: 10, z: 0 }, needs: 2 }],
+  logs: [
+    { x: -20, z: 28 },
+    { x: 4, z: -30 },
+  ],
+  beacons: [
+    { x: 5, z: -22 },
+    { x: 22, z: 0 },
+    { x: 44, z: -6 },
+  ],
+  drips: [
+    { x: -22, z: -25, period: 4, offset: 0 },
+    { x: -14, z: -27, period: 4, offset: 2 },
+    { x: -8, z: -25, period: 4, offset: 1 },
+  ],
+  treasures: [
+    { id: 'shard-1', x: -40, z: -5, weight: 1 },
+    { id: 'shard-2', x: -14, z: 5, weight: 2 },
+    { id: 'shard-3', x: -26, z: -28, weight: 3 },
+    { id: 'glass-1', x: -10, z: -24, weight: 2, variant: 'dewglass' },
+    { id: 'shard-4', x: 10, z: -28, weight: 4 },
+    { id: 'twin-1', x: 10, z: -21, weight: 3, twin: 'vault' },
+    { id: 'shard-5', x: -10, z: 28, weight: 4 },
+    { id: 'shard-6', x: 6, z: 5, weight: 2 },
+    { id: 'shard-7', x: 22, z: -5, weight: 3 },
+    { id: 'twin-2', x: 26, z: -22, weight: 3, twin: 'vault' },
+    { id: 'lodestone', x: 28, z: 26, weight: 6, variant: 'lodestone' },
+    { id: 'shard-8', x: 18, z: 18, weight: 4 },
+    { id: 'first-ember', x: 46, z: 10, weight: 10 },
+  ],
+  pods: [
+    { x: -38, z: 5 },
+    { x: -24, z: -5 },
+    { x: -6, z: -30 },
+    { x: 12, z: -20 },
+    { x: -28, z: 30 },
+    { x: -42, z: 22 },
+    { x: 20, z: 6 },
+    { x: 30, z: 16 },
+  ],
+  enemies: [
+    { x: -26, z: 22, kind: 'mound', drop: 3 },
+    { x: -8, z: 20, kind: 'mound', reveals: 'sap' },
+    { x: -18, z: 24, kind: 'skitter' },
+    { x: -14, z: 26, kind: 'skitter' },
+    { x: -20, z: 22, kind: 'skitter' },
+    { x: 30, z: -24, kind: 'spitter' },
+    { x: 26, z: 4, kind: 'skitter' },
+    { x: 28, z: -2, kind: 'skitter' },
+    { x: 24, z: 22, kind: 'mossback' },
+    { x: 42, z: 0, kind: 'snuffer', drop: 6 },
+  ],
+  secret: { x: -41, z: 27 },
+};
+
+/** A lesson as written, before its par score is derived. The theme defaults to its chapter's. */
+type LevelSpec = Omit<LevelDefinition, 'parScore' | 'difficulty' | 'theme'> & {
+  theme?: LevelTheme;
+};
+
+/** The setting each stretch of the academy is taught in. */
+function themeOf(stage: number): LevelTheme {
+  if (stage <= 5) return 'meadow';
+  if (stage <= 10) return 'autumn';
+  if (stage <= 16) return 'marsh';
+  return 'dusk';
+}
 
 /** Total value of every Sunshard in a lesson. */
 export function treasureTotal(
@@ -1067,6 +1187,7 @@ function withPar(spec: LevelSpec, difficulty: Difficulty = 'normal'): LevelDefin
   const timeLeft = spec.dayLength - spec.platinumTime;
   return {
     ...spec,
+    theme: spec.theme ?? themeOf(spec.stage),
     difficulty,
     parScore:
       treasureTotal(spec) + spec.startingWorkers * POINTS_PER_WORKER + timeLeft * POINTS_PER_SECOND,
@@ -1096,6 +1217,7 @@ export const LEVELS: readonly LevelDefinition[] = [
   MATCHED_PAIRS,
   GLASS_RIVER,
   GRADUATION_DAY,
+  THE_UNDERCROFT,
 ].map((spec) => withPar(spec));
 
 /** A lesson as played on the given difficulty: Hard has a shorter day and its own par. */

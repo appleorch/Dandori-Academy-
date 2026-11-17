@@ -9,7 +9,7 @@ const AIM_UNITS_PER_PIXEL = 0.07;
 
 /**
  * On-screen controls for touch: a joystick to move, a whistle button that also
- * aims when dragged, and charge and dismiss buttons. Throwing is done by touching
+ * aims when dragged, charge and dismiss buttons, and a hold-to-fast-forward button. Throwing is done by touching
  * the play field itself.
  */
 export function TouchControls({ input }: { input: InputController }) {
@@ -70,6 +70,23 @@ export function TouchControls({ input }: { input: InputController }) {
       >
         <div ref={knob} className="stick-knob" />
       </div>
+      <button
+        type="button"
+        className="touch-button fast"
+        aria-label="Fast forward"
+        onPointerDown={(event) => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          input.fastButton = true;
+        }}
+        onPointerUp={() => {
+          input.fastButton = false;
+        }}
+        onPointerCancel={() => {
+          input.fastButton = false;
+        }}
+      >
+        ▶▶
+      </button>
       <div className="touch-buttons">
         <button
           type="button"
