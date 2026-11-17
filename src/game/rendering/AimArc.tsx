@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { Object3D, type InstancedMesh } from 'three';
 import { THROW } from '../core/config';
 import type { Simulation } from '../simulation/Simulation';
+import { heightAt } from '../world/heightMap';
 
 const DOTS = 12;
 const dummy = new Object3D();
@@ -18,11 +19,13 @@ export function AimArc({ sim }: { sim: Simulation }) {
     if (!node.visible) return;
     const from = sim.captainTransform;
     const slide = (clock.elapsedTime * 1.5) % 1;
+    const low = heightAt(sim.level, from.x, from.z);
+    const high = heightAt(sim.level, sim.cursor.x, sim.cursor.z);
     for (let i = 0; i < DOTS; i++) {
       const u = (i + slide) / DOTS;
       dummy.position.set(
         from.x + (sim.cursor.x - from.x) * u,
-        0.6 + 4 * THROW.arcHeight * u * (1 - u),
+        0.6 + low + (high - low) * u + 4 * THROW.arcHeight * u * (1 - u),
         from.z + (sim.cursor.z - from.z) * u,
       );
       dummy.scale.setScalar(0.5 + 0.5 * Math.sin(u * Math.PI));

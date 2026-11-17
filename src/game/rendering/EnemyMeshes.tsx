@@ -20,6 +20,8 @@ import { ENEMY, ENEMY_SPECS, type EnemyKind } from '../enemies/enemyKinds';
 import type { Box } from '../navigation/NavGrid';
 import type { Enemy } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
+import type { GateSpawn } from '../world/levelTypes';
+import { heightAt } from '../world/heightMap';
 
 const BAR_WIDTH = 2.2;
 /** Seconds a hit makes an enemy glow. */
@@ -527,6 +529,208 @@ function GateBody({ box }: { box: Box }) {
   );
 }
 
+/**
+ * A crystal gate: a wall of faceted crystal grown across an old doorway of the Academy,
+ * glowing from inside, set in a frame of carved stone with a keystone over the top.
+ */
+function CrystalGateBody({ box }: { box: Box }) {
+  const long = box.w >= box.d;
+  const span = long ? box.w : box.d;
+  const count = Math.max(4, Math.round(span * 1.4));
+  return (
+    <>
+      {Array.from({ length: count }, (_, i) => {
+        const t = (i + 0.5) / count - 0.5;
+        const along = t * span;
+        const height = 1.4 + ((i * 0.618) % 1) * 1.6;
+        const lean = Math.sin(i * 2.7) * 0.25;
+        return (
+          <mesh
+            key={i}
+            position={[
+              long ? along : Math.sin(i) * 0.2,
+              height / 2,
+              long ? Math.sin(i) * 0.2 : along,
+            ]}
+            rotation={long ? [lean, i, 0] : [0, i, lean]}
+            castShadow
+          >
+            <coneGeometry args={[0.32 + ((i * 0.37) % 1) * 0.2, height, 6]} />
+            <meshPhysicalMaterial
+              color={i % 3 ? '#a8e8ff' : '#d0b0ff'}
+              emissive={i % 3 ? '#3ab8ff' : '#8a5aff'}
+              emissiveIntensity={0.7}
+              transparent
+              opacity={0.82}
+              roughness={0.05}
+              clearcoat={1}
+              flatShading
+            />
+          </mesh>
+        );
+      })}
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          position={[long ? side * (span / 2 + 0.3) : 0, 1.6, long ? 0 : side * (span / 2 + 0.3)]}
+          castShadow
+        >
+          <boxGeometry args={[0.6, 3.2, 0.6]} />
+          <meshStandardMaterial color="#d8ccb4" roughness={0.9} />
+        </mesh>
+      ))}
+      <mesh position={[0, 3.35, 0]} castShadow>
+        <boxGeometry args={long ? [span + 1.2, 0.4, 0.7] : [0.7, 0.4, span + 1.2]} />
+        <meshStandardMaterial color="#cfc2a8" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 3.6, 0]}>
+        <octahedronGeometry args={[0.3]} />
+        <meshBasicMaterial color={[2.2, 1.6, 0.6]} toneMapped={false} />
+      </mesh>
+      <pointLight position={[0, 1.6, 0]} color="#7acaff" intensity={4} distance={6} decay={1.8} />
+    </>
+  );
+}
+
+/** Cave vermin: a low, glossy carapace on six quick legs, with eyes that shine in the dark. */
+function SkitterBody({ r, gait, jaw }: { r: number; gait: Gait; jaw: React.Ref<Group> }) {
+  return (
+    <>
+      {[-0.6, 0, 0.6].flatMap((along, i) =>
+        [-1, 1].map((side) => (
+          <Leg
+            key={`${along}:${side}`}
+            gait={gait}
+            x={side * r * 0.75}
+            z={along * r}
+            length={r * 0.55}
+            radius={r * 0.09}
+            color="#2a2030"
+            offset={(i + (side > 0 ? 1 : 0)) * Math.PI}
+          />
+        )),
+      )}
+      <mesh position={[0, r * 0.6, -r * 0.1]} scale={[1, 0.5, 1.3]} castShadow>
+        <sphereGeometry args={[r * 0.85, 18, 12]} />
+        <meshStandardMaterial color="#3d2f4a" roughness={0.35} metalness={0.3} />
+      </mesh>
+      <mesh position={[0, r * 0.78, -r * 0.2]} scale={[0.7, 0.3, 1]}>
+        <sphereGeometry args={[r * 0.8, 14, 10]} />
+        <meshStandardMaterial color="#5a4470" roughness={0.3} metalness={0.3} />
+      </mesh>
+      <group position={[0, r * 0.55, r * 0.95]}>
+        <mesh castShadow>
+          <sphereGeometry args={[r * 0.42, 14, 10]} />
+          <meshStandardMaterial color="#2f2438" roughness={0.5} />
+        </mesh>
+        <Eye x={-r * 0.2} y={r * 0.16} z={r * 0.28} size={r * 0.13} glow="#c8ff5a" />
+        <Eye x={r * 0.2} y={r * 0.16} z={r * 0.28} size={r * 0.13} glow="#c8ff5a" />
+        <group ref={jaw} position={[0, -r * 0.1, r * 0.3]}>
+          {[-1, 1].map((side) => (
+            <mesh
+              key={side}
+              position={[side * r * 0.16, 0, r * 0.14]}
+              rotation={[1.5, 0, side * 0.5]}
+            >
+              <coneGeometry args={[r * 0.07, r * 0.4, 6]} />
+              <meshStandardMaterial color="#e8dcc0" roughness={0.4} />
+            </mesh>
+          ))}
+        </group>
+      </group>
+    </>
+  );
+}
+
+/**
+ * The Snuffer: a huge, pale, eyeless cave-dweller with a frill of gills and a mouth far
+ * too wide. Its belly shows while it lies winded.
+ */
+function SnufferBody({
+  r,
+  gait,
+  belly,
+}: {
+  r: number;
+  gait: Gait;
+  belly: React.Ref<MeshStandardMaterial>;
+}) {
+  return (
+    <>
+      {QUAD_LEGS.map(([side, along, offset]) => (
+        <Leg
+          key={`${side}:${along}`}
+          gait={gait}
+          x={side * r * 0.62}
+          z={along * r * 0.9}
+          length={r * 0.38}
+          radius={r * 0.14}
+          color="#cfc2cc"
+          offset={offset}
+        />
+      ))}
+      {[-1.1, -0.5, 0.1].map((along, i) => (
+        <mesh key={along} position={[0, r * 0.55, along * r * 0.8]} castShadow>
+          <sphereGeometry args={[r * (0.5 + i * 0.1), 20, 14]} />
+          <meshStandardMaterial color="#ded3dc" roughness={0.45} />
+        </mesh>
+      ))}
+      <mesh position={[0, r * 0.4, -r * 1.5]} rotation={[-1.35, 0, 0]} castShadow>
+        <coneGeometry args={[r * 0.3, r * 1.1, 10]} />
+        <meshStandardMaterial color="#d2c5cf" roughness={0.5} />
+      </mesh>
+      <mesh position={[0, r * 0.22, -r * 0.2]} scale={[0.85, 0.3, 1.5]}>
+        <sphereGeometry args={[r * 0.7, 16, 10]} />
+        <meshStandardMaterial
+          ref={belly}
+          color="#f6e4e2"
+          emissive="#ff9a7a"
+          emissiveIntensity={0}
+        />
+      </mesh>
+      <group position={[0, r * 0.58, r * 0.85]}>
+        <mesh scale={[1.25, 0.8, 1]} castShadow>
+          <sphereGeometry args={[r * 0.6, 20, 14]} />
+          <meshStandardMaterial color="#e6dbe2" roughness={0.4} />
+        </mesh>
+        <mesh position={[0, -r * 0.16, r * 0.3]} scale={[1.2, 0.22, 0.8]}>
+          <sphereGeometry args={[r * 0.5, 16, 8]} />
+          <meshStandardMaterial color="#5a2636" roughness={0.6} />
+        </mesh>
+        {[-2, -1, 0, 1, 2].map((t) => (
+          <mesh key={t} position={[t * r * 0.2, -r * 0.08, r * 0.58]} rotation={[Math.PI, 0, 0]}>
+            <coneGeometry args={[r * 0.05, r * 0.16, 5]} />
+            <meshStandardMaterial color="#fff6e6" roughness={0.3} />
+          </mesh>
+        ))}
+        {[-1, 1].flatMap((side) =>
+          [0, 1, 2].map((i) => (
+            <mesh
+              key={`${side}:${i}`}
+              position={[side * r * (0.62 + i * 0.07), r * (0.18 + i * 0.16), -r * 0.12]}
+              rotation={[0, 0, -side * (1.1 - i * 0.3)]}
+            >
+              <coneGeometry args={[r * 0.07, r * 0.5, 6]} />
+              <meshStandardMaterial
+                color="#f09ab0"
+                emissive="#ff5a8a"
+                emissiveIntensity={0.5}
+                roughness={0.5}
+              />
+            </mesh>
+          )),
+        )}
+        {[-1, 1].map((side) => (
+          <mesh key={side} position={[side * r * 0.16, r * 0.12, r * 0.55]}>
+            <sphereGeometry args={[r * 0.04, 6, 6]} />
+            <meshBasicMaterial color="#3a2030" />
+          </mesh>
+        ))}
+      </group>
+    </>
+  );
+}
+
 interface EnemyMeshProps {
   sim: Simulation;
   entity: Entity;
@@ -543,6 +747,8 @@ const BAR_HEIGHT: Record<EnemyKind, number> = {
   lanternroot: 2.6,
   rootknot: 1.6,
   bellwether: 2.6,
+  skitter: 1.3,
+  snuffer: 2.4,
 };
 
 /**
@@ -607,7 +813,7 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
     last.current = { x: transform.x, z: transform.z, hp: enemy.hp };
     gait.phase += moved * (5 / Math.max(0.6, r));
     gait.stride += ((moved > 0.004 ? 1 : 0) - gait.stride) * Math.min(1, delta * 8);
-    node.position.set(transform.x, 0, transform.z);
+    node.position.set(transform.x, heightAt(sim.level, transform.x, transform.z), transform.z);
     model.rotation.set(0, enemy.shape ? 0 : transform.facing, 0);
     model.position.set(0, 0, 0);
     model.scale.setScalar(1);
@@ -743,7 +949,14 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
         {enemy.kind === 'lanternroot' && <LanternrootBody r={r} />}
         {enemy.kind === 'rootknot' && <KnotBody r={r} />}
         {enemy.kind === 'bellwether' && <BellwetherBody r={r} bell={bell} gait={gait} />}
-        {enemy.shape && <GateBody box={enemy.shape} />}
+        {enemy.kind === 'skitter' && <SkitterBody r={r} gait={gait} jaw={jaw} />}
+        {enemy.kind === 'snuffer' && <SnufferBody r={r} gait={gait} belly={belly} />}
+        {enemy.shape &&
+          ((enemy.shape as GateSpawn).style === 'crystal' ? (
+            <CrystalGateBody box={enemy.shape} />
+          ) : (
+            <GateBody box={enemy.shape} />
+          ))}
         {enemy.kind === 'mound' && (
           <MoundBody
             r={r}
@@ -765,6 +978,13 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
             wireframe
             depthWrite={false}
           />
+        </mesh>
+      )}
+      {enemy.kind === 'snuffer' && (
+        // The dark it wears: a shroud that only shows outside a beacon's glow.
+        <mesh ref={shield} position={[0, r * 0.7, 0]} scale={[1, 0.7, 1.2]}>
+          <icosahedronGeometry args={[r * 1.5, 2]} />
+          <meshBasicMaterial color="#1a1030" transparent opacity={0.55} depthWrite={false} />
         </mesh>
       )}
       {spec.attack === 'charge' && (

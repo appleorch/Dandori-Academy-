@@ -1,4 +1,4 @@
-import { CARRY, DEWGLASS_BONUS_PER_WEIGHT, SAP, TWIN } from '../core/config';
+import { CARRY, CHAIN, DEWGLASS_BONUS_PER_WEIGHT, SAP, TWIN } from '../core/config';
 import type { Entity } from '../core/ecs';
 import type { Point } from '../navigation/NavGrid';
 import { moveAgent } from '../navigation/steering';
@@ -25,7 +25,7 @@ interface Destination extends Point {
 
 /**
  * Where a haul goes. Span-logs go to the bank of the nearest unbuilt bridge (by path,
- * chosen once); everything else goes to the Kiln.
+ * chosen once); everything else goes to the Kiln or a lit beacon, whichever is the shorter walk.
  */
 export function destinationOf(sim: Simulation, carryable: Carryable, at: Point): Destination {
   if (carryable.kind === 'log') {
@@ -47,7 +47,19 @@ export function destinationOf(sim: Simulation, carryable: Carryable, at: Point):
     const site = sim.bridges[carryable.dest];
     if (site) return { ...site.bank, field: site.field, site: carryable.dest };
   }
-  return { ...sim.level.kiln, field: sim.kilnField, site: -1 };
+  // The Kiln, unless a lit beacon is a shorter walk.
+  const cell = sim.nav.cellIndexAt(at.x, at.z);
+  let best: Destination = { ...sim.level.kiln, field: sim.kilnField, site: -1 };
+  let bestDist = sim.kilnField.dist[cell];
+  for (const beacon of sim.beacons) {
+    if (!beacon.lit) continue;
+    const dist = beacon.field.dist[cell];
+    if (dist < bestDist) {
+      best = { x: beacon.x, z: beacon.z, field: beacon.field, site: -1 };
+      bestDist = dist;
+    }
+  }
+  return best;
 }
 
 /** Whether a haul has a way to its destination from where it lies. */
@@ -70,6 +82,14 @@ function settleTwin(sim: Simulation, carryable: Carryable, kiln: Point): void {
   }
 }
 
+/** A delivery to the Kiln or a beacon: extends the chain if it came soon after the last one. */
+function extendChain(sim: Simulation, at: Point): void {
+  sim.chain = sim.elapsed - sim.lastDelivery <= CHAIN.window ? sim.chain + 1 : 1;
+  sim.lastDelivery = sim.elapsed;
+  sim.stats.bestChain = Math.max(sim.stats.bestChain, sim.chain);
+  if (sim.chain >= 2) sim.emit('chain', at.x, at.z, sim.chain);
+}
+
 function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Destination): void {
   for (const worker of [...carryable.claimed]) {
     setIdle(sim, worker, sim.workers.require(worker));
@@ -86,12 +106,15 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
   } else if (carryable.kind === 'treasure') {
     sim.stats.treasureValue += carryable.value;
     sim.stats.treasuresCollected.push(carryable.id);
+    sim.stats.deliveryTimes.push(sim.elapsed);
+    extendChain(sim, to);
     sim.emit('deliver', to.x, to.z, carryable.value);
     settleTwin(sim, carryable, to);
   } else if (carryable.kind === 'bloom') {
     // Bonus score: it counts towards the total but not towards clearing the lesson.
     sim.stats.treasureValue += carryable.value;
     sim.stats.bloomsCollected++;
+    extendChain(sim, to);
     sim.emit('deliver', to.x, to.z, carryable.value);
   } else if (carryable.kind === 'sap') {
     sim.sapTimer = SAP.seconds;
@@ -99,6 +122,8 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
   }
   if (carryable.workerYield > 0) {
     sim.kiln.queue += carryable.workerYield;
+    sim.hatchAt.x = to.x;
+    sim.hatchAt.z = to.z;
     sim.emit('grow', to.x, to.z, carryable.workerYield);
   }
   sim.ecs.destroy(entity);

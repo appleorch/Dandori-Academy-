@@ -21,6 +21,16 @@ export interface Settings {
   sfxVolume: number;
   /** Music volume, 0 to 1. */
   musicVolume: number;
+  /** Proctor Ashwick's advice during a day. */
+  hints: boolean;
+  /** Headmaster Sprocket's running commentary. */
+  commentary: boolean;
+  /** The story briefing shown before each day begins. */
+  briefings: boolean;
+  /** Set once the prologue has been read or skipped. */
+  seenIntro: boolean;
+  /** The Warden's outfit (see progression/outfits). */
+  outfit: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -32,6 +42,11 @@ export const DEFAULT_SETTINGS: Settings = {
   pauseOnBlur: true,
   sfxVolume: 0.7,
   musicVolume: 0.35,
+  hints: true,
+  commentary: true,
+  briefings: true,
+  seenIntro: false,
+  outfit: 'cadet',
 };
 
 export const ZOOM_SPEED_MIN = 0.25;
@@ -51,9 +66,18 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
   // Settings saved before quality levels existed had a shadows switch instead.
   if (graphics) settings.graphics = graphics;
   else if (raw.shadows === false) settings.graphics = 'low';
-  for (const key of ['carrierCounts', 'healthBars', 'pauseOnBlur'] as const) {
+  for (const key of [
+    'carrierCounts',
+    'healthBars',
+    'pauseOnBlur',
+    'hints',
+    'commentary',
+    'briefings',
+    'seenIntro',
+  ] as const) {
     if (typeof raw[key] === 'boolean') settings[key] = raw[key];
   }
+  if (typeof raw.outfit === 'string') settings.outfit = raw.outfit;
   if (typeof raw.zoomSpeed === 'number' && Number.isFinite(raw.zoomSpeed)) {
     settings.zoomSpeed = Math.min(ZOOM_SPEED_MAX, Math.max(ZOOM_SPEED_MIN, raw.zoomSpeed));
   }

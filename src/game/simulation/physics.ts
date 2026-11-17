@@ -65,6 +65,13 @@ export class PhysicsWorld {
     this.walls.delete(box);
   }
 
+  /** Puts the captain back at a point, for when a move was not allowed (up a one-way ledge). */
+  placeCaptain(at: Point): void {
+    this.body.setTranslation({ x: at.x, y: 1, z: at.z }, true);
+    this.body.setNextKinematicTranslation({ x: at.x, y: 1, z: at.z });
+    this.world.step();
+  }
+
   /** Moves the captain by the desired displacement, resolves collisions and writes the result. */
   moveCaptain(dx: number, dz: number, out: Point): void {
     this.controller.computeColliderMovement(this.collider, { x: dx, y: 0, z: dz });

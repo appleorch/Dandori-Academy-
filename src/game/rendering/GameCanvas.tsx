@@ -6,9 +6,12 @@ import { useGameStore } from '../core/gameStore';
 import { CameraRig } from '../camera/CameraRig';
 import type { InputController } from '../commands/input';
 import { Simulation } from '../simulation/Simulation';
+import { heightAt } from '../world/heightMap';
 import type { GraphicsLevel } from '../core/settings';
 import type { LevelDefinition } from '../world/level';
 import { AimArc } from './AimArc';
+import { Architecture } from './Architecture';
+import { Beacons } from './Beacons';
 import { Atmosphere } from './Atmosphere';
 import { CaptainMesh } from './CaptainMesh';
 import { CarryableMeshes } from './CarryableMeshes';
@@ -68,30 +71,32 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   const pauseOnBlur = useGameStore((state) => state.settings.pauseOnBlur);
 
   useEffect(() => {
+    fx.ground = (x, z) => heightAt(level, x, z);
     const created = new Simulation(level);
     setSim(created);
     return () => created.dispose();
-  }, [level]);
+  }, [level, fx]);
 
   useEffect(() => {
     input.zoomSpeed = zoomSpeed;
   }, [input, zoomSpeed]);
 
-  // Music plays only while a day is actually running.
+  // The whistle never outlives the day it was blown in.
   useEffect(() => {
-    if (!playing) return;
-    audio.startMusic();
-    return () => {
-      audio.stopMusic();
-      audio.setWhistle(false);
-    };
+    if (!playing) audio.setWhistle(false);
   }, [playing]);
 
   // Escape toggles the pause menu.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.code !== 'Escape') return;
       const store = useGameStore.getState();
+      if (store.pokerOpen) return;
+      if (event.code === 'Enter' && store.briefing) store.beginDay();
+      // R restarts from the pause menu or the results, never mid-play by accident.
+      if (event.code === 'KeyR' && (store.paused || store.phase === 'results')) {
+        store.startDay(store.levelId);
+      }
+      if (event.code !== 'Escape' || store.briefing) return;
       if (store.paused) store.resume();
       else store.pause();
     };
@@ -124,7 +129,13 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         toneMapping: ACESFilmicToneMapping,
         toneMappingExposure: 0.92,
       }}
-      camera={{ fov: 42, near: 1, far: 320, position: [0, 22, 16] }}
+      camera={{
+        fov: 42,
+        near: 1,
+        far: 320,
+        // High above the Warden, so the day opens with a swoop down to the field.
+        position: [level.captain.x, 70, level.captain.z + 44],
+      }}
     >
       {quality.postFx ? (
         <PostFx ambientOcclusion={quality.ambientOcclusion} />
@@ -132,7 +143,8 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         <OverlayInMainPass />
       )}
       <Terrain level={level} />
-      <Scenery level={level} />
+      <Architecture level={level} />
+      <Scenery level={level} sim={sim ?? undefined} />
       {sim && (
         <>
           <GameLoop sim={sim} input={input} fx={fx} />
@@ -144,6 +156,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
           <CarryableMeshes sim={sim} />
           <EnemyMeshes sim={sim} />
           <WaterAndBridges sim={sim} />
+          <Beacons sim={sim} />
           <Minimap sim={sim} />
           <HazardMeshes sim={sim} />
           <AimArc sim={sim} />

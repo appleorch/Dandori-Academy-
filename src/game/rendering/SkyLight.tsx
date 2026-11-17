@@ -10,74 +10,7 @@ import {
 } from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import type { Simulation } from '../simulation/Simulation';
-
-interface SkyStop {
-  /** Fraction of the day elapsed. */
-  at: number;
-  sun: string;
-  sunPower: number;
-  sky: string;
-  bounce: string;
-  skyPower: number;
-  /** Background and fog colour. */
-  air: string;
-}
-
-/** Morning gold, white midday, then a long orange sunset as the day runs out. */
-const STOPS: readonly SkyStop[] = [
-  {
-    at: 0,
-    sun: '#ffd2a0',
-    sunPower: 2.6,
-    sky: '#cfe6ff',
-    bounce: '#5d7a3a',
-    skyPower: 1.1,
-    air: '#9ec3d8',
-  },
-  {
-    at: 0.2,
-    sun: '#fff4e2',
-    sunPower: 3.1,
-    sky: '#d8ecff',
-    bounce: '#6b8a42',
-    skyPower: 1.25,
-    air: '#a9d0e6',
-  },
-  {
-    at: 0.65,
-    sun: '#ffefd6',
-    sunPower: 3,
-    sky: '#d8ecff',
-    bounce: '#6b8a42',
-    skyPower: 1.2,
-    air: '#a9d0e6',
-  },
-  {
-    at: 0.85,
-    sun: '#ffa45e',
-    sunPower: 2.6,
-    sky: '#f2c7a8',
-    bounce: '#6a6a38',
-    skyPower: 1,
-    air: '#e0b08c',
-  },
-  {
-    at: 1,
-    sun: '#ff6a3c',
-    sunPower: 1.9,
-    sky: '#8f7fb8',
-    bounce: '#4a4a3a',
-    skyPower: 0.8,
-    air: '#7c5f86',
-  },
-];
-const SKY = STOPS.map((stop) => ({
-  ...stop,
-  sun: new Color(stop.sun),
-  sky: new Color(stop.sky),
-  bounce: new Color(stop.bounce),
-  air: new Color(stop.air),
-}));
+import { themeOf } from './theme';
 
 /** Half-width of the area the sun's shadow map covers, centred on the captain. */
 const SHADOW_REACH = 32;
@@ -89,7 +22,7 @@ interface SkyLightProps {
 }
 
 /**
- * Sun, sky light, fog and reflections that follow the day clock, so the light
+ * Sun, sky light, fog and reflections that follow the day clock and the setting, so the light
  * itself says how late it is. The sun's shadow box follows the captain, which keeps
  * shadows crisp on large maps.
  */
@@ -98,13 +31,25 @@ export function SkyLight({ sim, shadowMapSize }: SkyLightProps) {
   const hemi = useRef<HemisphereLight>(null);
   const target = useMemo(() => new Object3D(), []);
   const { gl, scene } = useThree();
+  const look = themeOf(sim.level.theme);
+  const stops = useMemo(
+    () =>
+      look.sky.map((stop) => ({
+        ...stop,
+        sun: new Color(stop.sun),
+        sky: new Color(stop.sky),
+        bounce: new Color(stop.bounce),
+        air: new Color(stop.air),
+      })),
+    [look],
+  );
 
   useEffect(() => {
     const pmrem = new PMREMGenerator(gl);
     const environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = environment;
     scene.environmentIntensity = 0.25;
-    scene.fog = new Fog('#a9d0e6', 55, 160);
+    scene.fog = new Fog(look.sky[0].air, look.fog[0], look.fog[1]);
     return () => {
       scene.environment = null;
       scene.fog = null;
@@ -112,15 +57,15 @@ export function SkyLight({ sim, shadowMapSize }: SkyLightProps) {
       environment.dispose();
       pmrem.dispose();
     };
-  }, [gl, scene]);
+  }, [gl, scene, look]);
 
   useFrame(() => {
     if (!sun.current || !hemi.current) return;
     const day = 1 - sim.timeLeft / sim.level.dayLength;
     let index = 0;
-    while (index < SKY.length - 2 && day > SKY[index + 1].at) index++;
-    const from = SKY[index];
-    const to = SKY[index + 1];
+    while (index < stops.length - 2 && day > stops[index + 1].at) index++;
+    const from = stops[index];
+    const to = stops[index + 1];
     const t = Math.min(1, Math.max(0, (day - from.at) / (to.at - from.at)));
     sun.current.color.lerpColors(from.sun, to.sun, t);
     sun.current.intensity = from.sunPower + (to.sunPower - from.sunPower) * t;

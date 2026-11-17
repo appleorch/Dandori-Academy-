@@ -12,6 +12,10 @@ function formatDate(iso: string): string {
 export function AchievementsScreen() {
   const save = useGameStore((state) => state.save);
   const earned = Object.keys(save.achievements).length;
+  // Secret achievements stay off the list, and out of the count, until they are earned.
+  const listed = ACHIEVEMENTS.filter(
+    (achievement) => !achievement.secret || achievement.id in save.achievements,
+  );
 
   return (
     <main className="screen">
@@ -19,11 +23,11 @@ export function AchievementsScreen() {
         <MenuNav />
         <h1>Achievements</h1>
         <p>
-          {earned} of {ACHIEVEMENTS.length} earned. Days played: {save.totals.days} · Sunshards
-          delivered: {save.totals.treasures} · Enemies defeated: {save.totals.enemies}
+          {earned} of {listed.length} earned. Days played: {save.totals.days} · Sunshards delivered:{' '}
+          {save.totals.treasures} · Enemies defeated: {save.totals.enemies}
         </p>
         <ul className="achievements">
-          {ACHIEVEMENTS.map((achievement) => {
+          {listed.map((achievement) => {
             const when = save.achievements[achievement.id];
             const progress = achievement.progress?.(save);
             return (

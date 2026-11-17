@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import type { Mesh } from 'three';
 import type { Simulation } from '../simulation/Simulation';
+import { heightAt } from '../world/heightMap';
 
 /** Ground markers for the command cursor and the whistle's growing call circle. */
 export function CursorFx({ sim }: { sim: Simulation }) {
@@ -11,11 +12,12 @@ export function CursorFx({ sim }: { sim: Simulation }) {
   useFrame(({ clock }) => {
     if (!cursor.current || !whistle.current) return;
     const { x, z } = sim.cursor;
-    cursor.current.position.set(x, 0.05, z);
+    const ground = heightAt(sim.level, x, z);
+    cursor.current.position.set(x, ground + 0.05, z);
     cursor.current.rotation.z = clock.elapsedTime * 2;
     const radius = sim.captainState.whistleRadius;
     whistle.current.visible = radius > 0;
-    whistle.current.position.set(x, 0.06, z);
+    whistle.current.position.set(x, ground + 0.06, z);
     whistle.current.scale.setScalar(radius);
   });
 

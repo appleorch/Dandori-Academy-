@@ -4,6 +4,7 @@ import { Vector3 } from 'three';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { Box } from '../navigation/NavGrid';
 import type { Simulation } from '../simulation/Simulation';
+import type { GateSpawn } from '../world/levelTypes';
 import { inDanger } from './danger';
 
 const MAP_WIDTH = 190;
@@ -87,6 +88,70 @@ export function Minimap({ sim }: { sim: Simulation }) {
       }
     }
 
+    // Compass markers: home, and the nearest relic nobody has lifted yet, when off screen.
+    if (pen) {
+      const captain = sim.captainTransform;
+      const marker = (x: number, z: number, color: string, label: string): void => {
+        probe.set(x, 0.5, z).project(camera);
+        const behind = probe.z > 1;
+        if (!behind && Math.abs(probe.x) <= 0.92 && Math.abs(probe.y) <= 0.92) return;
+        const px = behind ? -probe.x : probe.x;
+        const py = behind ? -probe.y : probe.y;
+        const angle = Math.atan2(-py, px);
+        const edge = 0.84 / Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle)));
+        // Kept clear of the HUD along the top and bottom, and of the minimap in the corner.
+        const sx = Math.min(
+          size.width - 34,
+          Math.max(34, size.width / 2 + Math.cos(angle) * edge * (size.width / 2)),
+        );
+        let sy = Math.min(
+          size.height - 96,
+          Math.max(116, size.height / 2 + Math.sin(angle) * edge * (size.height / 2)),
+        );
+        if (sx > size.width - 220 && sy < 260) sy = 260;
+        const metres = Math.round(Math.hypot(x - captain.x, z - captain.z));
+        pen.save();
+        pen.translate(sx, sy);
+        pen.fillStyle = 'rgba(28, 20, 16, 0.78)';
+        pen.strokeStyle = color;
+        pen.lineWidth = 2;
+        pen.beginPath();
+        pen.arc(0, 0, 15, 0, Math.PI * 2);
+        pen.fill();
+        pen.stroke();
+        pen.rotate(angle);
+        pen.fillStyle = color;
+        pen.beginPath();
+        pen.moveTo(24, 0);
+        pen.lineTo(16, -6);
+        pen.lineTo(16, 6);
+        pen.closePath();
+        pen.fill();
+        pen.rotate(-angle);
+        pen.font = '700 13px system-ui, sans-serif';
+        pen.textAlign = 'center';
+        pen.textBaseline = 'middle';
+        pen.fillText(label, 0, 1);
+        pen.font = '600 10px system-ui, sans-serif';
+        pen.fillStyle = '#fff6dc';
+        pen.fillText(`${metres}m`, 0, 25);
+        pen.restore();
+      };
+      marker(sim.level.kiln.x, sim.level.kiln.z, '#ffb347', '\u2302');
+      let nearest: { x: number; z: number } | null = null;
+      let best = Infinity;
+      for (const [entity, haul] of sim.carryables.entries()) {
+        if (haul.kind !== 'treasure' || haul.carriers.length > 0) continue;
+        const at = sim.transforms.require(entity);
+        const dist = Math.hypot(at.x - captain.x, at.z - captain.z);
+        if (dist < best) {
+          best = dist;
+          nearest = at;
+        }
+      }
+      if (nearest) marker(nearest.x, nearest.z, '#ffd257', '\u25c6');
+    }
+
     // The minimap itself, redrawn a few times a second.
     if (frame % REDRAW_FRAMES !== 0) return;
     const ink = map.getContext('2d');
@@ -104,12 +169,25 @@ export function Minimap({ sim }: { sim: Simulation }) {
       ink.fill();
     };
     ink.clearRect(0, 0, MAP_WIDTH, height);
-    ink.fillStyle = 'rgba(40, 70, 40, 0.85)';
+    const cave = sim.level.theme === 'cave';
+    ink.fillStyle = cave ? 'rgba(70, 74, 96, 0.9)' : 'rgba(40, 70, 40, 0.85)';
     ink.fillRect(0, 0, MAP_WIDTH, height);
-    for (const wall of sim.level.obstacles) box(wall, '#8a8f98');
-    for (const water of sim.level.water ?? []) box(water, '#3d86b0');
-    for (const site of sim.bridges) box(site.box, site.built ? '#8a6a46' : '#3d86b0');
-    for (const [, enemy] of sim.enemies.entries()) if (enemy.shape) box(enemy.shape, '#4a5a22');
+    const wet = cave ? '#08080e' : '#3d86b0';
+    for (const plateau of sim.level.plateaus ?? []) box(plateau, 'rgba(150, 190, 110, 0.75)');
+    for (const ramp of sim.level.ramps ?? []) box(ramp, '#c8bca0');
+    for (const wall of sim.level.obstacles) box(wall, cave ? '#1c1e2a' : '#8a8f98');
+    for (const ledge of sim.level.ledges ?? []) box(ledge, '#ffe08a');
+    for (const water of sim.level.water ?? []) box(water, wet);
+    for (const site of sim.bridges) box(site.box, site.built ? '#8a6a46' : wet);
+    for (const beacon of sim.beacons)
+      dot(beacon.x, beacon.z, 3, beacon.lit ? '#ffc06a' : '#6aa8ff');
+    for (const [, enemy] of sim.enemies.entries()) {
+      if (enemy.shape) {
+        box(enemy.shape, (enemy.shape as GateSpawn).style === 'crystal' ? '#7acaff' : '#4a5a22');
+      }
+    }
+    const { descent } = sim.level;
+    if (descent) dot(descent.x, descent.z, 3, '#6a8aff');
     const { kiln } = sim.level;
     dot(kiln.x, kiln.z, 4, '#ffb347');
     for (const [entity, carryable] of sim.carryables.entries()) {

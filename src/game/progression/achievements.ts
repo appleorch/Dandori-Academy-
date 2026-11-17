@@ -1,12 +1,15 @@
 import type { Difficulty } from '../core/difficulty';
 import { rankValue, type Rank } from '../dandori/scoring';
 import { bestRank, type DayRecord, type SaveData } from '../save/saveManager';
+import { recoveredRelics, RELICS } from '../story/relics';
 import { LEVELS } from '../world/level';
 
 export interface Achievement {
   id: string;
   name: string;
   description: string;
+  /** Kept off the list, name and all, until it is earned. */
+  secret?: boolean;
   /** Counter achievements report [current, target]; one-off feats have no progress. */
   progress?: (save: SaveData) => readonly [number, number];
   /**
@@ -50,6 +53,11 @@ function feat(
   test: (day: DayRecord) => boolean,
 ): Achievement {
   return { id, name, description, earned: (_save, day) => day !== null && test(day) };
+}
+
+/** Earned by something other than a finished day; see `grantAchievement`. */
+function secret(id: string, name: string, description: string): Achievement {
+  return { id, name, description, secret: true, earned: () => false };
 }
 
 const FINAL = LEVELS.find((level) => level.id === 'final-exam') ?? LEVELS[LEVELS.length - 1];
@@ -134,6 +142,34 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
       return rank !== null && rankValue(rank) >= rankValue('Silver');
     },
   },
+  feat('lights-on', 'Lights On', 'Defeat the Snuffer.', (day) =>
+    day.bossesDefeated.includes('snuffer'),
+  ),
+  {
+    id: 'first-ember',
+    name: 'The First Ember',
+    description: 'Earn Silver or better in The Undercroft.',
+    earned: (save) => {
+      const rank = bestRank(save, 'the-undercroft');
+      return rank !== null && rankValue(rank) >= rankValue('Silver');
+    },
+  },
+  {
+    id: 'restorer',
+    name: 'Restorer',
+    description: 'Earn Silver or better on Restoration Day, the last of the Grand Curriculum.',
+    earned: (save) => {
+      const rank = bestRank(save, 'restoration-day');
+      return rank !== null && rankValue(rank) >= rankValue('Silver');
+    },
+  },
+  counter(
+    'curator',
+    'Curator',
+    'Recover every Relic of Harmony for the Field Guide.',
+    RELICS.length,
+    (s) => recoveredRelics(s.treasuresCollected).size,
+  ),
   counter('hardened', 'Hardened', 'Earn Silver or better on Hard in any lesson.', 1, (s) =>
     lessonsAtLeast(s, 'Silver', 'hard'),
   ),
@@ -150,6 +186,16 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     LEVELS.length,
     (s) => lessonsAtLeast(s, 'Platinum'),
   ),
+  counter(
+    'spelunker',
+    'Spelunker',
+    'Find every old way down into the Depths.',
+    LEVELS.filter((level) => level.side).length,
+    (s) => s.discovered.length,
+  ),
+  secret('back-room', 'Five Knocks', 'Find where the Emberlings go on Thursdays.'),
+  secret('card-shark', 'Card Shark', 'Win every chip at the table in the back room.'),
+  secret('royal-flush', 'Lucky Ember', 'Win a hand with a straight flush.'),
 ];
 
 export interface UnlockResult {
@@ -168,6 +214,14 @@ export function unlockAchievements(save: SaveData, day: DayRecord | null, now: D
   const achievements = { ...save.achievements };
   for (const achievement of unlocked) achievements[achievement.id] = stamp;
   return { save: { ...save, achievements }, unlocked };
+}
+
+/** Grants an achievement by id, for those earned outside a day. Returns the save unchanged if it is already held. */
+export function grantAchievement(save: SaveData, id: string, now: Date): SaveData {
+  if (id in save.achievements || !ACHIEVEMENTS.some((achievement) => achievement.id === id)) {
+    return save;
+  }
+  return { ...save, achievements: { ...save.achievements, [id]: now.toISOString() } };
 }
 
 export function findAchievement(id: string): Achievement | undefined {

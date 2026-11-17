@@ -18,6 +18,7 @@ import { updateWhistle } from '../whistle/whistleSystem';
 import { dismissSquad, rushSquad } from '../workers/squad';
 import { updateWorkers } from '../workers/workerSystem';
 import { shardCount, type LevelDefinition } from '../world/level';
+import { Beacon, updateBeacons } from '../carry/beacon';
 import { BridgeSite } from '../carry/bridgeSite';
 import {
   spawnEnemy,
@@ -41,6 +42,10 @@ export interface SimStats {
   enemiesDefeated: number;
   bossesDefeated: string[];
   bloomsCollected: number;
+  /** Seconds into the day at which each Sunshard arrived, in order: the day's splits. */
+  deliveryTimes: number[];
+  /** Longest run of deliveries each within CHAIN.window of the last. */
+  bestChain: number;
 }
 
 export interface WorkerCounts {
@@ -70,8 +75,15 @@ export class Simulation {
   readonly captainMaxHp: number;
   /** Bridge sites, in the lesson's order. */
   readonly bridges: BridgeSite[];
+  /** Beacons, in the lesson's order: second drop-offs once the Warden lights them. */
+  readonly beacons: Beacon[];
+  /** Where the next new Emberlings appear: the Kiln, or the beacon that took the last pod. */
+  readonly hatchAt: Point;
   /** Seconds of Sap left; while positive every haul moves faster. */
   sapTimer = 0;
+  /** Deliveries in the current chain, and when the last one arrived. */
+  chain = 0;
+  lastDelivery = -Infinity;
   /** Twins that arrived alone, waiting for their partner. */
   readonly twinArrivals = new Map<string, { time: number; value: number }>();
   /** Every solid box: the lesson's walls, water, unbuilt bridges, and gates not yet broken. */
@@ -116,6 +128,7 @@ export class Simulation {
       ...(level.bridges ?? []),
     ];
     this.nav = new NavGrid(level.width, level.depth, this.walls);
+    this.nav.setLedges(level.ledges ?? []);
     this.physics = new PhysicsWorld(level.width, level.depth, this.walls, level.captain, SIM_DT);
     this.rng = new Rng(level.seed);
     this.kilnField = new FlowField(this.nav);
@@ -124,6 +137,8 @@ export class Simulation {
     this.bridges = (level.bridges ?? []).map(
       (bridge) => new BridgeSite(bridge, bridge.bank, bridge.needs, this.nav),
     );
+    this.beacons = (level.beacons ?? []).map((spot) => new Beacon(spot.x, spot.z, this.nav));
+    this.hatchAt = { ...level.kiln };
     this.timeLeft = level.dayLength;
     this.stats = {
       treasureValue: 0,
@@ -133,6 +148,8 @@ export class Simulation {
       enemiesDefeated: 0,
       bossesDefeated: [],
       bloomsCollected: 0,
+      deliveryTimes: [],
+      bestChain: 0,
     };
 
     this.captain = this.ecs.create();
@@ -196,6 +213,7 @@ export class Simulation {
     this.kilnField.compute(this.nav.cellIndexAt(this.level.kiln.x, this.level.kiln.z));
     this.squadField.invalidate();
     for (const site of this.bridges) site.refresh();
+    for (const beacon of this.beacons) beacon.refresh();
   }
 
   /** Advances the day by one fixed step. Does nothing once the day has ended. */
@@ -205,6 +223,7 @@ export class Simulation {
     this.tick++;
     this.events.length = 0;
     updateCaptain(this, input, dt);
+    updateBeacons(this);
     updateWhistle(this, input, dt);
     updateThrowing(this, input, dt);
     if (input.dismiss) dismissSquad(this);

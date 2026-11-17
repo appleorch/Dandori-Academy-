@@ -32,7 +32,10 @@ export type SimEventType =
   | 'sap'
   | 'twin'
   | 'logPlaced'
-  | 'bridgeBuilt';
+  | 'bridgeBuilt'
+  | 'beaconLit'
+  | 'chain'
+  | 'snuff';
 
 export interface SimEvent {
   type: SimEventType;

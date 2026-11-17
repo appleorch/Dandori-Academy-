@@ -6,6 +6,7 @@ import { useGameStore } from '../core/gameStore';
 import type { HazardKind } from '../enemies/enemyKinds';
 import type { Hazard } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
+import { heightAt } from '../world/heightMap';
 
 interface HazardMeshProps {
   sim: Simulation;
@@ -40,7 +41,13 @@ function HazardMesh({ sim, entity, hazard }: HazardMeshProps) {
     if (marker.current) marker.current.visible = started;
     if (projectile.current) {
       projectile.current.visible = at !== undefined && started;
-      if (at) projectile.current.position.set(at.x, at.y, at.z);
+      if (at) {
+        // Lifted by the ground under its start and its landing spot, in proportion to the flight.
+        const u = Math.max(0, Math.min(1, hazard.time / hazard.duration));
+        const from = heightAt(sim.level, hazard.fromX, hazard.fromZ);
+        const to = heightAt(sim.level, hazard.toX, hazard.toZ);
+        projectile.current.position.set(at.x, at.y + from + (to - from) * u, at.z);
+      }
     }
     if (fill.current) {
       const progress = Math.max(0, Math.min(1, hazard.time / hazard.duration));
@@ -74,7 +81,7 @@ function HazardMesh({ sim, entity, hazard }: HazardMeshProps) {
       )}
       <group
         ref={marker}
-        position={[hazard.toX, 0.07, hazard.toZ]}
+        position={[hazard.toX, heightAt(sim.level, hazard.toX, hazard.toZ) + 0.07, hazard.toZ]}
         rotation={[-Math.PI / 2, 0, 0]}
         visible={false}
       >
@@ -110,7 +117,7 @@ function DripSpots({ sim }: { sim: Simulation }) {
       {(sim.level.drips ?? []).map((drip) => (
         <mesh
           key={`${drip.x}:${drip.z}`}
-          position={[drip.x, 0.03, drip.z]}
+          position={[drip.x, heightAt(sim.level, drip.x, drip.z) + 0.03, drip.z]}
           rotation={[-Math.PI / 2, 0, 0]}
         >
           <circleGeometry args={[1.3, 32]} />

@@ -15,14 +15,14 @@ export function createMover(): Mover {
   return { path: [], pathIndex: 0, goalCell: -1, replan: 0 };
 }
 
-/** Moves a point agent, sliding along obstacles instead of stopping dead. */
+/** Moves a point agent, sliding along obstacles instead of stopping dead, and never up a ledge. */
 export function moveAgent(nav: NavGrid, pos: Point, dx: number, dz: number): void {
-  if (nav.isWalkable(pos.x + dx, pos.z + dz)) {
+  if (nav.canMove(pos.x, pos.z, pos.x + dx, pos.z + dz)) {
     pos.x += dx;
     pos.z += dz;
-  } else if (nav.isWalkable(pos.x + dx, pos.z)) {
+  } else if (nav.canMove(pos.x, pos.z, pos.x + dx, pos.z)) {
     pos.x += dx;
-  } else if (nav.isWalkable(pos.x, pos.z + dz)) {
+  } else if (nav.canMove(pos.x, pos.z, pos.x, pos.z + dz)) {
     pos.z += dz;
   }
 }

@@ -1,17 +1,32 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
+import { audio } from '../audio/audioManager';
+import type { Intensity } from '../audio/music';
 import type { InputController } from '../commands/input';
 import { FixedClock } from '../core/clock';
 import { SIM_DT } from '../core/config';
-import { audio } from '../audio/audioManager';
 import { useGameStore } from '../core/gameStore';
+import { splitKey } from '../save/saveManager';
+import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { Simulation } from '../simulation/Simulation';
+import { heightAt } from '../world/heightMap';
+import { Coach } from '../story/coach';
+import { Headmaster } from '../story/headmaster';
+import { relicFor } from '../story/relics';
 import type { Feedback } from './feedback';
 
 const HUD_INTERVAL_FRAMES = 6;
-/** A chime sounds when this much of the day is left. */
+/** A chime sounds when this much of the day is left, and the music picks up. */
 const LAST_CALL_SECONDS = 30;
+/** The clock ticks aloud through the final seconds. */
+const TICKING_SECONDS = 10;
+/** Simulation speed while fast-forward is held. */
+const FAST_FORWARD = 3;
+/** Distance the Warden walks between footsteps. */
+const STRIDE = 1.5;
+/** How close the Warden must stand to the little door to knock. */
+const SECRET_RANGE = 2.6;
 const probe = new Vector3();
 
 interface GameLoopProps {
@@ -20,44 +35,129 @@ interface GameLoopProps {
   fx: Feedback;
 }
 
+/** How tense the music should be: a boss fight, danger nearby, or an ordinary working day. */
+function mood(sim: Simulation): { boss: boolean; intensity: Intensity } {
+  let boss = false;
+  let danger = false;
+  for (const [, enemy] of sim.enemies.entries()) {
+    const spec = ENEMY_SPECS[enemy.kind];
+    if (spec.attack === 'none' || enemy.hp <= 0) continue;
+    const roused = enemy.alert || enemy.latched.length > 0 || enemy.state !== 'roam';
+    if (spec.boss && (roused || enemy.hp < enemy.maxHp)) boss = true;
+    if (roused) danger = true;
+  }
+  return { boss, intensity: danger ? 2 : 1 };
+}
+
 /**
  * The main loop. Each rendered frame it projects the pointer onto the ground, runs
  * the fixed simulation steps that are due, hands their events to the feedback layer,
- * and forwards state to the HUD store.
- * While the game is paused no steps run and no time accumulates.
- * It runs before every other frame callback so meshes read fresh state.
+ * and forwards state to the HUD store, the coach and the soundtrack.
+ * While the game is paused, or the briefing is still up, no steps run and no time
+ * accumulates. It runs before every other frame callback so meshes read fresh state.
  */
 export function GameLoop({ sim, input, fx }: GameLoopProps): null {
   const element = useThree((state) => state.gl.domElement);
-  const [clock] = useState(() => new FixedClock(SIM_DT));
+  const [clock] = useState(() => new FixedClock(SIM_DT, 5 * FAST_FORWARD));
+  const [coach] = useState(
+    () =>
+      new Coach(typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches),
+  );
+  const [headmaster] = useState(() => new Headmaster(sim));
   const frame = useRef(0);
+  const walked = useRef(0);
+  const lastSpot = useRef({ x: sim.captainTransform.x, z: sim.captainTransform.z });
+  const wasFast = useRef(false);
   // Starts true if the scene remounts after the day already ended (a settings change).
   const finished = useRef(sim.ended !== null);
+  // The splits of the best clear, kept from before this day started.
+  const bestSplits = useRef(
+    useGameStore.getState().save.bestSplits[splitKey(sim.level.id, sim.level.difficulty)] ?? null,
+  );
 
   useEffect(() => input.attach(element), [input, element]);
 
   useFrame(({ camera }, delta) => {
     probe.set(input.pointerX, input.pointerY, 0.5).unproject(camera).sub(camera.position);
-    const t = -camera.position.y / probe.y;
+    // Where the pointer meets the ground: first the flat floor, then the height found there,
+    // twice, which settles onto a terrace top or a ramp.
+    let t = -camera.position.y / probe.y;
+    for (let i = 0; i < 2; i++) {
+      const lift = heightAt(
+        sim.level,
+        camera.position.x + probe.x * t,
+        camera.position.z + probe.z * t,
+      );
+      t = (lift - camera.position.y) / probe.y;
+    }
     // Dragging the on-screen whistle button aims relative to the captain instead.
     const aim = input.aimOffset;
     const cursorX = aim ? sim.captainTransform.x + aim.x : camera.position.x + probe.x * t;
     const cursorZ = aim ? sim.captainTransform.z + aim.z : camera.position.z + probe.z * t;
 
     const store = useGameStore.getState();
-    if (store.paused) {
+    if (store.paused || store.briefing) {
       audio.setWhistle(false);
+      // Any press made while the game was stopped is thrown away, not saved up.
+      input.takeInteract();
       return;
     }
+    const fast = input.fast && !sim.ended;
+    if (fast !== wasFast.current) {
+      audio.play(fast ? 'fastOn' : 'fastOff');
+      wasFast.current = fast;
+    }
     const before = sim.timeLeft;
-    const steps = clock.advance(delta);
+    const delivered = sim.stats.deliveryTimes.length;
+    // During hit-stop the world holds its breath: no steps run and no time is saved up.
+    const steps = fx.hitstop > 0 ? 0 : clock.advance(delta * (fast ? FAST_FORWARD : 1));
+    fx.listenerX = sim.captainTransform.x;
+    fx.listenerZ = sim.captainTransform.z;
     for (let i = 0; i < steps && !sim.ended; i++) {
       sim.step(input.sample(cursorX, cursorZ));
       for (const event of sim.events) fx.handle(event);
+      headmaster.events(sim.events);
     }
     fx.update(delta);
+    // Each relic home is announced by name, and logged in the Field Guide by the save.
+    for (let i = delivered; i < sim.stats.treasuresCollected.length; i++) {
+      const id = sim.stats.treasuresCollected[i];
+      const spawn = sim.level.treasures.find((t) => t.id === id);
+      const relic = relicFor(sim.level.id, id, spawn?.variant);
+      fx.popup(relic.name, sim.level.kiln.x, sim.level.kiln.z - 3, '#fff2c8');
+      headmaster.relic(relic);
+    }
+    // Each Sunshard home is compared with the same shard on the best clear so far.
+    for (let i = delivered; i < sim.stats.deliveryTimes.length; i++) {
+      const best = bestSplits.current?.[i];
+      if (best === undefined) continue;
+      const diff = sim.stats.deliveryTimes[i] - best;
+      const { x, z } = sim.level.kiln;
+      fx.popup(
+        `${diff <= 0 ? '−' : '+'}${Math.abs(diff).toFixed(1)}s`,
+        x - 2,
+        z + 2,
+        diff <= 0 ? '#7dff9a' : '#ff8a7a',
+      );
+      store.setSplit(diff);
+    }
     audio.setWhistle(sim.captainState.whistleRadius > 0 && !sim.ended);
     if (before > LAST_CALL_SECONDS && sim.timeLeft <= LAST_CALL_SECONDS) audio.play('warning');
+    if (sim.timeLeft <= TICKING_SECONDS && Math.ceil(before) !== Math.ceil(sim.timeLeft)) {
+      audio.play('tick');
+    }
+
+    // Footsteps, by distance walked rather than by time, so they keep pace with the Warden.
+    const spot = sim.captainTransform;
+    const stride = Math.hypot(spot.x - lastSpot.current.x, spot.z - lastSpot.current.z);
+    lastSpot.current.x = spot.x;
+    lastSpot.current.z = spot.z;
+    // A knock-back is not a step.
+    if (stride < 1) walked.current += stride;
+    if (walked.current > STRIDE) {
+      walked.current = 0;
+      audio.play('step', { gain: 0.8 });
+    }
 
     if (sim.ended) {
       if (!finished.current) {
@@ -67,9 +167,39 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
       }
       return;
     }
+
+    const secret = sim.level.secret;
+    const atDoor =
+      secret !== undefined && Math.hypot(spot.x - secret.x, spot.z - secret.z) < SECRET_RANGE;
+    store.setNearSecret(atDoor);
+    const { descent } = sim.level;
+    const atStair =
+      descent !== undefined && Math.hypot(spot.x - descent.x, spot.z - descent.z) < SECRET_RANGE;
+    if (atStair && store.nearDescent === null) audio.play('beaconLit');
+    store.setNearDescent(atStair && descent ? descent.to : null);
+    if (input.takeInteract()) {
+      if (atDoor) {
+        audio.play('knock');
+        store.openPoker();
+      } else if (atStair && descent) {
+        audio.play('doorOpen');
+        store.startDay(descent.to);
+        return;
+      }
+    }
+
     frame.current++;
     if (frame.current % HUD_INTERVAL_FRAMES === 0 || sim.entityVersion !== store.entityVersion) {
       store.publish(sim);
+    }
+    if (frame.current % HUD_INTERVAL_FRAMES === 0) {
+      const seconds = steps * SIM_DT * HUD_INTERVAL_FRAMES;
+      store.setHint(store.settings.hints ? coach.update(sim, seconds) : null);
+      const line = headmaster.update(seconds);
+      if (line && store.settings.commentary) store.say(line);
+      const { boss, intensity } = mood(sim);
+      audio.playMusic(boss ? 'boss' : sim.level.theme);
+      audio.setMusicMood(intensity, sim.timeLeft <= LAST_CALL_SECONDS);
     }
   }, -1);
 

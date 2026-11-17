@@ -9,15 +9,15 @@ import {
   writeSaveFile,
 } from '../game/save/saveFile';
 import { emptySave, type SaveData } from '../game/save/saveManager';
-import { LEVELS } from '../game/world/level';
+import { MAIN_LEVELS } from '../game/world/level';
 
 type Status = { kind: 'ok' | 'error'; text: string } | null;
 type Pending = { kind: 'load'; save: SaveData; fileName: string } | { kind: 'erase' } | null;
 
 function describe(save: SaveData): string {
-  const lessons = Math.min(save.stage, LEVELS.length);
+  const lessons = Math.min(save.stage, MAIN_LEVELS.length);
   const achievements = Object.keys(save.achievements).length;
-  return `${lessons} of ${LEVELS.length} lessons open, ${achievements} of ${ACHIEVEMENTS.length} achievements, academy total ${save.score} pts`;
+  return `${lessons} of ${MAIN_LEVELS.length} lessons open, ${achievements} of ${ACHIEVEMENTS.length} achievements, academy total ${save.score} pts`;
 }
 
 /** Download progress to a file, load it back, or start over. */

@@ -25,7 +25,7 @@ export function PauseMenu({ level }: { level: LevelDefinition }) {
               Resume
             </button>
             <button type="button" className="secondary" onClick={() => startDay(level.id)}>
-              Restart lesson
+              Restart lesson <kbd>R</kbd>
             </button>
             <button type="button" className="secondary" onClick={() => setView('settings')}>
               Settings

@@ -2,10 +2,11 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import type { Group, Mesh, MeshStandardMaterial } from 'three';
 import type { LevelDefinition } from '../world/level';
+import { wallLook } from './Architecture';
 import { rockGeometry } from './rocks';
-import { gameTextures } from './textures';
+import { gameTextures, turfTextures } from './textures';
+import { themeOf } from './theme';
 
-const ROCK_HEIGHT = 2.3;
 /** World units covered by one repeat of the grass texture. */
 const GRASS_TILE = 7;
 const LEG_ANGLES = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3];
@@ -18,11 +19,17 @@ function KilnMesh({ x, z }: { x: number; z: number }) {
   const { clay } = gameTextures();
   const glow = useRef<MeshStandardMaterial>(null);
   const smoke = useRef<Group>(null);
+  const flames = useRef<Group>(null);
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     if (glow.current)
       glow.current.emissiveIntensity = 1.6 + Math.sin(t * 3.1) * 0.25 + Math.sin(t * 7.7) * 0.15;
+    flames.current?.children.forEach((flame, i) => {
+      const lick = 0.75 + Math.sin(t * (9 + i * 2.3) + i * 1.7) * 0.25;
+      flame.scale.set(lick, 0.7 + lick * 0.6, lick);
+      flame.rotation.z = Math.sin(t * 5 + i * 2) * 0.15;
+    });
     smoke.current?.children.forEach((puff, i) => {
       const life = (t * 0.35 + i / 4) % 1;
       puff.position.set(Math.sin(t + i) * 0.2 * life, 4.3 + life * 3, life * 0.5);
@@ -65,6 +72,21 @@ function KilnMesh({ x, z }: { x: number; z: number }) {
         <ringGeometry args={[1.25, 1.55, 48]} />
         <meshBasicMaterial color="#ffc06a" transparent opacity={0.75} toneMapped={false} />
       </mesh>
+      <group ref={flames} position={[0, 1.55, 0]}>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <mesh
+            key={i}
+            position={[
+              Math.sin(i * 1.26) * 0.55 * (i ? 1 : 0),
+              0,
+              Math.cos(i * 1.26) * 0.55 * (i ? 1 : 0),
+            ]}
+          >
+            <coneGeometry args={[i ? 0.24 : 0.36, i ? 0.9 : 1.2, 7]} />
+            <meshBasicMaterial color={i % 2 ? '#ffb347' : '#ff7a1a'} toneMapped={false} />
+          </mesh>
+        ))}
+      </group>
       <group ref={smoke}>
         {[0, 1, 2, 3].map((i) => (
           <mesh key={i}>
@@ -80,31 +102,43 @@ function KilnMesh({ x, z }: { x: number; z: number }) {
 
 /** Static level geometry: textured lawn, the Kiln's clearing, boulders and the Kiln. */
 export function Terrain({ level }: { level: LevelDefinition }) {
-  const { grass, stone, soil } = gameTextures();
+  const { stone, soil } = gameTextures();
+  const look = themeOf(level.theme);
+  const ROCK_HEIGHT = look.rockHeight;
+  const floor = look.stoneFloor ? stone : turfTextures(look.turf);
   const rocks = useMemo(
-    () => level.obstacles.map((box) => ({ box, geometry: rockGeometry(box, ROCK_HEIGHT) })),
-    [level],
+    () =>
+      level.obstacles
+        .filter((box) => wallLook(level, box) === 'rock')
+        .map((box) => ({ box, geometry: rockGeometry(box, ROCK_HEIGHT) })),
+    [level, ROCK_HEIGHT],
   );
   const [fieldMap, outerMap, fieldBump] = useMemo(() => {
-    const field = grass.color.clone();
+    const field = floor.color.clone();
     field.repeat.set(level.width / GRASS_TILE, level.depth / GRASS_TILE);
-    const bump = grass.bump.clone();
+    const bump = floor.bump.clone();
     bump.repeat.copy(field.repeat);
-    const outer = grass.color.clone();
+    const outer = floor.color.clone();
     outer.repeat.set((level.width + 240) / GRASS_TILE, (level.depth + 240) / GRASS_TILE);
     for (const texture of [field, bump, outer]) texture.needsUpdate = true;
     return [field, outer, bump];
-  }, [grass, level]);
+  }, [floor, level]);
 
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]} receiveShadow>
         <planeGeometry args={[level.width + 240, level.depth + 240]} />
-        <meshStandardMaterial map={outerMap} color="#7d9a6a" roughness={1} />
+        <meshStandardMaterial map={outerMap} color={look.outer} roughness={1} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[level.width, level.depth]} />
-        <meshStandardMaterial map={fieldMap} bumpMap={fieldBump} bumpScale={1.5} roughness={0.95} />
+        <meshStandardMaterial
+          map={fieldMap}
+          bumpMap={fieldBump}
+          bumpScale={look.stoneFloor ? 2.5 : 1.5}
+          color={look.ground}
+          roughness={0.95}
+        />
       </mesh>
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
@@ -133,6 +167,7 @@ export function Terrain({ level }: { level: LevelDefinition }) {
             bumpMap={stone.bump}
             bumpScale={3}
             vertexColors
+            color={look.rock}
             roughness={0.92}
           />
         </mesh>
