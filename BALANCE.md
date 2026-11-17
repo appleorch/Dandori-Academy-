@@ -27,6 +27,11 @@ On Normal it must clear each lesson at Platinum pace; on Hard it must bring home
 | 20 | Glass River | 660s | 540s | 491s | 0.91 | 24 | 594s | 9/10 | 27 | Silver |
 | 21 | Graduation Day | 1000s | 700s | 631s | 0.90 | 7 | 900s | 15/15 | 55 | Gold |
 | 22 | The Undercroft | 620s | 380s | 317s | 0.83 | 21 | 558s | 15/15 | 36 | Gold |
-| 23 | The Cistern | 260s | 140s | 122s | 0.87 | 4 | 234s | 9/9 | 11 | Gold |
-| 24 | Skitter Warren | 420s | 280s | 245s | 0.88 | 14 | 378s | 13/13 | 17 | Platinum |
-| 25 | The Root Cellar | 280s | 160s | 130s | 0.81 | 4 | 252s | 8/8 | 5 | Gold |
+| 23 | Terrace Gardens | 800s | 660s | 601s | 0.91 | 5 | 720s | 12/12 | 7 | Platinum |
+| 24 | The Long Drop | 860s | 720s | 658s | 0.91 | 9 | 774s | 13/13 | 8 | Platinum |
+| 25 | Crystal Conservatory | 740s | 560s | 510s | 0.91 | 15 | 666s | 12/12 | 14 | Platinum |
+| 26 | Clockwork Causeway | 860s | 740s | 676s | 0.91 | 9 | 774s | 8/10 | 31 | Bronze |
+| 27 | Restoration Day | 1000s | 790s | 714s | 0.90 | 10 | 900s | 14/14 | 5 | Platinum |
+| 28 | The Cistern | 260s | 140s | 122s | 0.87 | 4 | 234s | 9/9 | 11 | Gold |
+| 29 | Skitter Warren | 420s | 280s | 245s | 0.88 | 14 | 378s | 13/13 | 17 | Platinum |
+| 30 | The Root Cellar | 280s | 160s | 130s | 0.81 | 4 | 252s | 8/8 | 5 | Gold |
