@@ -6,6 +6,9 @@ import { SprocketPortrait } from './Portrait';
 import { rankTargets } from '../game/dandori/targets';
 import { LEVELS, type LevelDefinition } from '../game/world/level';
 
+/** How long a remark of the Headmaster's stays up: it fades out over the end of this. */
+const SPROCKET_SECONDS = 5.6;
+
 const GUARD_TEXT: Record<BossSnapshot['guard'], string> = {
   open: 'Open: full damage!',
   armoured: 'Armoured',
@@ -29,8 +32,32 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
   useEffect(() => {
     if (hint) audio.play('hint');
   }, [hint]);
+  // The Headmaster's banner leaves once it has faded, so it never sits in the way unseen.
+  const remark = sprocket?.id;
+  useEffect(() => {
+    if (remark === undefined) return;
+    const timer = window.setTimeout(() => {
+      useGameStore.setState((state) => (state.sprocket?.id === remark ? { sprocket: null } : {}));
+    }, SPROCKET_SECONDS * 1000);
+    return () => window.clearTimeout(timer);
+  }, [remark]);
   if (!hud) return null;
   const elapsed = 1 - hud.timeLeft / level.dayLength;
+  // Where the workforce is: along the bottom on a desktop; on touch, up top, clear of the controls.
+  const counts = (
+    <div className={touch ? 'hud-row counts' : 'hud-row bottom'}>
+      <div className="chip">
+        <span className="dot squad" /> Squad {hud.squad}
+      </div>
+      <div className="chip">
+        <span className="dot working" /> Working {hud.working}
+      </div>
+      <div className={hud.idle > 0 ? 'chip idle-warning' : 'chip'}>
+        <span className="dot idle" /> Idle {hud.idle}
+      </div>
+      <div className="chip">Field {hud.total}</div>
+    </div>
+  );
 
   return (
     <div className={touch ? 'hud touch' : 'hud'}>
@@ -52,6 +79,13 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
           >
             PB {hud.split <= 0 ? '−' : '+'}
             {Math.abs(hud.split).toFixed(1)}s
+          </div>
+        )}
+        {hud.chain >= 2 && (
+          // Keyed so each new link replays the pop. Prefixed: keys must never collide with a
+          // sibling's, or React leaves stale copies behind.
+          <div key={`chain-${hud.chain}`} className="chip chain" aria-live="polite">
+            Chain <strong>×{hud.chain}</strong>
           </div>
         )}
         <div className="chip" aria-label={`Warden health ${hud.captainHp}`}>
@@ -98,51 +132,45 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
         )}
         <span className="daybar-sun" style={{ left: `${elapsed * 100}%` }} />
       </div>
-      <div className="hud-spacer" />
-      {hud.chain >= 2 && (
-        <div key={hud.chain} className="chain-banner" aria-live="polite">
-          Chain <strong>×{hud.chain}</strong>
+      {touch && counts}
+      {phase === 'playing' && (
+        <div className="callouts">
+          {nearSecret && (
+            <button type="button" className="chip knock" onClick={openPoker}>
+              Knock on the little door {!touch && <kbd>E</kbd>}
+            </button>
+          )}
+          {below && (
+            <button type="button" className="chip knock descend" onClick={() => startDay(below.id)}>
+              Go down to {below.name} (leaves this lesson) {!touch && <kbd>E</kbd>}
+            </button>
+          )}
+          {hint ? (
+            <p className="coach" role="status">
+              <strong>Ashwick</strong> {hint}
+            </p>
+          ) : (
+            sprocket && (
+              <div
+                key={`sprocket-${sprocket.id}`}
+                className={`sprocket-banner ${sprocket.mood}`}
+                role="status"
+              >
+                <SprocketPortrait mood={sprocket.mood} />
+                <p>
+                  <strong>Headmaster Sprocket</strong>
+                  {sprocket.text}
+                </p>
+              </div>
+            )
+          )}
         </div>
       )}
+      <div className="hud-spacer" />
+      {!touch && counts}
       {phase === 'playing' && hud.timeLeft <= 30 && hud.timeLeft > 0 && (
         <div className="urgent-vignette" aria-hidden="true" />
       )}
-      {phase === 'playing' && nearSecret && (
-        <button type="button" className="chip knock" onClick={openPoker}>
-          Knock on the little door {!touch && <kbd>E</kbd>}
-        </button>
-      )}
-      {phase === 'playing' && below && (
-        <button type="button" className="chip knock descend" onClick={() => startDay(below.id)}>
-          Go down to {below.name} (leaves this lesson) {!touch && <kbd>E</kbd>}
-        </button>
-      )}
-      {phase === 'playing' && sprocket && (
-        <div key={sprocket.id} className={`sprocket-banner ${sprocket.mood}`} role="status">
-          <SprocketPortrait mood={sprocket.mood} />
-          <p>
-            <strong>Headmaster Sprocket</strong>
-            {sprocket.text}
-          </p>
-        </div>
-      )}
-      {phase === 'playing' && hint && (
-        <p className="coach" role="status">
-          <strong>Ashwick</strong> {hint}
-        </p>
-      )}
-      <div className="hud-row bottom">
-        <div className="chip">
-          <span className="dot squad" /> Squad {hud.squad}
-        </div>
-        <div className="chip">
-          <span className="dot working" /> Working {hud.working}
-        </div>
-        <div className={hud.idle > 0 ? 'chip idle-warning' : 'chip'}>
-          <span className="dot idle" /> Idle {hud.idle}
-        </div>
-        <div className="chip">Field {hud.total}</div>
-      </div>
     </div>
   );
 }

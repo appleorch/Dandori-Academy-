@@ -778,9 +778,22 @@ progress {
   background: currentColor;
 }
 
-/* Touch layout: worker counts move to the top, leaving the bottom for the controls. */
-.hud.touch .hud-spacer {
-  order: 1;
+/* Touch layout: the worker counts sit up top (placed there in the markup), smaller, leaving
+   the bottom of the screen to the joystick and buttons. */
+.hud-row.counts .chip {
+  padding: 3px 8px;
+  font-size: 0.72rem;
+}
+
+/* One place for words during a day, under the day bar: a prompt to knock or go down, and at
+   most one message, Ashwick's hint or else the Headmaster's remark. */
+.callouts {
+  align-self: center;
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
 @media (max-width: 640px), (max-height: 480px) {
@@ -1196,9 +1209,8 @@ details.chapter .lessons {
 }
 
 .coach {
-  align-self: center;
-  max-width: min(560px, 92%);
-  margin: 0 0 10px;
+  max-width: 100%;
+  margin: 0;
   padding: 9px 16px;
   border-radius: 14px;
   background: rgba(28, 20, 16, 0.86);
@@ -1226,9 +1238,8 @@ details.chapter .lessons {
 }
 
 button.chip.knock {
-  align-self: center;
   width: auto;
-  margin: 0 0 10px;
+  margin: 0;
   background: #ffcf7a;
   color: #2a1a08;
   pointer-events: auto;
@@ -1580,21 +1591,14 @@ button.chip.descend {
   color: #ff8a7a;
 }
 
-.chain-banner {
-  align-self: center;
-  margin-bottom: 8px;
-  padding: 4px 16px;
-  border-radius: 999px;
-  background: rgba(28, 20, 16, 0.75);
-  border: 1px solid rgba(255, 179, 71, 0.6);
+.chip.chain {
+  border-color: rgba(255, 179, 71, 0.7);
   font-weight: 700;
-  letter-spacing: 0.06em;
   animation: chain-pop 0.35s ease-out;
 }
 
-.chain-banner strong {
+.chip.chain strong {
   color: var(--accent);
-  font-size: 1.2em;
 }
 
 @keyframes chain-pop {
@@ -1790,7 +1794,7 @@ button.hero-continue small {
 
   .rank.stamp,
   tr.tally,
-  .chain-banner {
+  .chip.chain {
     animation: none;
   }
 }
@@ -1826,10 +1830,7 @@ button.hero-continue small {
 /* ----- Headmaster Sprocket ----- */
 
 .sprocket-banner {
-  position: absolute;
-  top: 92px;
-  left: 12px;
-  max-width: min(420px, calc(100% - 24px));
+  max-width: 100%;
   display: flex;
   gap: 10px;
   align-items: center;
@@ -1871,14 +1872,15 @@ button.hero-continue small {
 
 @keyframes sprocket-in {
   from {
-    transform: translateX(-110%);
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
   }
 }
 
 @keyframes sprocket-out {
   to {
     opacity: 0;
-    transform: translateX(-20px);
+    transform: translateY(-6px);
   }
 }
 
@@ -1894,13 +1896,6 @@ button.hero-continue small {
 
 .speech.verdict blockquote {
   font-size: 0.88rem;
-}
-
-@media (max-width: 700px) {
-  .sprocket-banner {
-    top: auto;
-    bottom: 200px;
-  }
 }
 
 /* ----- Field Guide ----- */
