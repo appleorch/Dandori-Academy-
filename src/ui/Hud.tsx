@@ -3,7 +3,7 @@ import { audio } from '../game/audio/audioManager';
 import { useGameStore, type BossSnapshot } from '../game/core/gameStore';
 import { formatTime } from './format';
 import { rankTargets } from '../game/dandori/targets';
-import type { LevelDefinition } from '../game/world/level';
+import { LEVELS, type LevelDefinition } from '../game/world/level';
 
 const GUARD_TEXT: Record<BossSnapshot['guard'], string> = {
   open: 'Open: full damage!',
@@ -21,6 +21,9 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
   const hint = useGameStore((state) => state.hint);
   const nearSecret = useGameStore((state) => state.nearSecret);
   const openPoker = useGameStore((state) => state.openPoker);
+  const nearDescent = useGameStore((state) => state.nearDescent);
+  const startDay = useGameStore((state) => state.startDay);
+  const below = LEVELS.find((candidate) => candidate.id === nearDescent);
   useEffect(() => {
     if (hint) audio.play('hint');
   }, [hint]);
@@ -88,6 +91,11 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
       {phase === 'playing' && nearSecret && (
         <button type="button" className="chip knock" onClick={openPoker}>
           Knock on the little door {!touch && <kbd>E</kbd>}
+        </button>
+      )}
+      {phase === 'playing' && below && (
+        <button type="button" className="chip knock descend" onClick={() => startDay(below.id)}>
+          Go down to {below.name} (leaves this lesson) {!touch && <kbd>E</kbd>}
         </button>
       )}
       {phase === 'playing' && hint && (

@@ -128,9 +128,20 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
     const atDoor =
       secret !== undefined && Math.hypot(spot.x - secret.x, spot.z - secret.z) < SECRET_RANGE;
     store.setNearSecret(atDoor);
-    if (input.takeInteract() && atDoor) {
-      audio.play('knock');
-      store.openPoker();
+    const { descent } = sim.level;
+    const atStair =
+      descent !== undefined && Math.hypot(spot.x - descent.x, spot.z - descent.z) < SECRET_RANGE;
+    if (atStair && store.nearDescent === null) audio.play('beaconLit');
+    store.setNearDescent(atStair && descent ? descent.to : null);
+    if (input.takeInteract()) {
+      if (atDoor) {
+        audio.play('knock');
+        store.openPoker();
+      } else if (atStair && descent) {
+        audio.play('doorOpen');
+        store.startDay(descent.to);
+        return;
+      }
     }
 
     frame.current++;

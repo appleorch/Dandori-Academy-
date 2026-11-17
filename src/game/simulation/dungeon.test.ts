@@ -152,9 +152,9 @@ describe('the Snuffer', () => {
 });
 
 describe('The Undercroft', () => {
-  const level = LEVELS[LEVELS.length - 1];
+  const level = LEVELS.find((candidate) => candidate.id === 'the-undercroft') ?? LEVELS[0];
 
-  it('is the last lesson, set in a cave, with beacons and a little door', () => {
+  it('is set in a cave, with beacons and a little door', () => {
     expect(level.id).toBe('the-undercroft');
     expect(level.theme).toBe('cave');
     expect(level.beacons?.length).toBe(3);

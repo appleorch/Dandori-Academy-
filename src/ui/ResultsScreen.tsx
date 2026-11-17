@@ -6,7 +6,7 @@ import { formatTime } from './format';
 import { findAchievement } from '../game/progression/achievements';
 import { HARD_UNLOCK_RANK, hardUnlocked, UNLOCK_RANK } from '../game/save/saveManager';
 import type { DayEnd } from '../game/simulation/Simulation';
-import { LEVELS, type LevelDefinition } from '../game/world/level';
+import { LEVELS, MAIN_LEVELS, type LevelDefinition } from '../game/world/level';
 import { RankTargets } from './RankTargets';
 
 const HEADLINES: Record<DayEnd, string> = {
@@ -38,7 +38,12 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
   if (!result) return null;
   const { score } = result;
   const hard = level.difficulty === 'hard';
-  const next = LEVELS.find((candidate) => candidate.stage === level.stage + 1);
+  const next = level.side
+    ? undefined
+    : MAIN_LEVELS.find((candidate) => candidate.stage === level.stage + 1);
+  const below = LEVELS.find(
+    (candidate) => candidate.id === level.descent?.to && save.discovered.includes(candidate.id),
+  );
   const nextUnlocked =
     next !== undefined && next.stage <= save.stage && (!hard || hardUnlocked(save, next.id));
 
@@ -117,7 +122,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
               : `Earn ${UNLOCK_RANK} or better to open the next lesson.`}
           </p>
         )}
-        {!next && result.reason === 'allCollected' && (
+        {level.id === 'the-undercroft' && result.reason === 'allCollected' && (
           <button type="button" onClick={() => showStory('epilogue')} autoFocus>
             Read the ending
           </button>
@@ -135,6 +140,11 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
         >
           Try again <kbd>R</kbd>
         </button>
+        {below && (
+          <button type="button" className="secondary" onClick={() => startDay(below.id)}>
+            Go down to {below.name}
+          </button>
+        )}
         <button type="button" className="secondary" onClick={() => showScreen('menu')}>
           All lessons
         </button>

@@ -9,7 +9,8 @@ const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');
 
 // Browsers only allow sound after the player has interacted with the page.
-for (const gesture of ['pointerdown', 'keydown'] as const) {
+// iOS only counts the end of a touch, so every kind of press is listened for.
+for (const gesture of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const) {
   window.addEventListener(gesture, () => audio.unlock());
 }
 

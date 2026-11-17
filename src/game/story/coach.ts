@@ -155,6 +155,17 @@ const RULES: readonly Rule[] = [
     },
   },
   {
+    id: 'descent',
+    cooldown: 999,
+    limit: 1,
+    test: (sim) => {
+      const { descent } = sim.level;
+      return descent && near(sim, descent.x, descent.z, 14)
+        ? 'There is a cold draught coming up out of the ground near here. Old stonework, by the look of it.'
+        : null;
+    },
+  },
+  {
     id: 'idle',
     cooldown: 28,
     limit: 3,

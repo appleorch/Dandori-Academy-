@@ -8,6 +8,19 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.13.0',
+    date: '2026-11-17',
+    changes: [
+      'The Depths: three new cave lessons under the Academy. The Cistern (a flooded hall to bridge), Skitter Warren (fifteen chambers of Skitters) and The Root Cellar (a Lanternroot in the dark).',
+      'Each is reached by an old way down hidden in lessons 19, 20 and 21. Walk onto it to find the lesson for good; you can go straight down, or play it later from the lesson list.',
+      'The back room: looking around is now smooth on phones (drag to look), it fits tall screens, and it is lighter to draw on phones.',
+      'The back room has its own slow, dark jazz: walking bass, brushes, low chords and a tenor, over a crackling record.',
+      'More sounds at the table: the regulars mutter when they speak, a chime when it is your turn, a swell for an all-in, chips raked to the winner and every card dealt.',
+      'Sound now starts reliably on iPhone and iPad after the first tap.',
+      'New achievement: Spelunker.',
+    ],
+  },
+  {
     version: '0.12.0',
     date: '2026-11-17',
     changes: [

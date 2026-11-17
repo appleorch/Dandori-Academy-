@@ -3,6 +3,7 @@ import { evaluateDay, type ScoreBreakdown } from '../dandori/scoring';
 import { grantAchievement, unlockAchievements } from '../progression/achievements';
 import {
   bestScore,
+  discover,
   emptySave,
   loadSave,
   recordDay,
@@ -89,6 +90,8 @@ interface GameStore {
   hint: string | null;
   /** True while the Warden stands at the little door. */
   nearSecret: boolean;
+  /** Id of the side lesson whose way down the Warden is standing at, or null. */
+  nearDescent: string | null;
   /** True while the back room is open, over whatever screen was showing. */
   pokerOpen: boolean;
   /** Which pages the story screen is showing. */
@@ -108,6 +111,8 @@ interface GameStore {
   beginDay: () => void;
   setHint: (hint: string | null) => void;
   setNearSecret: (near: boolean) => void;
+  /** The Warden is at a way down (or has left it): the side lesson is found for good. */
+  setNearDescent: (levelId: string | null) => void;
   openPoker: () => void;
   closePoker: () => void;
   /** Grants an achievement earned outside a day. Returns true if it is new. */
@@ -193,6 +198,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     briefing: false,
     hint: null,
     nearSecret: false,
+    nearDescent: null,
     pokerOpen: false,
     hud: null,
     entityVersion: 0,
@@ -210,6 +216,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         briefing: state.settings.briefings,
         hint: null,
         nearSecret: false,
+        nearDescent: null,
         hud: null,
         result: null,
       })),
@@ -235,6 +242,14 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     setNearSecret: (near) => {
       if (near !== get().nearSecret) set({ nearSecret: near });
+    },
+
+    setNearDescent: (levelId) => {
+      if (levelId === get().nearDescent) return;
+      const before = get().save;
+      const save = levelId ? discover(before, levelId) : before;
+      if (save !== before) persist(save);
+      set({ nearDescent: levelId, save });
     },
 
     openPoker: () => set((state) => ({ pokerOpen: true, paused: state.phase === 'playing' })),
@@ -288,7 +303,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       const day: DayRecord = {
         levelId: level.id,
         difficulty: level.difficulty,
-        stage: level.stage,
+        // A side lesson never moves the numbered run along.
+        stage: level.side ? 0 : level.stage,
         score: score.total,
         rank: score.rank,
         workersAlive,
@@ -311,6 +327,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         paused: false,
         hint: null,
         nearSecret: false,
+        nearDescent: null,
         hud: snapshot(sim),
         save,
         result: {

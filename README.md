@@ -6,8 +6,8 @@ scored on how much you brought home and how quickly.
 
 This repository implements the MVP defined in the project handoff document (one worker type,
 one captain, one home base, one enemy type, one treasure type, throwing, whistling, carrying,
-treasure delivery, a day timer and dandori scoring) plus the academy around it: twenty-two lessons
-across four terms and a dungeon, four boss fights, a story, ranks, and progression from one
+treasure delivery, a day timer and dandori scoring) plus the academy around it: twenty-five lessons
+across four terms and the caves under the school, four bosses, a story, ranks, and progression from one
 lesson to the next.
 
 ## Run it
@@ -125,6 +125,14 @@ On a phone or tablet the game shows touch controls instead:
 | 20  | Glass River        | Fragile Dewglass across bridges and drips                  |
 | 21  | Graduation Day     | Everything at once on the biggest field                    |
 | 22  | The Undercroft     | A dungeon: beacons, a chasm, Skitters and the Snuffer      |
+| 23  | The Cistern        | Side lesson: a flooded cave hall, a bridge and twin shards |
+| 24  | Skitter Warren     | Side lesson: fifteen small chambers full of Skitters       |
+| 25  | The Root Cellar    | Side lesson: a Lanternroot fought in the dark              |
+
+Lessons 23 to 25 are **the Depths**: cave lessons that are not part of the numbered run. Each
+is found through an old way down (a ring of stones round a dark stair, blue on the minimap) in
+lesson 19, 20 or 21. Standing on it records the find in the save; from there press E to go
+straight down, which abandons the current day, or play it later from the lesson list.
 
 The lessons are told as a story in four terms and an ending: Kindling (1 to 5, spring meadow),
 Field Work (6 to 10, autumn), The Wild Marches (11 to 16, marsh), The Long Road (17 to 21,

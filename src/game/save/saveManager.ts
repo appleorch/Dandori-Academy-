@@ -40,6 +40,8 @@ export interface SaveData {
   /** Unlocked achievement ids, each with the ISO time it was earned. */
   achievements: Record<string, string>;
   totals: SaveTotals;
+  /** Ids of side lessons whose way down has been found. */
+  discovered: string[];
 }
 
 export interface DayRecord {
@@ -79,6 +81,7 @@ export function emptySave(): SaveData {
     bestScoresHard: {},
     achievements: {},
     totals: { days: 0, treasures: 0, enemies: 0, workersLost: 0 },
+    discovered: [],
   };
 }
 
@@ -133,6 +136,9 @@ export function parseSave(value: unknown): SaveData | null {
     bestScoresHard: isNumberRecord(value.bestScoresHard) ? value.bestScoresHard : {},
     achievements: isStringRecord(value.achievements) ? value.achievements : {},
     totals: parseTotals(value.totals),
+    discovered: Array.isArray(value.discovered)
+      ? value.discovered.filter((id): id is string => typeof id === 'string')
+      : [],
   };
 }
 
@@ -216,6 +222,7 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
     bestRanksHard: hard ? nextRanks : save.bestRanksHard,
     bestScoresHard,
     achievements: save.achievements,
+    discovered: save.discovered,
     totals: {
       days: save.totals.days + 1,
       treasures: save.totals.treasures + day.treasureIds.length,
@@ -223,4 +230,10 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
       workersLost: save.totals.workersLost + day.workersLost,
     },
   };
+}
+
+/** Returns a save in which the side lesson's way down has been found; the same save if it already was. */
+export function discover(save: SaveData, levelId: string): SaveData {
+  if (save.discovered.includes(levelId)) return save;
+  return { ...save, discovered: [...save.discovered, levelId] };
 }

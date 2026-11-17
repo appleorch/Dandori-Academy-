@@ -27,3 +27,6 @@ On Normal it must clear each lesson at Platinum pace; on Hard it must bring home
 | 20 | Glass River | 660s | 540s | 491s | 0.91 | 24 | 594s | 9/10 | 27 | Silver |
 | 21 | Graduation Day | 1000s | 700s | 631s | 0.90 | 7 | 900s | 15/15 | 55 | Gold |
 | 22 | The Undercroft | 620s | 380s | 317s | 0.83 | 21 | 558s | 15/15 | 36 | Gold |
+| 23 | The Cistern | 260s | 140s | 122s | 0.87 | 4 | 234s | 9/9 | 11 | Gold |
+| 24 | Skitter Warren | 420s | 280s | 245s | 0.88 | 14 | 378s | 13/13 | 17 | Platinum |
+| 25 | The Root Cellar | 280s | 160s | 130s | 0.81 | 4 | 252s | 8/8 | 5 | Gold |

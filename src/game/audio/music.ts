@@ -10,7 +10,7 @@ export type TrackName = 'menu' | 'meadow' | 'autumn' | 'marsh' | 'dusk' | 'cave'
 export type Intensity = 0 | 1 | 2;
 
 type Steps = readonly (number | null)[];
-type Voice = 'pluck' | 'bell' | 'lead' | 'keys' | 'mallet';
+type Voice = 'pluck' | 'bell' | 'lead' | 'keys' | 'mallet' | 'sax';
 
 interface Part {
   /** Lowest intensity at which the part plays. */
@@ -346,39 +346,44 @@ const SONGS: Record<TrackName, Song> = {
       hat: { from: 0, pattern: 'x.xox.xox.xox.xo', volume: 0.05 },
     },
   },
-  /** The back room: a lazy swing with a walking bass. */
+  /**
+   * The back room: slow, dark jazz. A walking bass, brushes, a few low chords and a
+   * tenor that takes its time, all in a minor key with sevenths on everything.
+   */
   poker: {
-    bpm: 108,
-    swing: 0.64,
-    root: 58,
-    scale: MAJOR,
-    bars: [1, 4, 0, 5, 1, 4, 0, 0],
+    bpm: 72,
+    swing: 0.67,
+    root: 60,
+    scale: MINOR,
+    bars: [0, 3, 1, 4, 0, 5, 1, 4],
     chord: SEVENTH,
-    echo: 0.12,
+    echo: 0.3,
+    pad: { from: 0, volume: 0.028, octave: -1, cutoff: 480 },
     bass: {
       from: 0,
-      volume: 0.24,
+      volume: 0.27,
       octave: -2,
-      steps: [0, _, _, _, 1, _, _, _, 2, _, _, _, 3, _, _, _],
+      steps: [0, _, _, _, 1, _, _, _, 2, _, _, _, 3, _, _, 2],
     },
-    comp: { from: 0, volume: 0.06, octave: 0, voice: 'keys', steps: [6, 14] },
+    comp: { from: 0, volume: 0.045, octave: 0, voice: 'keys', steps: [3, 10] },
     lead: {
       from: 0,
       volume: 0.085,
-      octave: 1,
-      voice: 'keys',
+      octave: 0,
+      voice: 'sax',
       phrases: [
-        [_, _, _, _, 4, _, 6, _, 7, _, _, _, 6, _, 4, _],
-        [2, _, _, _, _, _, _, _, _, _, 4, _, 2, _, 0, _],
+        [4, _, _, _, _, _, 6, _, 7, _, _, _, _, _, _, _],
+        [_, _, _, _, 9, _, 7, _, 6, _, _, _, 4, _, _, _],
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
-        [7, _, 6, _, 4, _, 2, _, 4, _, _, _, _, _, _, _],
+        [2, _, _, 3, 4, _, _, _, _, _, _, _, 2, _, 0, _],
+        [7, _, _, _, _, _, _, _, 6, _, 4, _, 2, _, _, _],
       ],
-      order: [0, 1, 2, 2, 3, 1, 2, 2],
+      order: [0, 2, 1, 2, 3, 2, 4, 2],
     },
     drums: {
-      ride: { from: 0, pattern: 'x...x.x.x...x.x.', volume: 0.05 },
-      snare: { from: 0, pattern: '....o.......o...', volume: 0.05 },
-      kick: { from: 0, pattern: 'o...............', volume: 0.16 },
+      ride: { from: 0, pattern: 'x...x.xox...x.xo', volume: 0.035 },
+      snare: { from: 0, pattern: '....o.......o...', volume: 0.035 },
+      kick: { from: 0, pattern: 'o.......o.......', volume: 0.14 },
     },
   },
 };
@@ -635,6 +640,46 @@ export class MusicPlayer {
       )
         .connect(upper)
         .connect(filter);
+    } else if (voice === 'sax') {
+      // A tenor: a reedy tone through a low, slightly ringing filter, a slow attack,
+      // vibrato that arrives late, and a little breath on top.
+      const ring = Math.max(length * 1.15, 0.6);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.Q.value = 2.5;
+      filter.frequency.setValueAtTime(700, time);
+      filter.frequency.linearRampToValueAtTime(1500, time + 0.18);
+      filter.frequency.linearRampToValueAtTime(900, time + ring);
+      const out = this.ctx.createGain();
+      out.gain.setValueAtTime(0.0001, time);
+      out.gain.linearRampToValueAtTime(volume, time + 0.09);
+      out.gain.setValueAtTime(volume, time + ring * 0.6);
+      out.gain.exponentialRampToValueAtTime(0.0001, time + ring);
+      out.connect(this.out);
+      out.connect(this.echoSend);
+      filter.connect(out);
+      const reed = this.osc('sawtooth', hz, time, ring);
+      // Scoop up into the note, the way a player does.
+      reed.frequency.setValueAtTime(hz * 0.97, time);
+      reed.frequency.linearRampToValueAtTime(hz, time + 0.1);
+      const vibrato = this.osc('sine', 4.8, time, ring);
+      const depth = ctx.createGain();
+      depth.gain.setValueAtTime(0, time);
+      depth.gain.linearRampToValueAtTime(hz * 0.012, time + Math.min(0.5, ring * 0.6));
+      vibrato.connect(depth).connect(reed.frequency);
+      reed.connect(filter);
+      const body = ctx.createGain();
+      body.gain.value = 0.3;
+      this.osc('square', hz, time, ring).connect(body).connect(filter);
+      const breath = ctx.createBufferSource();
+      breath.buffer = this.noise;
+      const air = ctx.createBiquadFilter();
+      air.type = 'bandpass';
+      air.frequency.value = 2400;
+      const airGain = ctx.createGain();
+      airGain.gain.value = 0.12;
+      breath.connect(air).connect(airGain).connect(out);
+      breath.start(time, Math.random() * 0.4, ring);
     } else if (voice === 'keys') {
       // An electric-piano tone: a sine with a soft bell on top and slow tremolo.
       const ring = Math.max(length, 0.5);

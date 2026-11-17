@@ -151,6 +151,63 @@ function SecretDoor({ at }: { at: Point }) {
   );
 }
 
+/** A way down: a ring of old stones round a dark stair, with cold air and blue light coming up. */
+function Descent({ at }: { at: Point }) {
+  const glow = useRef<MeshBasicMaterial>(null);
+  const near = useGameStore((state) => state.nearDescent !== null);
+  useFrame(({ clock }) => {
+    if (glow.current) glow.current.opacity = 0.35 + Math.sin(clock.elapsedTime * 1.8) * 0.15;
+  });
+  return (
+    <group position={[at.x, 0, at.z]}>
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[1.5, 28]} />
+        <meshBasicMaterial color="#05060b" />
+      </mesh>
+      <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.2, 1.45, 28]} />
+        <meshBasicMaterial
+          ref={glow}
+          color="#6a8aff"
+          transparent
+          opacity={0.4}
+          toneMapped={false}
+        />
+      </mesh>
+      {[0, 1, 2, 3].map((i) => (
+        <mesh
+          key={i}
+          position={[0.35 - i * 0.3, -0.02 - i * 0.02, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <planeGeometry args={[0.24, 1.6 - i * 0.25]} />
+          <meshBasicMaterial color={i % 2 ? '#1c2030' : '#2a3048'} />
+        </mesh>
+      ))}
+      {Array.from({ length: 9 }, (_, i) => {
+        const angle = (i / 9) * Math.PI * 2 + 0.3;
+        return (
+          <mesh
+            key={i}
+            position={[Math.sin(angle) * 1.75, 0.3 + (i % 3) * 0.12, Math.cos(angle) * 1.75]}
+            rotation={[0, angle, (i % 2) * 0.2]}
+            castShadow
+          >
+            <boxGeometry args={[0.7, 0.6 + (i % 3) * 0.25, 0.5]} />
+            <meshStandardMaterial
+              color={i % 2 ? '#6a6e7c' : '#7c8090'}
+              roughness={0.95}
+              flatShading
+            />
+          </mesh>
+        );
+      })}
+      <pointLight position={[0, 0.8, 0]} color="#6a8aff" intensity={5} distance={7} decay={1.6} />
+      <TextSprite y={2.6} getText={() => (near ? 'Go down: E' : 'A way down')} color="#bcd0ff" />
+    </group>
+  );
+}
+
 /** The light the Warden carries where there is no sky. */
 function Lantern({ sim, power }: { sim: Simulation; power: number }) {
   const light = useRef<PointLight>(null);
@@ -163,7 +220,7 @@ function Lantern({ sim, power }: { sim: Simulation; power: number }) {
   return <pointLight ref={light} color="#ffd9a0" distance={30} decay={1.2} />;
 }
 
-/** Beacons, the Warden's lantern in dark places, and the little door if the lesson has one. */
+/** Beacons, the Warden's lantern in dark places, and any little door or way down the lesson has. */
 export function Beacons({ sim }: { sim: Simulation }) {
   const look = themeOf(sim.level.theme);
   return (
@@ -173,6 +230,7 @@ export function Beacons({ sim }: { sim: Simulation }) {
       ))}
       {look.lantern > 0 && <Lantern sim={sim} power={look.lantern} />}
       {sim.level.secret && <SecretDoor at={sim.level.secret} />}
+      {sim.level.descent && <Descent at={sim.level.descent} />}
     </>
   );
 }

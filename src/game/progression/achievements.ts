@@ -169,6 +169,13 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     LEVELS.length,
     (s) => lessonsAtLeast(s, 'Platinum'),
   ),
+  counter(
+    'spelunker',
+    'Spelunker',
+    'Find every old way down into the Depths.',
+    LEVELS.filter((level) => level.side).length,
+    (s) => s.discovered.length,
+  ),
   secret('back-room', 'Five Knocks', 'Find where the Emberlings go on Thursdays.'),
   secret('card-shark', 'Card Shark', 'Win every chip at the table in the back room.'),
   secret('royal-flush', 'Lucky Ember', 'Win a hand with a straight flush.'),

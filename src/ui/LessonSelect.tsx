@@ -8,7 +8,13 @@ import {
   UNLOCK_RANK,
 } from '../game/save/saveManager';
 import { CHAPTERS } from '../game/story/story';
-import { forDifficulty, LEVELS, type LevelDefinition } from '../game/world/level';
+import {
+  entranceTo,
+  forDifficulty,
+  LEVELS,
+  MAIN_LEVELS,
+  type LevelDefinition,
+} from '../game/world/level';
 import { Controls } from './Controls';
 import { MenuNav } from './MenuNav';
 import { RankTargetsLine } from './RankTargets';
@@ -26,8 +32,14 @@ export function LessonSelect() {
   const lastStage = LEVELS.find((level) => level.id === lastPlayed)?.stage ?? 1;
 
   const lockReason = (level: LevelDefinition): string | null => {
-    if (level.stage > save.stage)
+    if (level.side) {
+      if (!save.discovered.includes(level.id)) {
+        const above = entranceTo(level.id);
+        return `Not found yet. There is a way down somewhere in lesson ${above?.stage ?? '?'}.`;
+      }
+    } else if (level.stage > save.stage) {
       return `Locked. Earn ${UNLOCK_RANK} in lesson ${level.stage - 1}.`;
+    }
     if (hard && !hardUnlocked(save, level.id)) {
       return `Hard opens after ${HARD_UNLOCK_RANK} on Normal.`;
     }
@@ -70,12 +82,14 @@ export function LessonSelect() {
           const lessons = LEVELS.filter(
             (level) => level.stage >= chapter.from && level.stage <= chapter.to,
           );
-          const reached = save.stage >= chapter.from;
+          const side = lessons.every((level) => level.side);
+          const reached = side ? save.stage >= 19 : save.stage >= chapter.from;
           // The term being worked on, and the one last played, start open.
           const current =
             (save.stage >= chapter.from && save.stage <= chapter.to) ||
             (lastStage >= chapter.from && lastStage <= chapter.to) ||
-            (save.stage > LEVELS.length && chapter.to === LEVELS.length);
+            (save.stage > MAIN_LEVELS.length && chapter.to === MAIN_LEVELS.length) ||
+            (side && lessons.some((level) => save.discovered.includes(level.id)));
           const done = lessons.filter((level) => bestRank(save, level.id, difficulty)).length;
           return (
             <details key={chapter.id} className="chapter" open={current}>

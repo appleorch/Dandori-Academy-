@@ -114,6 +114,8 @@ export function Minimap({ sim }: { sim: Simulation }) {
     for (const beacon of sim.beacons)
       dot(beacon.x, beacon.z, 3, beacon.lit ? '#ffc06a' : '#6aa8ff');
     for (const [, enemy] of sim.enemies.entries()) if (enemy.shape) box(enemy.shape, '#4a5a22');
+    const { descent } = sim.level;
+    if (descent) dot(descent.x, descent.z, 3, '#6a8aff');
     const { kiln } = sim.level;
     dot(kiln.x, kiln.z, 4, '#ffb347');
     for (const [entity, carryable] of sim.carryables.entries()) {

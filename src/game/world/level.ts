@@ -103,6 +103,10 @@ export interface LevelDefinition {
   theme: LevelTheme;
   /** A small door in the rock. Something is going on behind it. */
   secret?: Point;
+  /** A way down: stepping on it finds the side lesson `to`, which can then be played. */
+  descent?: Point & { to: string };
+  /** A side lesson: not part of the numbered run, opened by finding its way down. */
+  side?: boolean;
 }
 
 const MANY_HANDS: LevelSpec = {
@@ -860,6 +864,7 @@ const MATCHED_PAIRS: LevelSpec = {
   name: 'Matched Pairs',
   brief:
     'The Kiln sits in the middle, and each twin shard has its match on the far side. Bring a pair home within ten seconds of each other for a bonus: stagger your starts. Sapdrops speed every haul up for half a minute.',
+  descent: { x: 50, z: -30, to: 'the-cistern' },
   width: 110,
   depth: 72,
   dayLength: 360,
@@ -910,6 +915,7 @@ const GLASS_RIVER: LevelSpec = {
   name: 'Glass River',
   brief:
     'A long river with two bridge sites and two crossings, one under falling drips. Dewglass cracks if its crew breaks up: build the bridges and clear the way before you lift it.',
+  descent: { x: -48, z: 28, to: 'skitter-warren' },
   width: 104,
   depth: 68,
   dayLength: 660,
@@ -975,6 +981,7 @@ const GRADUATION_DAY: LevelSpec = {
   name: 'Graduation Day',
   brief:
     'Everything you have learned on the biggest field yet: a bridge to build, a gate or a dripping gap to the east, mounds, twins, Dewglass, Glowcaps, and a Gravelmaw guarding the far side.',
+  descent: { x: -56, z: 34, to: 'the-root-cellar' },
   width: 120,
   depth: 80,
   dayLength: 1000,
@@ -1144,6 +1151,248 @@ const THE_UNDERCROFT: LevelSpec = {
   secret: { x: -41, z: 27 },
 };
 
+/** The Cistern: a flooded hall split by a channel, with store rooms off both sides. */
+const CISTERN_ROOMS: readonly Rect[] = [
+  [-38, -8, -26, 8], // entry, with the Kiln
+  [-26, -2, -18, 2],
+  [-18, -14, 24, 14], // the great hall, cut in two by the channel
+  [-10, -18, -6, -14],
+  [-16, -26, 0, -18], // north store
+  [-10, 14, -6, 18],
+  [-16, 18, 0, 26], // south store
+  [16, -18, 20, -14],
+  [12, -26, 26, -18], // north-east room
+  [16, 14, 20, 18],
+  [12, 18, 26, 26], // south-east room
+  [24, -2, 28, 2],
+  [28, -6, 38, 6], // the sump
+];
+
+const THE_CISTERN: LevelSpec = {
+  id: 'the-cistern',
+  stage: 23,
+  side: true,
+  name: 'The Cistern',
+  theme: 'cave',
+  brief:
+    'A flooded hall under the twin fields. Two Span-logs bridge the channel; the beacon on the far side saves the long walk. A pair of twin shards waits in the far rooms: time them to the same flame.',
+  width: 80,
+  depth: 56,
+  dayLength: 260,
+  platinumTime: 140,
+  seed: 23,
+  startingWorkers: 10,
+  captain: { x: -31, z: 2 },
+  kiln: { x: -34, z: 0 },
+  obstacles: carve(80, 56, CISTERN_ROOMS),
+  water: [rectBox([0, -14, 6, -3]), rectBox([0, 3, 6, 14])],
+  bridges: [{ ...rectBox([0, -3, 6, 3]), bank: { x: -2, z: 0 }, needs: 2 }],
+  logs: [
+    { x: -14, z: -24 },
+    { x: -2, z: 20 },
+  ],
+  beacons: [{ x: 12, z: 0 }],
+  drips: [
+    { x: -8, z: -22, period: 4, offset: 0 },
+    { x: -4, z: -23, period: 4, offset: 2 },
+  ],
+  treasures: [
+    { id: 'shard-1', x: -28, z: -5, weight: 1 },
+    { id: 'shard-2', x: -12, z: 8, weight: 2 },
+    { id: 'shard-3', x: -12, z: -21, weight: 3 },
+    { id: 'shard-4', x: -4, z: 23, weight: 4 },
+    { id: 'shard-5', x: 20, z: -8, weight: 3 },
+    { id: 'glass-1', x: 10, z: 10, weight: 2, variant: 'dewglass' },
+    { id: 'twin-1', x: 22, z: -22, weight: 4, twin: 'tide' },
+    { id: 'twin-2', x: 22, z: 22, weight: 4, twin: 'tide' },
+    { id: 'lodestone', x: 34, z: 0, weight: 5, variant: 'lodestone' },
+  ],
+  pods: [
+    { x: -22, z: 0 },
+    { x: -16, z: -10 },
+    { x: -2, z: -25 },
+    { x: -14, z: 24 },
+    { x: 8, z: -10 },
+    { x: 24, z: -24 },
+  ],
+  enemies: [
+    { x: -12, z: 22, kind: 'skitter' },
+    { x: -9, z: 23, kind: 'skitter' },
+    { x: 20, z: 5, kind: 'mossback' },
+    { x: 14, z: 22, kind: 'skitter' },
+    { x: 16, z: 24, kind: 'skitter' },
+    { x: 32, z: -4, kind: 'mound', reveals: 'sap' },
+  ],
+};
+
+/** Fifteen small rooms on a grid, joined by short tunnels: [column, row] pairs that connect. */
+const WARREN_LINKS: readonly (readonly [number, number, number, number])[] = [
+  [0, 1, 1, 1],
+  [1, 1, 2, 1],
+  [2, 1, 3, 1],
+  [3, 1, 4, 1],
+  [1, 1, 1, 0],
+  [1, 0, 0, 0],
+  [2, 1, 2, 2],
+  [2, 2, 1, 2],
+  [1, 2, 0, 2],
+  [3, 1, 3, 0],
+  [3, 0, 2, 0],
+  [3, 0, 4, 0],
+  [4, 1, 4, 2],
+  [4, 2, 3, 2],
+];
+const warrenX = (column: number): number => -32 + column * 16;
+const warrenZ = (row: number): number => -18 + row * 18;
+const WARREN_ROOMS: readonly Rect[] = [
+  ...[0, 1, 2, 3, 4].flatMap((column) =>
+    [0, 1, 2].map((row): Rect => [
+      warrenX(column) - 6,
+      warrenZ(row) - 6,
+      warrenX(column) + 6,
+      warrenZ(row) + 6,
+    ]),
+  ),
+  ...WARREN_LINKS.map(([c0, r0, c1, r1]): Rect => {
+    const x0 = Math.min(warrenX(c0), warrenX(c1));
+    const z0 = Math.min(warrenZ(r0), warrenZ(r1));
+    return r0 === r1 ? [x0 + 6, z0 - 2, x0 + 10, z0 + 2] : [x0 - 2, z0 + 6, x0 + 2, z0 + 12];
+  }),
+];
+
+const SKITTER_WARREN: LevelSpec = {
+  id: 'skitter-warren',
+  stage: 24,
+  side: true,
+  name: 'Skitter Warren',
+  theme: 'cave',
+  brief:
+    'Fifteen small chambers and a great many Skitters. They die to a single good volley, so throw first: a pack that reaches the squad takes one Emberling a bite. Light the beacons as you go and break the rubble to the east.',
+  width: 84,
+  depth: 60,
+  dayLength: 420,
+  platinumTime: 280,
+  seed: 24,
+  startingWorkers: 10,
+  captain: { x: -31, z: 2 },
+  kiln: { x: -34, z: 0 },
+  obstacles: carve(84, 60, WARREN_ROOMS),
+  gates: [{ ...rectBox([22, -2, 26, 2]), hp: 150 }],
+  beacons: [
+    { x: 16, z: -14 },
+    { x: 32, z: 14 },
+  ],
+  treasures: [
+    { id: 'shard-1', x: -16, z: 3, weight: 2 },
+    { id: 'shard-2', x: -18, z: -20, weight: 3 },
+    { id: 'shard-3', x: 2, z: -3, weight: 2 },
+    { id: 'shard-4', x: 2, z: 20, weight: 4 },
+    { id: 'glass-1', x: -18, z: 16, weight: 2, variant: 'dewglass' },
+    { id: 'shard-5', x: 0, z: -20, weight: 3 },
+    { id: 'shard-6', x: 19, z: -21, weight: 4 },
+    { id: 'lodestone', x: 34, z: -18, weight: 5, variant: 'lodestone' },
+    { id: 'shard-7', x: 16, z: 3, weight: 3 },
+    { id: 'shard-8', x: 34, z: 3, weight: 6 },
+    { id: 'shard-9', x: 34, z: 21, weight: 5 },
+    { id: 'shard-10', x: 14, z: 20, weight: 3 },
+  ],
+  pods: [
+    { x: -28, z: -4 },
+    { x: -16, z: -3 },
+    { x: -34, z: -14 },
+    { x: 0, z: 3 },
+    { x: 16, z: -3 },
+    { x: 30, z: -21 },
+    { x: 18, z: 16 },
+    { x: -30, z: 21 },
+  ],
+  enemies: [
+    { x: -32, z: -19, kind: 'mound', drop: 2 },
+    { x: -33, z: 17, kind: 'mound', reveals: 'pod' },
+    { x: 3, z: -16, kind: 'mound', reveals: 'sap' },
+    { x: -14, z: -16, kind: 'skitter' },
+    { x: -13, z: -19, kind: 'skitter' },
+    { x: -2, z: 16, kind: 'skitter' },
+    { x: 0, z: 15, kind: 'skitter' },
+    { x: 14, z: -18, kind: 'skitter' },
+    { x: 16, z: -20, kind: 'skitter' },
+    { x: 18, z: -17, kind: 'skitter' },
+    { x: 30, z: -1, kind: 'mossback' },
+    { x: 30, z: 18, kind: 'skitter' },
+    { x: 32, z: 20, kind: 'skitter' },
+    { x: 30, z: 21, kind: 'skitter' },
+  ],
+};
+
+const ROOT_CELLAR_ROOMS: readonly Rect[] = [
+  [-34, -6, -24, 6], // entry, with the Kiln
+  [-24, -2, -16, 2],
+  [-16, -10, -4, 10], // antechamber
+  [-10, -14, -6, -10],
+  [-14, -24, -2, -14],
+  [-10, 10, -6, 14],
+  [-14, 14, -2, 24],
+  [-4, -2, 2, 2],
+  [2, -20, 34, 20], // the great cellar
+];
+
+const THE_ROOT_CELLAR: LevelSpec = {
+  id: 'the-root-cellar',
+  stage: 25,
+  side: true,
+  name: 'The Root Cellar',
+  theme: 'cave',
+  brief:
+    'A Lanternroot has grown down through the roof of the old cellar, and it is the only light in there. Break the rubble, light the beacon inside, then fell all three root-knots together. Skitters nest in the corners.',
+  width: 72,
+  depth: 52,
+  dayLength: 280,
+  platinumTime: 160,
+  seed: 25,
+  startingWorkers: 14,
+  captain: { x: -27, z: 2 },
+  kiln: { x: -30, z: 0 },
+  obstacles: carve(72, 52, ROOT_CELLAR_ROOMS),
+  gates: [{ ...rectBox([-4, -2, 2, 2]), hp: 140 }],
+  beacons: [{ x: 6, z: 0 }],
+  roots: [
+    {
+      x: 26,
+      z: 0,
+      knots: [
+        { x: 13, z: -10 },
+        { x: 13, z: 10 },
+        { x: 31, z: -13 },
+      ],
+      drop: 8,
+    },
+  ],
+  treasures: [
+    { id: 'shard-1', x: -8, z: 6, weight: 2 },
+    { id: 'shard-2', x: -8, z: -20, weight: 3 },
+    { id: 'shard-3', x: -8, z: 20, weight: 4 },
+    { id: 'shard-4', x: 6, z: -16, weight: 3 },
+    { id: 'shard-5', x: 6, z: 16, weight: 3 },
+    { id: 'shard-6', x: 31, z: -17, weight: 4 },
+    { id: 'shard-7', x: 31, z: 17, weight: 4 },
+  ],
+  pods: [
+    { x: -20, z: 0 },
+    { x: -12, z: -6 },
+    { x: -4, z: -22 },
+    { x: -12, z: 22 },
+    { x: 5, z: 8 },
+    { x: 5, z: -8 },
+  ],
+  enemies: [
+    { x: -4, z: 16, kind: 'mound', reveals: 'sap' },
+    { x: 20, z: -16, kind: 'skitter' },
+    { x: 22, z: -17, kind: 'skitter' },
+    { x: 28, z: 14, kind: 'skitter' },
+    { x: 30, z: 12, kind: 'skitter' },
+  ],
+};
+
 /** A lesson as written, before its par score is derived. The theme defaults to its chapter's. */
 type LevelSpec = Omit<LevelDefinition, 'parScore' | 'difficulty' | 'theme'> & {
   theme?: LevelTheme;
@@ -1194,7 +1443,7 @@ function withPar(spec: LevelSpec, difficulty: Difficulty = 'normal'): LevelDefin
   };
 }
 
-/** The academy's lessons in play order. */
+/** The academy's lessons in play order, then the side lessons found by going down. */
 export const LEVELS: readonly LevelDefinition[] = [
   MANY_HANDS,
   OVER_THE_WALL,
@@ -1218,6 +1467,9 @@ export const LEVELS: readonly LevelDefinition[] = [
   GLASS_RIVER,
   GRADUATION_DAY,
   THE_UNDERCROFT,
+  THE_CISTERN,
+  SKITTER_WARREN,
+  THE_ROOT_CELLAR,
 ].map((spec) => withPar(spec));
 
 /** A lesson as played on the given difficulty: Hard has a shorter day and its own par. */
@@ -1231,4 +1483,12 @@ export function forDifficulty(level: LevelDefinition, difficulty: Difficulty): L
   const dayLength = difficulty === 'hard' ? Math.round(normalDay * HARD.dayLength) : normalDay;
   // withPar replaces the par and difficulty.
   return withPar({ ...level, dayLength }, difficulty);
+}
+
+/** The numbered run, without the side lessons. */
+export const MAIN_LEVELS: readonly LevelDefinition[] = LEVELS.filter((level) => !level.side);
+
+/** The lesson that holds the way down to a side lesson. */
+export function entranceTo(levelId: string): LevelDefinition | undefined {
+  return LEVELS.find((level) => level.descent?.to === levelId);
 }

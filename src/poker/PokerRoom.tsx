@@ -8,6 +8,7 @@ import { cardLabel, isRed } from './cards';
 import { HANDS_PER_LEVEL, PokerGame, type Action } from './game';
 import { evaluate } from './hand';
 import { PokerScene, type TableView } from './PokerScene';
+import { useTouchDevice } from '../ui/useTouchDevice';
 import { PLAYERS, STARTING_STACK, WARDEN } from './table';
 
 const NAMES = [WARDEN, ...PLAYERS.map((player) => player.name)];
@@ -47,13 +48,19 @@ function newTable(): TableState {
 
 function say(view: TableView, index: number, text: string): void {
   view.speech[index] = { text, until: performance.now() + SPEECH_MS };
+  // Each regular squeaks at its own pitch.
+  audio.play('voice', {
+    pitch: 0.75 + index * 0.13,
+    pan: Math.sin(PLAYERS[index - 1].angle) * -0.8,
+  });
 }
 
 /** The noise an action makes, from the side of the table it was made on. */
 function soundFor(game: PokerGame, index: number, potBefore: number): void {
   const acted = game.seats[index];
   const pan = index === 0 ? 0 : Math.sin(PLAYERS[index - 1].angle) * -0.8;
-  if (acted.lastAction === 'Fold') audio.play('fold', { pan });
+  if (acted.lastAction.startsWith('All in')) audio.play('allIn', { pan });
+  else if (acted.lastAction === 'Fold') audio.play('fold', { pan });
   else if (acted.lastAction === 'Check') audio.play('check', { pan });
   else audio.play(game.pot - potBefore > game.blinds[1] * 4 ? 'chips' : 'chip', { pan });
 }
@@ -63,6 +70,7 @@ function finishHand({ game, view }: TableState, grant: (id: string) => boolean):
   view.winners = [...new Set(game.results.flatMap((pot) => pot.winners))];
   const won = view.winners.includes(0);
   audio.play(won ? 'pokerWin' : 'pokerLose');
+  window.setTimeout(() => audio.play('rake'), 700);
   if (
     game.results.some((pot) => pot.winners.includes(0) && /^(Straight|Royal) flush/.test(pot.hand))
   ) {
@@ -89,6 +97,9 @@ export function PokerRoom() {
   const closePoker = useGameStore((state) => state.closePoker);
   const grant = useGameStore((state) => state.grant);
   const graphics = useGameStore((state) => state.settings.graphics);
+  const touch = useTouchDevice();
+  // Phones get a lighter room: no shadows, fewer lights, fewer pixels.
+  const lite = touch || graphics === 'low';
   const [table, setTable] = useState(newTable);
   const { game, view } = table;
   // The game object is mutated in place; this counter is what tells React it changed.
@@ -113,8 +124,11 @@ export function PokerRoom() {
   // The sound of a hand being dealt, once per hand.
   useEffect(() => {
     audio.play('shuffle');
-    const timers = [0, 1, 2, 3].map((i) =>
-      window.setTimeout(() => audio.play('cardDeal', { pan: (i % 2) * 0.6 - 0.3 }), 420 + i * 170),
+    const timers = [0, 1, 2, 3, 4, 5, 6, 7].map((i) =>
+      window.setTimeout(
+        () => audio.play('cardDeal', { pan: ((i % 4) - 1.5) * 0.4, gain: 0.8 }),
+        420 + i * 130,
+      ),
     );
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [game, handNumber]);
@@ -157,6 +171,11 @@ export function PokerRoom() {
     }, DEAL_MS * hurry);
     return () => window.clearTimeout(timer);
   }, [game, view, version, grant, bump]);
+
+  // A soft chime when the action comes round to the Warden.
+  useEffect(() => {
+    if (myTurn) audio.play('yourTurn');
+  }, [myTurn, handNumber]);
 
   const act = useCallback(
     (action: Action) => {
@@ -228,12 +247,12 @@ export function PokerRoom() {
   return (
     <div className="poker">
       <Canvas
-        shadows={graphics === 'low' ? false : 'soft'}
-        dpr={graphics === 'high' ? [1, 2] : [1, 1.5]}
+        shadows={lite ? false : 'soft'}
+        dpr={lite ? [1, 1.5] : graphics === 'high' ? [1, 2] : [1, 1.5]}
         gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
         camera={{ fov: 62, near: 0.05, far: 40, position: [0, 1.62, 2.95] }}
       >
-        <PokerScene game={game} view={view} version={version} />
+        <PokerScene game={game} view={view} version={version} lite={lite} />
       </Canvas>
       <div className="poker-vignette" />
       <div className="poker-top">

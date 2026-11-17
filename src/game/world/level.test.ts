@@ -55,6 +55,7 @@ describe.each(LEVELS)('$name', (level) => {
       ...(level.bridges ?? []).map((bridge) => bridge.bank),
       ...(level.beacons ?? []),
       ...(level.secret ? [level.secret] : []),
+      ...(level.descent ? [level.descent] : []),
     ];
     for (const spot of spots) {
       expect(sim.nav.isWalkable(spot.x, spot.z)).toBe(true);

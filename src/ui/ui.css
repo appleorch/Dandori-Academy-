@@ -1379,6 +1379,7 @@ button.touch-button.fast {
 
 .poker canvas {
   display: block;
+  touch-action: none;
 }
 
 .poker-vignette {
@@ -1555,5 +1556,16 @@ button.touch-button.fast {
 
   .poker-raise input[type='range'] {
     flex-basis: 100%;
+  }
+}
+
+button.chip.descend {
+  background: #bcd0ff;
+  color: #101830;
+}
+
+@media (pointer: coarse) {
+  .poker kbd {
+    display: none;
   }
 }

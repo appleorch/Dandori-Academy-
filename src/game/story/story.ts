@@ -74,6 +74,17 @@ export const CHAPTERS: readonly Chapter[] = [
     margin:
       'Both fires burning. The tall one cried a bit and blamed the smoke. Table is open late tonight, Warden. Bring chips.',
   },
+  {
+    id: 'depths',
+    label: 'Below',
+    title: 'The Depths',
+    from: 23,
+    to: 25,
+    intro:
+      'The Undercroft is bigger than the school above it. There are old ways down in the far fields, half grown over, and each one leads to a part of it nobody has mapped.',
+    margin:
+      'We knew about the stairs. We did not say because nobody asked. There is a fourth one. It is behind the piano.',
+  },
 ];
 
 export interface LessonStory {
@@ -217,6 +228,27 @@ export const LESSON_STORY: Record<string, LessonStory> = {
       'It put the beacons out and I lit them again, twice, with the squad around my feet in the dark. Then it lay still, and the First Ember was just there, warm, after a hundred years. We carried it up together.',
   },
 };
+
+Object.assign(LESSON_STORY, {
+  'the-cistern': {
+    briefing:
+      'So you found the old cistern. The founders kept the school\u2019s water down here, and rather more of it has got in since. There is a beacon across the channel. Build the bridge first and the rest is half the walk.',
+    journal:
+      'The twins went into the same flame a breath apart and lit the whole hall, water and all. Someone had scratched tally marks by the channel. Hundreds of them. Lessons, I think.',
+  },
+  'skitter-warren': {
+    briefing:
+      'Skitters. A great many, and this is where they come from. They are nothing one at a time and a disaster in a crowd. Throw before they reach you, Warden, not after.',
+    journal:
+      'Fifteen rooms, and something with too many legs in most of them. We went through it one chamber at a time, lighting as we went. The Emberlings would like a bath. So would I.',
+  },
+  'the-root-cellar': {
+    briefing:
+      'That is where the Lanternroot in the marsh came up from. This is the rest of it. Same rule as before: all three knots, then the bulb. Mind the corners, they are not empty.',
+    journal:
+      'It was the only light in that cellar until we lit the beacon, and it did not care for the competition. The shelves along the walls still had jars on them. Pickled something. We left those.',
+  },
+} satisfies Record<string, LessonStory>);
 
 /** Shown once, before the first lesson. */
 export const PROLOGUE: readonly string[] = [

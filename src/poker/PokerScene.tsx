@@ -10,6 +10,7 @@ import {
   MathUtils,
   SRGBColorSpace,
   Vector3,
+  PerspectiveCamera,
   type Group,
   type Mesh,
   type MeshStandardMaterial,
@@ -380,6 +381,8 @@ function DisguiseParts({ kind }: { kind: Disguise }) {
 }
 
 interface RegularProps {
+  /** True on phones and low graphics: no light of its own for each ember. */
+  lite: boolean;
   player: Player;
   seat: number;
   game: PokerGame;
@@ -387,7 +390,7 @@ interface RegularProps {
 }
 
 /** One of the regulars: an Emberling on a tall stool, wearing what it thinks is a disguise. */
-function Regular({ player, seat, game, view }: RegularProps) {
+function Regular({ player, seat, game, view, lite }: RegularProps) {
   const root = useRef<Group>(null);
   const body = useRef<Group>(null);
   const eyes = useRef<Group>(null);
@@ -498,14 +501,16 @@ function Regular({ player, seat, game, view }: RegularProps) {
                 emissiveIntensity={1}
               />
             </mesh>
-            <pointLight
-              ref={emberLight}
-              position={[0, player.disguise === 'professor' ? 0.97 : 0.81, 0.1]}
-              color="#ff9a3c"
-              intensity={0.5}
-              distance={2.2}
-              decay={1.6}
-            />
+            {!lite && (
+              <pointLight
+                ref={emberLight}
+                position={[0, player.disguise === 'professor' ? 0.97 : 0.81, 0.1]}
+                color="#ff9a3c"
+                intensity={0.5}
+                distance={2.2}
+                decay={1.6}
+              />
+            )}
           </group>
         </group>
       </group>
@@ -529,7 +534,7 @@ function Regular({ player, seat, game, view }: RegularProps) {
 }
 
 /** The back room itself: boards, a low lamp, a shelf of bottles and a door that is not on the plans. */
-function Room() {
+function Room({ lite }: { lite: boolean }) {
   const haze = useRef<Group>(null);
   const bulb = useRef<MeshStandardMaterial>(null);
   useFrame(({ clock }) => {
@@ -584,7 +589,7 @@ function Room() {
         distance={9}
         decay={1.5}
         color="#ffd9a0"
-        castShadow
+        castShadow={!lite}
         shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0006}
       />
@@ -703,9 +708,13 @@ function HeldCards({ game }: { game: PokerGame }) {
     if (!node) return;
     node.position.copy(camera.position);
     node.quaternion.copy(camera.quaternion);
+    // Bottom right of the view, whatever the screen's shape.
+    const lens = camera as PerspectiveCamera;
+    const halfHeight = Math.tan(MathUtils.degToRad(lens.fov) / 2) * 0.62;
+    const halfWidth = halfHeight * lens.aspect;
     node.translateZ(-0.62);
-    node.translateX(0.36);
-    node.translateY(-0.17 + Math.sin(clock.elapsedTime * 1.3) * 0.004);
+    node.translateX(Math.min(0.36, halfWidth - 0.15));
+    node.translateY(-halfHeight * 0.46 + Math.sin(clock.elapsedTime * 1.3) * 0.004);
   });
   return (
     <group ref={hand}>
@@ -738,30 +747,98 @@ function HeldCards({ game }: { game: PokerGame }) {
   );
 }
 
-/** First-person head: fixed in its chair, turning a little towards wherever the pointer is. */
+/** How far the head turns: left and right, and up and down, in radians. */
+const YAW_LIMIT = 0.62;
+const PITCH_LIMIT = 0.3;
+/** Radians of turn per pixel dragged on a touch screen. */
+const DRAG_TURN = 0.0045;
+/** Width of view wanted across the table on a tall, narrow screen. */
+const PORTRAIT_SPAN = (104 * Math.PI) / 180;
+const BASE_PITCH = Math.atan2(LOOK.y - EYE.y, EYE.z - LOOK.z);
+
+/**
+ * First-person head: fixed in its chair. A mouse turns it towards wherever the pointer
+ * is; a finger drags the view round. Either way the head eases to where it was asked to
+ * look, at the same speed whatever the frame rate, so it never jumps.
+ */
 function Head() {
-  const { camera, scene } = useThree();
-  const target = useMemo(() => new Vector3(), []);
+  const { camera, scene, gl, size } = useThree();
+  const aim = useRef({ yaw: 0, pitch: 0, toYaw: 0, toPitch: 0 });
+
   useEffect(() => {
     scene.fog = new Fog('#0c0806', 4.5, 11);
     scene.background = new Color('#0c0806');
     camera.position.copy(EYE);
+    camera.rotation.set(BASE_PITCH, 0, 0, 'YXZ');
     return () => {
       scene.fog = null;
       scene.background = null;
     };
   }, [camera, scene]);
-  useFrame(({ pointer, clock }, delta) => {
-    const sway = Math.sin(clock.elapsedTime * 0.5) * 0.02;
-    target.set(LOOK.x + pointer.x * 1.9 + sway, LOOK.y + pointer.y * 0.75, LOOK.z);
-    camera.position.lerp(EYE, Math.min(1, delta * 4));
-    // Ease the gaze by aiming at a point part-way between where it is and where it should be.
-    const current = new Vector3(0, 0, -1)
-      .applyQuaternion(camera.quaternion)
-      .multiplyScalar(3)
-      .add(camera.position);
-    current.lerp(target, Math.min(1, delta * 5));
-    camera.lookAt(current);
+
+  useEffect(() => {
+    const element = gl.domElement;
+    let finger: { id: number; x: number; y: number } | null = null;
+    const clamp = (): void => {
+      const a = aim.current;
+      a.toYaw = MathUtils.clamp(a.toYaw, -YAW_LIMIT, YAW_LIMIT);
+      a.toPitch = MathUtils.clamp(a.toPitch, -PITCH_LIMIT, PITCH_LIMIT);
+    };
+    const onDown = (event: PointerEvent): void => {
+      if (event.pointerType === 'mouse') return;
+      finger = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    };
+    const onMove = (event: PointerEvent): void => {
+      const a = aim.current;
+      if (event.pointerType === 'mouse') {
+        const rect = element.getBoundingClientRect();
+        a.toYaw = -(((event.clientX - rect.left) / rect.width) * 2 - 1) * 0.6;
+        a.toPitch = -(((event.clientY - rect.top) / rect.height) * 2 - 1) * 0.24;
+      } else if (finger && finger.id === event.pointerId) {
+        // The view follows the finger, as if the room were being pushed round.
+        a.toYaw += (event.clientX - finger.x) * DRAG_TURN;
+        a.toPitch += (event.clientY - finger.y) * DRAG_TURN;
+        finger.x = event.clientX;
+        finger.y = event.clientY;
+      }
+      clamp();
+    };
+    const onUp = (event: PointerEvent): void => {
+      if (finger && finger.id === event.pointerId) finger = null;
+    };
+    element.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      element.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, [gl]);
+
+  // A tall screen sees less to the sides, so the lens widens and the chair slides back a little.
+  useEffect(() => {
+    if (!(camera instanceof PerspectiveCamera)) return;
+    const aspect = size.width / size.height;
+    const tall = aspect < 1.25;
+    const fov = tall
+      ? Math.min(98, MathUtils.radToDeg(2 * Math.atan(Math.tan(PORTRAIT_SPAN / 2) / aspect)))
+      : 62;
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+    EYE.z = tall ? 3.25 : 2.95;
+  }, [camera, size]);
+
+  useFrame(({ clock }, delta) => {
+    const a = aim.current;
+    const ease = 1 - Math.exp(-Math.min(delta, 0.1) * 9);
+    a.yaw += (a.toYaw - a.yaw) * ease;
+    a.pitch += (a.toPitch - a.pitch) * ease;
+    const breath = Math.sin(clock.elapsedTime * 0.5) * 0.006;
+    camera.position.lerp(EYE, ease);
+    camera.rotation.set(BASE_PITCH + a.pitch + breath, a.yaw, 0, 'YXZ');
   });
   return null;
 }
@@ -771,10 +848,12 @@ interface PokerSceneProps {
   view: TableView;
   /** Bumped by the room after every change to the game, so cards and chips re-render. */
   version: number;
+  /** Cheaper lighting, for phones and the low graphics setting. */
+  lite: boolean;
 }
 
 /** Everything in the back room, seen from the Warden's chair. */
-export function PokerScene({ game, view }: PokerSceneProps) {
+export function PokerScene({ game, view, lite }: PokerSceneProps) {
   const hand = game.handNumber;
   const { seats, dealer } = game;
   const [buttonX, buttonZ] =
@@ -782,11 +861,18 @@ export function PokerScene({ game, view }: PokerSceneProps) {
   return (
     <>
       <Head />
-      <ambientLight intensity={0.16} color="#8a6a5a" />
-      <Room />
+      <ambientLight intensity={lite ? 0.3 : 0.16} color="#8a6a5a" />
+      <Room lite={lite} />
       <Table game={game} />
       {PLAYERS.map((player, i) => (
-        <Regular key={player.name} player={player} seat={i + 1} game={game} view={view} />
+        <Regular
+          key={player.name}
+          player={player}
+          seat={i + 1}
+          game={game}
+          view={view}
+          lite={lite}
+        />
       ))}
 
       {/* Hole cards of the regulars: face down in front of them, stood up when shown. */}

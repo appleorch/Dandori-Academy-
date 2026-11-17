@@ -44,7 +44,9 @@ export function JournalScreen() {
           const lessons = LEVELS.filter(
             (level) => level.stage >= chapter.from && level.stage <= chapter.to,
           );
-          const open = save.stage >= chapter.from;
+          const open = lessons.every((level) => level.side)
+            ? lessons.some((level) => save.discovered.includes(level.id))
+            : save.stage >= chapter.from;
           const complete = lessons.every((level) => passed(save, level.id));
           return (
             <section key={chapter.id} className="journal-chapter">

@@ -70,7 +70,11 @@ export type SoundName =
   | 'check'
   | 'fold'
   | 'pokerWin'
-  | 'pokerLose';
+  | 'pokerLose'
+  | 'yourTurn'
+  | 'allIn'
+  | 'rake'
+  | 'voice';
 
 /** Where the game is: it sets the reverb and the ambience. */
 export type AudioScene = 'meadow' | 'autumn' | 'marsh' | 'dusk' | 'cave' | 'room' | 'menu';
@@ -80,6 +84,8 @@ export interface PlayOptions {
   pan?: number;
   /** Volume multiplier, for distance. */
   gain?: number;
+  /** Pitch multiplier, for sounds that have a speaker. */
+  pitch?: number;
 }
 
 /** Identical sounds closer together than this are dropped, so volleys do not stack up. */
@@ -101,7 +107,7 @@ const SCENES: Record<AudioScene, SceneSound> = {
   marsh: { reverb: 0.18, tail: 1.6, gap: [0.8, 2.6] },
   dusk: { reverb: 0.14, tail: 1.4, gap: [1, 3] },
   cave: { reverb: 0.45, tail: 3.2, gap: [1.2, 4] },
-  room: { reverb: 0.2, tail: 0.7, gap: [5, 11] },
+  room: { reverb: 0.22, tail: 0.9, gap: [0.3, 1.4] },
 };
 
 const rand = (low: number, high: number): number => low + Math.random() * (high - low);
@@ -563,6 +569,30 @@ class AudioManager {
         [587, 740, 880, 1175].forEach((hz, i) => this.bell(out, hz, 0.6, 0.18, i * 0.09));
         for (let i = 0; i < 6; i++) this.bell(out, rand(2600, 4400), 0.08, 0.08, 0.3 + i * 0.05);
         break;
+      case 'yourTurn':
+        this.bell(out, 659, 0.35, 0.09);
+        this.bell(out, 880, 0.45, 0.09, 0.12);
+        break;
+      case 'allIn':
+        this.tone(out, 110, 220, 0.7, 'sawtooth', 0.1);
+        for (let i = 0; i < 12; i++) {
+          this.bell(out, rand(2400, 4600), 0.08, 0.1, 0.15 + i * rand(0.03, 0.045));
+        }
+        break;
+      case 'rake':
+        this.burst(out, 0.5, 2200, 0.1, 0, 'bandpass', 900);
+        for (let i = 0; i < 9; i++) this.bell(out, rand(2600, 4400), 0.07, 0.07, i * 0.05);
+        break;
+      case 'voice': {
+        // An Emberling muttering: two or three squeaks at its own pitch.
+        const p = options?.pitch ?? 1;
+        const count = 2 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < count; i++) {
+          const from = rand(520, 760) * p;
+          this.chirp(out, from, from * rand(0.8, 1.3), rand(0.07, 0.12), 0.11, i * 0.12);
+        }
+        break;
+      }
       case 'pokerLose':
         this.notes(out, [330, 294, 247], 0.2, 0.4, 0.14);
         break;
@@ -648,8 +678,15 @@ class AudioManager {
       this.tone(voice, hz, hz * 0.55, 0.09, 'sine', 0.07);
       if (roll < 0.3) this.tone(voice, hz * 1.3, hz * 0.7, 0.07, 'sine', 0.04, rand(0.15, 0.3));
     } else {
-      // The back room: a chair creaks, a glass is set down.
-      if (roll < 0.5) this.tone(voice, rand(180, 260), rand(120, 160), 0.25, 'sawtooth', 0.012);
+      // The back room: the record crackles; now and then a chair creaks or a glass is set down.
+      if (roll < 0.86) {
+        const pops = 1 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < pops; i++) {
+          this.burst(voice, 0.012, 5200, rand(0.02, 0.05), i * rand(0.03, 0.2), 'highpass');
+        }
+        return;
+      }
+      if (roll < 0.93) this.tone(voice, rand(180, 260), rand(120, 160), 0.25, 'sawtooth', 0.012);
       else this.bell(voice, rand(1800, 2600), 0.3, 0.02);
     }
   }
