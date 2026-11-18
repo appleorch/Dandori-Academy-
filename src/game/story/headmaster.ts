@@ -33,7 +33,7 @@ const OPENERS: readonly string[] = [
   'Places, cadet! The clock is wound and the Kiln is hungry. Marvellous!',
   'Ah, {lesson}! I designed this one myself. Mostly. Begin!',
   'Pencils down, whistles up! {lesson} begins now!',
-  'Mind the plants, mind the Emberlings, mind the time. In that order. Off you go!',
+  'Mind the plants, mind the Sproutlings, mind the time. In that order. Off you go!',
   'A fine day for an examination. Every day is, if you ask me. Nobody does.',
 ];
 

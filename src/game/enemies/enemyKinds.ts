@@ -193,7 +193,7 @@ export const ENEMY_SPECS: Record<EnemyKind, EnemySpec> = {
     phases: [0.6, 0.25],
     boss: true,
     chargeTime: 1.6,
-    trampleKills: 5,
+    trampleKills: 3,
   },
   /** Small, quick and weak cave vermin that hunts in packs. One bite takes one Emberling. */
   skitter: {

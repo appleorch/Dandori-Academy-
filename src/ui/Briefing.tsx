@@ -3,6 +3,7 @@ import { chapterOf, LESSON_STORY } from '../game/story/story';
 import type { LevelDefinition } from '../game/world/level';
 import { AshwickPortrait } from './Portrait';
 import { RankTargets } from './RankTargets';
+import { SquadRoster } from './SquadRoster';
 
 /**
  * Shown over the waiting field before a day starts: where the story has got to, what
@@ -34,6 +35,7 @@ export function Briefing({ level }: { level: LevelDefinition }) {
           </figure>
         )}
         <p className="brief">{level.brief}</p>
+        <SquadRoster level={level} />
         <RankTargets level={level} />
         <button type="button" onClick={beginDay} autoFocus>
           Begin the day <kbd>Enter</kbd>

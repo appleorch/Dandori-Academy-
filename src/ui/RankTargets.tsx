@@ -56,7 +56,7 @@ export function RankTargets({ level, earned }: RankTargetsProps) {
         </tbody>
       </table>
       <p className="note">
-        Times assume no Emberlings lost. Each extra Emberling alive at the end is worth half a
+        Times assume no Sproutlings lost. Each extra Sproutling alive at the end is worth half a
         second; each one lost costs {lossSeconds(level)} seconds.
       </p>
     </div>

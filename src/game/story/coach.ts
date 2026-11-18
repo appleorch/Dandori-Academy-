@@ -46,8 +46,8 @@ const RULES: readonly Rule[] = [
     test: (sim, coach) =>
       sim.level.stage === 1 && sim.elapsed > 1
         ? coach.touch
-          ? 'Touch a Sunshard and hold: your Emberlings are thrown at it one after another.'
-          : 'Move with WASD. Point at a Sunshard and hold the left mouse button to throw Emberlings at it.'
+          ? 'Touch a Sunshard and hold: your Sproutlings are thrown at it one after another.'
+          : 'Move with WASD. Point at a Sunshard and hold the left mouse button to throw Sproutlings at it.'
         : null,
   },
   {
@@ -173,8 +173,8 @@ const RULES: readonly Rule[] = [
       if (coach.idleFor < IDLE_PATIENCE) return null;
       const { idle } = sim.countWorkers();
       return coach.touch
-        ? `${idle} Emberlings are standing idle. Hold Whistle over them to call them back.`
-        : `${idle} Emberlings are standing idle. Hold the right mouse button over them to call them back.`;
+        ? `${idle} Sproutlings are standing idle. Hold Whistle over them to call them back.`
+        : `${idle} Sproutlings are standing idle. Hold the right mouse button over them to call them back.`;
     },
   },
   {
@@ -203,7 +203,7 @@ const RULES: readonly Rule[] = [
     limit: 1,
     test: (sim, coach) =>
       !coach.touch && sim.level.stage >= 4 && coach.idleFor > 3 && sim.level.width > 55
-        ? 'Lost track of someone? Hold Tab to look at your idle Emberlings.'
+        ? 'Lost track of someone? Hold Tab to look at your idle Sproutlings.'
         : null,
   },
   {

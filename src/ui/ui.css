@@ -2210,3 +2210,56 @@ button.touch-button.cycle {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* The squad by kind: in the briefing and the Field Guide. */
+.roster {
+  list-style: none;
+  margin: 8px 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.roster li {
+  display: grid;
+  grid-template-columns: 12px auto;
+  column-gap: 8px;
+  align-items: baseline;
+}
+.roster li .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.roster li small {
+  grid-column: 2;
+  opacity: 0.8;
+}
+.roster .ember strong {
+  color: #ffb08a;
+}
+.roster .ember .dot {
+  background: #e8432d;
+}
+.roster .dew strong {
+  color: #9ac8ff;
+}
+.roster .dew .dot {
+  background: #3a8ae8;
+}
+.roster .stone strong {
+  color: #d8d8de;
+}
+.roster .stone .dot {
+  background: #8a8a92;
+}
+.roster .spark strong {
+  color: #ffe68a;
+}
+.roster .spark .dot {
+  background: #f2c62a;
+}
+.sprout-guide h2 {
+  margin: 12px 0 4px;
+  font-size: 1.15rem;
+}

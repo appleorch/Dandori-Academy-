@@ -8,6 +8,20 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.16.0',
+    date: '2026-11-18',
+    changes: [
+      'Sproutlings: the Kiln now grows four kinds. Emberlings are fireproof and hit hard; Dewlings wade, carry straight through water and shrug off drips; Stonelings lift like two, hit like three and crack crystal; Sparklings are quick, thrown farthest and unharmed by sparks. Choose which kind to throw with 1 to 4, C, the kind chips or the Kind button.',
+      'New hazards made for them: flame vents that burst on a beat, spark coils that arc between their pylons, and shards sunk in ponds and rivers. A Sproutling caught by a vent catches fire and one that lands in water flounders; whistle it within three seconds or it is lost.',
+      'Seed pods grow their own kind, and anything else grows whichever kind carried it home; the Kiln never lets a kind of the day die out, so no job is ever shut for good. Each kind is introduced by Ashwick in its own lesson (Dewlings in 6, Stonelings in 8, Sparklings in 11), and every lesson after that has work for its squad. The briefing shows the day\u2019s squad, and the Field Guide describes all four.',
+      'Every lesson is fuller: Glowcaps, Sapdrops, mounds, twins, Dewglass and Lodestones now appear from the first term on, alongside the new vents, coils, ponds and crystal vaults.',
+      'The squad no longer dodges by itself: it follows the Warden into a charge lane or a slam ring, and dies there. Lead it out.',
+      'Caves are part of the day now. Going down a way down pauses the surface, clock and all, takes the squad with you, and the same stair brings everyone back up to carry on. Relics found below go to the Field Guide.',
+      'Six ranks: Copper, Bronze, Silver, Gold, Platinum and Diamond. Platinum is much harder: its time is now the test player\u2019s own clear time, and both Platinum and Diamond need every Sunshard home. Diamond asks for the day in 85% of the Platinum time. New achievement and outfit for Diamond.',
+      'Leaderboard: your ten best runs on every lesson, and the Academy board, kept as issues on the game\u2019s GitHub repository with no server of its own. Post a run from the results screen; every entry is signed and checked against the lesson\u2019s rules before it is shown.',
+    ],
+  },
+  {
     version: '0.15.0',
     date: '2026-11-17',
     changes: [

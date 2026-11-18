@@ -39,7 +39,9 @@ it after changes with `npm run build:docs`.
 | F / middle mouse    | Charge: send the whole squad running to the cursor   |
 | Q                   | Dismiss the squad                                    |
 | Shift (hold)        | Fast-forward the day at three times speed            |
-| Tab (hold)          | Look at your idle Emberlings                         |
+| 1 2 3 4 / C         | Choose which kind of Sproutling to throw / next kind |
+| E                   | Knock, go down a way down, or come back up           |
+| Tab (hold)          | Look at your idle Sproutlings                        |
 | V                   | Tactical view over the whole course                  |
 | Esc                 | Pause (resume, restart with R, settings, quit)       |
 | Mouse wheel         | Zoom                                                 |
@@ -52,11 +54,28 @@ On a phone or tablet the game shows touch controls instead:
 | Touch the field (hold)   | Throw squad members at that spot                      |
 | Whistle button (hold)    | Call workers around the Warden; drag to move the call |
 | Charge / Dismiss buttons | Send the squad to where you last aimed / dismiss it   |
+| Kind button, kind chips  | Choose which kind of Sproutling to throw              |
 | Fast-forward button      | Hold to hurry the day along                           |
 | Two-finger pinch         | Zoom                                                  |
 
-- **Emberlings** are your workers. Thrown next to a job, they start it by themselves. Idle
-  ones (pale, with a cold tip) pick up any work within a few steps.
+- **Sproutlings** are your workers, grown by the Kiln in four kinds (`src/game/workers/sprouts.ts`).
+  Thrown next to a job, they start it by themselves. Idle ones (pale) pick up any work within a
+  few steps. Only the selected kind is thrown: press 1 to 4, C, or tap a kind's chip.
+  - **Emberlings** (red): fireproof, and hit hardest of the light kinds. Only they can work by a
+    **flame vent**, which bursts on a beat after its ring glows.
+  - **Dewlings** (blue): the only kind that wades. They fetch shards sunk in ponds, carry a haul
+    straight across a river, and shrug off dew drips.
+  - **Stonelings** (grey): slow, but lift like two and hit like three, and the only kind that
+    cracks **crystal gates** at full strength (the rest manage a fifth).
+  - **Sparklings** (yellow): quick and thrown farthest. Only they can work under a **spark
+    coil**, whose pylons arc across the gap between them on a beat.
+  - A **seed pod** grows its own kind (its colour shows which); anything else grows whichever
+    kind made up most of the crew that carried it home. The Kiln never lets a kind of the day
+    die out: if every Sproutling of a kind is lost, the next one it grows is of that kind.
+  - Other kinds caught by a vent catch fire and run about; one that lands in water flounders.
+    Either is lost after three seconds unless the whistle reaches it first.
+  - The squad trusts the Warden: it follows into danger rather than dodging by itself. Lead it
+    out of a charge lane or a slam ring, or lose it.
 - **Sunshards** show `carriers / needed`. Once staffed they walk home to the **Kiln**; extra
   carriers (up to double) make them faster.
 - **Enemies fight back**, and every attack is telegraphed. Workers thrown onto an enemy cling
@@ -67,15 +86,16 @@ On a phone or tablet the game shows touch controls instead:
     workers and knocking the Warden back. Step aside and pile on while it stands winded.
   - **Bogspitter**: fragile, but lobs globs from long range. A red ring shows where one will
     land; anything still inside is flattened.
-  - Every carcass hauled home becomes new Emberlings (4, 7 and 3).
-- **Bramble gates** block a path until enough Emberlings break them; hauls behind a gate
-  wait until it falls. **Dew drips** fall on the dark wet patches and knock carriers off their
+  - Every carcass hauled home becomes new Sproutlings (4, 7 and 3).
+- **Bramble gates** block a path until enough Sproutlings break them; hauls behind a gate
+  wait until it falls. **Dew drips** fall on the dark wet patches and knock carriers (but not Dewlings) off their
   haul. **Glowcaps** sprout partway through some days and wilt if left: bonus score.
 - **Bosses** have a health bar across the top that says when they can be hurt. The Gravelmaw's
   plates take a quarter damage except while it lies winded after a slam; the Lanternroot is
   shielded while any root-knot glows; the Bellwether is armoured except after charging into
-  stone. Off-duty Emberlings scramble out of slam rings and charge lanes on their own.
-- **More to carry and do**: **mounds** are dug up by idle Emberlings and reveal a shard, pod or
+  stone. Off-duty Sproutlings scramble out of slam rings and charge lanes on their own; the
+  squad does not.
+- **More to carry and do**: **mounds** are dug up by idle Sproutlings and reveal a shard, pod or
   Sapdrop; **Span-logs** go to a riverbank, and enough of them build a bridge; **Sapdrops**
   speed every haul up by 40% for 30 seconds; **twin shards** (matching runes) earn a 50% bonus
   when both arrive within 10 seconds; **Dewglass** is worth more but cracks if its crew breaks
@@ -83,21 +103,21 @@ On a phone or tablet the game shows touch controls instead:
 - **Reading danger**: a red disc shows where a bite will land, a "!" and a red line mark an enemy
   hunting something, an amber ring shows an enemy's hunting radius as the Warden approaches, a
   gauge fills before a shake, workers about to be hit flash white, and the minimap and red
-  screen-edge arrows show threatened Emberlings off screen.
+  screen-edge arrows show threatened Sproutlings off screen.
 - **Beacons** are cold until the Warden walks up to them. A lit beacon is a second drop-off:
-  every haul goes to the Kiln or a lit beacon, whichever is the shorter walk, and Emberlings
+  every haul goes to the Kiln or a lit beacon, whichever is the shorter walk, and Sproutlings
   from a pod hatch where the pod was delivered.
 - **The Undercroft** is a dungeon: rock everywhere except its rooms and corridors, no daylight,
   and only the Warden's lantern and the beacons to see by. **Skitters** are weak cave vermin
-  that hunt in packs and take one Emberling per bite. **The Snuffer**, its boss, cannot be
+  that hunt in packs and take one Sproutling per bite. **The Snuffer**, its boss, cannot be
   hurt in the dark at all: inside a lit beacon's glow it is armoured, and open while it lies
   winded after a slam. At two thirds and one third of its health it puts out the beacons
   around it and calls two Skitters; walk back to a beacon to relight it.
 - **Proctor Ashwick** offers a line of advice now and then: the controls in the first lessons,
-  and after that what you seem to be missing (idle Emberlings, a winded boss, dazed workers
+  and after that what you seem to be missing (idle Sproutlings, a winded boss, dazed workers
   about to be eaten). Settings can turn it off.
-- **Terraces and ledges**: raised ground is ringed by cliffs. Emberlings can be thrown up a cliff,
-  but hauls, the Warden and walking Emberlings use the stairs. A **ledge** (yellow chevrons) is a
+- **Terraces and ledges**: raised ground is ringed by cliffs. Sproutlings can be thrown up a cliff,
+  but hauls, the Warden and walking Sproutlings use the stairs. A **ledge** (yellow chevrons) is a
   one-way edge: anything can step down off it, nothing climbs back. Heights only change how the
   world looks; the rules are worked out on the flat nav grid, where a ledge is a cell that can
   only be entered in its drop direction.
@@ -112,11 +132,11 @@ On a phone or tablet the game shows touch controls instead:
   each other build a chain. Neither changes the score; both are there to chase.
 - **Wardrobe**: outfits for the Warden, earned with medals and feats, chosen under Wardrobe &
   settings (`src/game/progression/outfits.ts`).
-- **Emberpods** are light orange hauls. One carrier takes a pod home, where it hatches into two
-  new Emberlings.
+- **Seed pods** are light hauls. One carrier takes a pod home, where it hatches into two new
+  Sproutlings of its kind.
 - You can throw over walls. Hauls cannot go over them, so they take the long way home.
 - The day ends when every Sunshard is home, time runs out, the Warden is down, or no
-  Emberlings remain. Leftover time only scores if everything was collected.
+  Sproutlings remain. Leftover time only scores if everything was collected.
 
 ## Lessons and progression
 
@@ -127,13 +147,13 @@ On a phone or tablet the game shows touch controls instead:
 | 3   | The Guard            | Fighting a Mossback and growing the squad from its carcass |
 | 4   | First Light          | Three lanes and three guards: choosing an order            |
 | 5   | Long Haul            | A large field where the walk home dominates                |
-| 6   | Divide and Conquer   | Splitting the squad across many jobs at once               |
+| 6   | Divide and Conquer   | Dewlings, sunk shards; splitting the squad across jobs     |
 | 7   | The Gauntlet         | Clearing a corridor of guards, then hauling through it     |
-| 8   | Growing Pains        | Starting small and growing the squad from carcasses        |
+| 8   | Growing Pains        | Stonelings and a crystal vault; growing from carcasses     |
 | 9   | Switchbacks          | Long zigzag hauls past walls you can throw over            |
 | 10  | Final Exam           | Ten shards, six guards, walls everywhere                   |
-| 11  | Bramble Gate         | Breaking gates so hauls behind them can come home          |
-| 12  | Drip Line            | Overstaffing hauls that must cross dripping ground         |
+| 11  | Bramble Gate         | Sparklings and spark coils; breaking bramble gates         |
+| 12  | Drip Line            | Dewlings through the drips, a sunk shard                   |
 | 13  | Gravelmaw's Pit      | Boss: dodge the slam, strike while it lies winded          |
 | 14  | Three Roots          | Boss: fell three root-knots together to drop its shield    |
 | 15  | Rush Hour            | Everything at once, with Glowcap bonuses mid-day           |
@@ -160,8 +180,13 @@ with cliffs and stairways, one-way ledges, crystal gates and outposts (see
 
 Lessons 28 to 30 are **the Depths**: cave lessons that are not part of the numbered run. Each
 is found through an old way down (a ring of stones round a dark stair, blue on the minimap) in
-lesson 19, 20 or 21. Standing on it records the find in the save; from there press E to go
-straight down, which abandons the current day, or play it later from the lesson list.
+lesson 19, 20 or 21. Standing on it records the find in the save; press E (or the button) to
+take the squad down. The surface stops where it is, clock and all, until the Warden comes back
+up the same stair (`src/game/simulation/expedition.ts`). Everyone below comes back up, including
+Sproutlings grown down there; losses below count against the day, and if the Warden falls below
+the day is over. Relics brought up go to the Field Guide but do not count towards the day's
+score, so a cave is a detour for the collection, not a shortcut to a rank. A cave can be
+revisited until it is emptied, and can also be played on its own from the lesson list.
 
 The lessons are told as a story in four terms and an ending: Kindling (1 to 5, spring meadow),
 Field Work (6 to 10, autumn), The Wild Marches (11 to 16, marsh), The Long Road (17 to 21,
@@ -170,15 +195,22 @@ music. Before a day, Proctor Ashwick gives a briefing; passing a lesson at Silve
 an entry to the Journal tab, and finishing a term adds a note from Tindle, the squad's first
 Emberling. The text lives in `src/game/story/story.ts`.
 
-Each day is ranked Bronze, Silver, Gold or Platinum against the lesson's par score. Silver or
-better unlocks the next lesson. Best rank and best score per lesson are saved in the browser.
-Each lesson sets a Platinum time (`platinumTime` in `src/game/world/level.ts`): bring every
-Sunshard home by then without losing an Emberling and the day is Platinum. The par score is
-derived from that time, and Gold and Silver need 85% and 55% of par. The lesson list, the pause
-menu and the results screen show every rank's score and the clock time it needs. Platinum times
-are about 10% slower than the greedy test player in `src/game/world/testBot.ts` (30% on the
-first three lessons, 20% on boss fights), and `level.test.ts` requires it to earn Platinum on
-every lesson, so every rank is always reachable. `npm run balance` plays every lesson on both
+Each day is ranked **Copper, Bronze, Silver, Gold, Platinum or Diamond** against the lesson's
+par score (`src/game/dandori/scoring.ts`). Silver or better unlocks the next lesson. Best rank and
+best score per lesson are saved in the browser. Each lesson sets a Platinum time
+(`platinumTime` in `src/game/world/levels/`): bring every Sunshard home by then without losing a
+Sproutling and the day is Platinum. The par score is derived from that time; Bronze, Silver and
+Gold need 35%, 55% and 75% of par. Diamond needs the same day finished in 85% of the Platinum
+time. Platinum and Diamond also need every Sunshard home, whatever the score. The lesson list,
+the briefing, the pause menu and the results screen show every rank's score and the clock time it
+needs.
+
+Platinum times are set at the clear time of the greedy test player in
+`src/game/world/testBot.ts`, rounded up to five seconds. That player knows every map perfectly,
+throws the right kind at every job, and still loses Sproutlings on the way, so it usually ends a
+lesson on Gold: Platinum means keeping its pace with fewer losses, and Diamond means beating it
+clearly. `level.test.ts` requires the bot to clear every lesson within five seconds under its
+Platinum time and to earn at least Gold, so the targets cannot drift slack or out of reach. `npm run balance` plays every lesson on both
 difficulties and rewrites [BALANCE.md](BALANCE.md) with clear times, losses and ranks; that table
 is how the targets are checked whenever a lesson or a rule changes.
 
@@ -187,9 +219,31 @@ is how the targets are checked whenever a lesson or a rule changes.
 The lesson list has a Normal / Hard switch. A lesson's Hard mode opens after earning Gold on it
 on Normal, and keeps its own best rank and score. On Hard (`src/game/core/difficulty.ts`):
 enemies have 25% more health and wind up 15% faster, the Warden has two hearts, drips kill up
-to three Emberlings, each lost Emberling costs 20 points instead of 10, and the day is 10%
-shorter while the Platinum finish time stays the same. The greedy bot is only required to bring
-home at least 80% of the shards on Hard; on the largest maps it falls a shard or two short.
+to three Sproutlings, each lost Sproutling costs 20 points instead of 10, and the day is 10%
+shorter while the Platinum finish time stays the same. On Hard the greedy bot is only required
+to bring home at least 80% of the shards, in one of up to three tries, each with a slightly
+different style (how close it walks before throwing, how near it lets a beast come), the way a
+person would try again.
+
+## Leaderboard
+
+The Leaderboard tab needs no server of its own (`src/game/leaderboard/`):
+
+- **Your best runs**: the ten best days per lesson and difficulty are kept in the save.
+- **The Academy board** lives on this repository's GitHub issues. The results screen (and each
+  of your kept runs) has a _Post to the leaderboard_ link that opens a new GitHub issue with the
+  run already filled in; submitting it with a GitHub account posts the run. The game reads the
+  board back through GitHub's public API, which browsers can call directly, and shows each
+  account's best run per lesson.
+- Every posted run carries a signed run code. Before an entry is shown, the game checks the
+  signature, recomputes every part of the score from the lesson's own rules, checks the rank
+  against the score and the clock against the day, rejects impossibly fast clears, and checks
+  a fingerprint of the lesson, so runs on a lesson that has since been rebalanced are left off.
+  The signing key ships with the game, so like the save file this stops casual editing, not a
+  determined cheat; the repository owner can strike any entry off by labelling its issue
+  `rejected`.
+- GitHub allows 60 anonymous reads an hour per network, so the board is read at most once every
+  two minutes and kept between visits to the tab.
 
 ## Settings, save files and achievements
 
@@ -206,7 +260,7 @@ home at least 80% of the shards on Hard; on the largest maps it falls a shard or
   editing, not someone reading the source. Progress kept in the browser is still plain JSON.
 - **Version and revision history**: shown on Settings & save, from `src/game/core/changelog.ts`.
   A test keeps its newest entry equal to the version in `package.json`.
-- **Achievements**: 23 on the list, from First Delivery to Dandori Master (Platinum in every
+- **Achievements**: 27 on the list, from First Delivery to Dandori Master (Platinum in every
   lesson), and a few that stay off the list until they are earned. Counter achievements show progress bars. New ones are announced on the results
   screen, and an older save is granted anything it already qualifies for when it loads.
 
@@ -267,8 +321,8 @@ stress scenario (100 workers, 20 enemies, 50 carry tasks) costs about 0.35 ms pe
 Each of these is deliberate.
 
 1. **Original names and look.** The handoff describes the game with another game's names and
-   creatures. This project keeps the genre and mechanics but uses its own cast: Emberlings,
-   the Warden, the Kiln, Mossbacks and Sunshards. Folder names follow: `workers/` instead of
+   creatures. This project keeps the genre and mechanics but uses its own cast: Sproutlings
+   (Emberlings, Dewlings, Stonelings and Sparklings), the Warden, the Kiln, Mossbacks and Sunshards. Folder names follow: `workers/` instead of
    `pikmin/`, `kiln/` instead of `onion/`.
 2. **Save format.** `SaveData` matches the handoff field for field, except `pikminCounts` is
    named `workerCounts`, and three fields were added: `bestScores` (per-lesson bests),

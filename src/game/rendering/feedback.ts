@@ -158,7 +158,7 @@ export class Feedback {
         event.amount >= 4,
       );
     }
-    if (event.type === 'grow') this.popup(`+${event.amount} Emberlings`, event.x, event.z + 1.2);
+    if (event.type === 'grow') this.popup(`+${event.amount} Sproutlings`, event.x, event.z + 1.2);
     if (event.type === 'bloom') this.popup('A Glowcap sprouted!', event.x, event.z);
     if (event.type === 'twin') this.popup(`Twin bonus +${event.amount}`, event.x, event.z + 1.2);
     if (event.type === 'sap') this.popup('Sap! Hauls speed up', event.x, event.z + 1.2);

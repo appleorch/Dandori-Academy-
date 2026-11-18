@@ -6,7 +6,7 @@ import type { FlowField } from '../pathfinding/flowField';
 import type { Carryable, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { setIdle } from '../workers/squad';
-import { mostCommon, SPROUTS, type Squad, type SproutKind } from '../workers/sprouts';
+import { mostCommon, SPROUT_KINDS, SPROUTS, type Squad, type SproutKind } from '../workers/sprouts';
 
 /** How many carriers a crew counts as: a Stoneling lifts like two. */
 export function crewStrength(sim: Simulation, crew: readonly Entity[]): number {
@@ -131,6 +131,22 @@ function extendChain(sim: Simulation, at: Point): void {
   if (sim.chain >= 2) sim.emit('chain', at.x, at.z, sim.chain);
 }
 
+/** A kind that has been part of the day but has no Sproutling left, on the field or growing. */
+export function extinctKind(sim: Simulation): SproutKind | null {
+  for (const kind of SPROUT_KINDS) {
+    if (!sim.knownKinds.has(kind) || sim.kiln.queue.includes(kind)) continue;
+    let alive = false;
+    for (const [, worker] of sim.workers.entries()) {
+      if (worker.kind === kind) {
+        alive = true;
+        break;
+      }
+    }
+    if (!alive) return kind;
+  }
+  return null;
+}
+
 function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Destination): void {
   // A seed grows its own kind; anything else grows the kind most of its crew were.
   const crew: Squad = {};
@@ -169,7 +185,11 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
     sim.emit('sap', to.x, to.z, SAP.seconds);
   }
   if (carryable.workerYield > 0) {
-    for (let i = 0; i < carryable.workerYield; i++) sim.kiln.queue.push(grows);
+    // A kind of the day that has died out comes back first, so no job is ever shut for good.
+    const lost = extinctKind(sim);
+    for (let i = 0; i < carryable.workerYield; i++) {
+      sim.kiln.queue.push(i === 0 && lost ? lost : grows);
+    }
     sim.hatchAt.x = to.x;
     sim.hatchAt.z = to.z;
     sim.emit('grow', to.x, to.z, carryable.workerYield);

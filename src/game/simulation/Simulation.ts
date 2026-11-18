@@ -130,6 +130,11 @@ export class Simulation {
   readonly anchor: Point;
   readonly cursor: Point;
   readonly kiln: Kiln = { queue: [], spawnTimer: 0 };
+  /**
+   * Every kind of Sproutling that has been part of the day: those it started with, those its
+   * seed pods grow, and any that came down from above. The Kiln never lets one of them die out.
+   */
+  readonly knownKinds = new Set<SproutKind>();
 
   readonly stats: SimStats;
   squadSize = 0;
@@ -211,6 +216,7 @@ export class Simulation {
     this.selected = kinds[0] ?? 'ember';
     for (const treasure of level.treasures) spawnTreasure(this, treasure);
     level.pods.forEach((pod, index) => spawnPod(this, pod, index, pod.kind));
+    for (const pod of level.pods) if (pod.kind) this.knownKinds.add(pod.kind);
     (level.logs ?? []).forEach((log, index) => spawnLog(this, log, index));
     (level.saps ?? []).forEach((sap, index) => spawnSap(this, sap, index));
     for (const enemy of level.enemies) {

@@ -48,7 +48,7 @@ const RANGES: readonly RangeSetting[] = [
   {
     key: 'sfxVolume',
     label: 'Sound effects',
-    hint: 'Throws, whistles, Emberling voices and the sounds of each setting.',
+    hint: 'Throws, whistles, Sproutling voices and the sounds of each setting.',
     min: 0,
     max: 1,
     step: 0.05,

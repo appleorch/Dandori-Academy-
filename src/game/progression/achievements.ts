@@ -81,7 +81,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   feat(
     'nobody-left-behind',
     'Nobody Left Behind',
-    'Collect every Sunshard without losing an Emberling.',
+    'Collect every Sunshard without losing a Sproutling.',
     (day) => cleared(day) && day.workersLost === 0,
   ),
   counter('first-hunt', 'First Hunt', 'Defeat an enemy.', 1, (s) => s.totals.enemies),
@@ -100,7 +100,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   feat(
     'big-family',
     'Big Family',
-    'End a day with 40 or more Emberlings.',
+    'End a day with 40 or more Sproutlings.',
     (day) => day.workersAlive >= 40,
   ),
   counter('platinum-student', 'Platinum Student', 'Earn Platinum in any lesson.', 1, (s) =>
@@ -203,7 +203,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     LEVELS.filter((level) => level.side).length,
     (s) => s.discovered.length,
   ),
-  secret('back-room', 'Five Knocks', 'Find where the Emberlings go on Thursdays.'),
+  secret('back-room', 'Five Knocks', 'Find where the Sproutlings go on Thursdays.'),
   secret('card-shark', 'Card Shark', 'Win every chip at the table in the back room.'),
   secret('royal-flush', 'Lucky Ember', 'Win a hand with a straight flush.'),
 ];

@@ -9,7 +9,7 @@ import { Simulation } from '../simulation/Simulation';
 import { rectBox } from '../world/carve';
 import { LEVELS, type LevelDefinition } from '../world/level';
 import { spawnHazard, spawnWorker } from '../world/spawn';
-import { joinSquad, setIdle } from './squad';
+import { joinSquad, removeWorker, setIdle } from './squad';
 import { SPROUT_KINDS, SPROUTS, squadSize } from './sprouts';
 
 beforeAll(async () => {
@@ -271,6 +271,33 @@ describe('growing', () => {
     const sim = new Simulation({ ...FIELD, squad: { dew: 8 } });
     spawnWorker(sim, -10, 2, 'follow', 'dew');
     expect(workersOf(sim, 'dew').length).toBe(9);
+    sim.dispose();
+  });
+});
+
+describe('the Kiln', () => {
+  it('never lets a kind of the day die out: the next one it grows is of that kind', () => {
+    const sim = new Simulation({
+      ...FIELD,
+      squad: { ember: 6, spark: 2 },
+      pods: [{ x: -14, z: 4, kind: 'ember' }],
+    });
+    // Every Sparkling is lost.
+    for (const [entity, worker] of workersOf(sim, 'spark')) removeWorker(sim, entity, worker);
+    expect(workersOf(sim, 'spark')).toHaveLength(0);
+    // An Emberling pod still grows a Sparkling first, then Emberlings.
+    run(sim, 60 * 12, { selectKind: 'ember', throwHeld: true, cursorX: -14, cursorZ: 4 });
+    run(sim, 60 * 3);
+    expect(workersOf(sim, 'spark')).toHaveLength(1);
+    expect(workersOf(sim, 'ember')).toHaveLength(7);
+    sim.dispose();
+  });
+
+  it('does not bring back a kind the day never had', () => {
+    const sim = new Simulation({ ...FIELD, squad: { ember: 8 }, pods: [{ x: -14, z: 4 }] });
+    run(sim, 60 * 12, { throwHeld: true, cursorX: -14, cursorZ: 4 });
+    run(sim, 60 * 3);
+    expect(workersOf(sim, 'ember')).toHaveLength(10);
     sim.dispose();
   });
 });

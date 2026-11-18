@@ -7,7 +7,7 @@ const MANY_HANDS: LevelSpec = {
   stage: 1,
   name: 'Many Hands',
   brief:
-    'Five Sunshards, ten Emberlings, no danger. Give every shard exactly the carriers it needs and nobody waits around.',
+    'Five Sunshards, ten Emberlings, no danger. Give every shard exactly the carriers it needs and nobody waits around. A Glowcap sprouts early for bonus score, and the soft mound hides a seed pod.',
   width: 40,
   depth: 26,
   dayLength: 60,
@@ -24,8 +24,9 @@ const MANY_HANDS: LevelSpec = {
     { id: 'shard-4', x: 6, z: -6, weight: 3 },
     { id: 'shard-5', x: 8, z: 6, weight: 3 },
   ],
+  blooms: [{ x: 2, z: -9, weight: 1, at: 4, lifetime: 30 }],
   pods: [],
-  enemies: [],
+  enemies: [{ x: 13, z: -2, kind: 'mound', reveals: 'pod' }],
 };
 
 const OVER_THE_WALL: LevelSpec = {
@@ -33,11 +34,11 @@ const OVER_THE_WALL: LevelSpec = {
   stage: 2,
   name: 'Over the Wall',
   brief:
-    'Emberlings fly over walls; Sunshards have to walk around them. Throw across to start the far jobs early.',
+    'Emberlings fly over walls; Sunshards have to walk around them. Throw across to start the far jobs early. A buried shard waits under the mound by the second wall: dig it up on the way.',
   width: 50,
   depth: 30,
   dayLength: 100,
-  platinumTime: 70,
+  platinumTime: 65,
   seed: 2,
   startingWorkers: 12,
   captain: { x: -17, z: 2 },
@@ -53,11 +54,13 @@ const OVER_THE_WALL: LevelSpec = {
     { id: 'shard-4', x: 16, z: 6, weight: 4 },
     { id: 'shard-5', x: 18, z: -10, weight: 1 },
   ],
+  blooms: [{ x: 16, z: -3, weight: 2, at: 20, lifetime: 40 }],
+  saps: [{ x: -14, z: -10 }],
   pods: [
     { x: -12, z: 6 },
     { x: 6, z: -2 },
   ],
-  enemies: [],
+  enemies: [{ x: 4, z: -12, kind: 'mound', drop: 2 }],
 };
 
 const THE_GUARD: LevelSpec = {
@@ -65,11 +68,11 @@ const THE_GUARD: LevelSpec = {
   stage: 3,
   name: 'The Guard',
   brief:
-    'A Mossback holds the only gap. Throw a full squad onto its back, and whistle them clear when it shakes or it eats the fallen. Its carcass is worth four more Emberlings.',
+    'A Mossback holds the only gap. Throw a full squad onto its back, and whistle them clear when it shakes or it eats the fallen. Its carcass is worth four more Emberlings. The shard on the flame vent is yours to take: Emberlings are fireproof, but the Warden is not.',
   width: 50,
   depth: 30,
   dayLength: 120,
-  platinumTime: 65,
+  platinumTime: 40,
   seed: 3,
   startingWorkers: 9,
   captain: { x: -17, z: 2 },
@@ -84,6 +87,8 @@ const THE_GUARD: LevelSpec = {
     { id: 'shard-3', x: 16, z: 9, weight: 2 },
     { id: 'shard-4', x: 15, z: -2, weight: 10 },
   ],
+  vents: [{ x: -11.5, z: -8, period: 5, offset: 2 }],
+  blooms: [{ x: 18, z: -9, weight: 2, at: 30, lifetime: 45 }],
   pods: [{ x: -14, z: -3 }],
   enemies: [{ x: 4, z: 0, kind: 'mossback' }],
 };
@@ -93,7 +98,7 @@ const FIRST_LIGHT: LevelSpec = {
   stage: 4,
   name: 'First Light',
   brief:
-    'Three lanes and three guards, one of them a Bogspitter that lobs globs from afar: keep moving when a ring appears on the ground.',
+    'Three lanes and three guards, one of them a Bogspitter that lobs globs from afar: keep moving when a ring appears on the ground. Two flame vents breathe by the lanes; the Sunshards beside them are Emberling work.',
   width: 60,
   depth: 40,
   dayLength: 180,
@@ -115,7 +120,14 @@ const FIRST_LIGHT: LevelSpec = {
     { id: 'shard-4', x: 3, z: 3, weight: 4 },
     { id: 'shard-5', x: 17, z: 13, weight: 5 },
     { id: 'shard-6', x: 24, z: -4, weight: 8 },
+    { id: 'shard-7', x: 12, z: -4, weight: 2, twin: 'lanes' },
+    { id: 'shard-8', x: -12, z: -16, weight: 2, twin: 'lanes' },
   ],
+  vents: [
+    { x: 1.5, z: -11.5, period: 4, offset: 1 },
+    { x: -11, z: 16.5, period: 4, offset: 3 },
+  ],
+  blooms: [{ x: 18, z: 2, weight: 3, at: 40, lifetime: 50 }],
   pods: [
     { x: -12, z: 4 },
     { x: 2, z: -6 },
@@ -132,11 +144,11 @@ const LONG_HAUL: LevelSpec = {
   stage: 5,
   name: 'Long Haul',
   brief:
-    'A wide field and far-off shards. The walk home is the slow part, so start the distant hauls first and grow the squad on the way.',
+    'A wide field and far-off shards. The walk home is the slow part, so start the distant hauls first and grow the squad on the way. Sap in the middle speeds every haul for half a minute: save it for the long ones.',
   width: 80,
   depth: 50,
   dayLength: 360,
-  platinumTime: 270,
+  platinumTime: 220,
   seed: 5,
   startingWorkers: 15,
   captain: { x: -29, z: 2 },
@@ -156,7 +168,13 @@ const LONG_HAUL: LevelSpec = {
     { id: 'shard-5', x: 13, z: 17, weight: 5 },
     { id: 'shard-6', x: 18, z: -20, weight: 6 },
     { id: 'shard-7', x: 33, z: -10, weight: 8 },
-    { id: 'shard-8', x: 34, z: 17, weight: 10 },
+    { id: 'shard-8', x: 34, z: 17, weight: 9 },
+  ],
+  saps: [{ x: -4, z: -6 }],
+  vents: [{ x: 35, z: 15, period: 5, offset: 0 }],
+  blooms: [
+    { x: -14, z: 18, weight: 2, at: 50, lifetime: 50 },
+    { x: 22, z: 2, weight: 4, at: 140, lifetime: 60 },
   ],
   pods: [
     { x: -24, z: 6 },
@@ -164,6 +182,7 @@ const LONG_HAUL: LevelSpec = {
     { x: 14, z: 6 },
   ],
   enemies: [
+    { x: 30, z: -20, kind: 'mound', drop: 3 },
     { x: -8, z: 9, kind: 'mossback' },
     { x: 12, z: -5, kind: 'ramhorn' },
     { x: 20, z: 11, kind: 'mossback' },

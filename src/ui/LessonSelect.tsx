@@ -109,7 +109,7 @@ export function LessonSelect() {
         <p>
           {hard
             ? HARD_SUMMARY
-            : `Bring every Sunshard back to the Kiln before the day ends. Throw Emberlings at work, then move on: they finish the job without you. Earn ${UNLOCK_RANK} or better to open the next lesson, and ${HARD_UNLOCK_RANK} to open its Hard mode.`}
+            : `Bring every Sunshard back to the Kiln before the day ends. Throw Sproutlings at work, then move on: they finish the job without you. Earn ${UNLOCK_RANK} or better to open the next lesson, and ${HARD_UNLOCK_RANK} to open its Hard mode.`}
         </p>
         {!hard && (
           <details className="how-to" open={save.totals.days === 0}>

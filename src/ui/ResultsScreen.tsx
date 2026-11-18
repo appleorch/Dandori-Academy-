@@ -17,7 +17,7 @@ const HEADLINES: Record<DayEnd, string> = {
   allCollected: 'Every Sunshard is home',
   timeUp: 'The day is over',
   captainDown: 'The Warden is down',
-  wipedOut: 'No Emberlings remain',
+  wipedOut: 'No Sproutlings remain',
 };
 
 /** Counts from 0 up to `target` once `delay` seconds have passed, easing out. */
@@ -134,13 +134,13 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
                 delay={0.1}
               />
               <TallyRow label="Time bonus" value={score.timeBonus} delay={0.35} />
-              <TallyRow label="Emberlings alive" value={score.workerBonus} delay={0.6} />
-              <TallyRow label="Emberlings lost" value={score.lossPenalty} delay={0.85} negative />
+              <TallyRow label="Sproutlings alive" value={score.workerBonus} delay={0.6} />
+              <TallyRow label="Sproutlings lost" value={score.lossPenalty} delay={0.85} negative />
               <TallyRow label="Total" value={score.total} delay={1.1} total />
             </tbody>
           </table>
           <p className="day-stats">
-            Day finished in {formatTime(result.elapsed)} · {result.workersAlive} Emberlings home ·{' '}
+            Day finished in {formatTime(result.elapsed)} · {result.workersAlive} Sproutlings home ·{' '}
             {result.enemiesDefeated} {result.enemiesDefeated === 1 ? 'enemy' : 'enemies'} defeated
           </p>
           {result.clearTime !== null && (

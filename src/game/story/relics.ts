@@ -63,7 +63,7 @@ const COMMON: readonly Relic[] = [
     name: 'Chapel Handbell',
     shape: 'bell',
     material: 'brass',
-    description: 'Rung once a term to begin examinations. Emberlings still flinch at it.',
+    description: 'Rung once a term to begin examinations. Sproutlings still flinch at it.',
   },
   {
     id: 'greenhouse-key',
@@ -112,7 +112,7 @@ const COMMON: readonly Relic[] = [
     name: 'Seamstress’s Thimble',
     shape: 'thimble',
     material: 'silver',
-    description: 'From the sewing room, where the Emberlings’ baskets were first woven.',
+    description: 'From the sewing room, where the Sproutlings’ baskets were first woven.',
   },
   {
     id: 'golden-gear',
@@ -133,14 +133,14 @@ const COMMON: readonly Relic[] = [
     name: 'Refectory Dinner Bell',
     shape: 'bell',
     material: 'silver',
-    description: 'Every Emberling within a mile knows exactly what this means.',
+    description: 'Every Sproutling within a mile knows exactly what this means.',
   },
   {
     id: 'skeleton-key',
     name: 'Silver Skeleton Key',
     shape: 'key',
     material: 'silver',
-    description: 'Fits no lock anyone has found. The Emberlings are very interested in this.',
+    description: 'Fits no lock anyone has found. The Sproutlings are very interested in this.',
   },
   {
     id: 'gold-watch',
@@ -242,7 +242,7 @@ const FRAGILE: readonly Relic[] = [
     name: 'Glass Bell',
     shape: 'bell',
     material: 'glass',
-    description: 'Rings a note so high only the Emberlings can hear it. They hate it.',
+    description: 'Rings a note so high only the Sproutlings can hear it. They hate it.',
   },
 ];
 

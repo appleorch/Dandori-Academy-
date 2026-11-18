@@ -29,6 +29,7 @@ export function spawnWorker(
   state: WorkerState,
   kind: SproutKind = 'ember',
 ): Entity {
+  sim.knownKinds.add(kind);
   const entity = sim.ecs.create();
   sim.transforms.set(entity, { x, y: 0, z, facing: 0 });
   sim.workers.set(entity, {

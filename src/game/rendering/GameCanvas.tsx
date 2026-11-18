@@ -77,6 +77,10 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
     const created = new Expedition(new Simulation(level));
     setExpedition(created);
     setSim(created.active);
+    // Development builds only: lets browser checks reach the running day.
+    if (import.meta.env.DEV) {
+      (window as unknown as { __dandori?: unknown }).__dandori = { expedition: created, setSim };
+    }
     return () => created.dispose();
   }, [level]);
 

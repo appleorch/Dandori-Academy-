@@ -5,6 +5,7 @@ import { useGameStore } from '../game/core/gameStore';
 import { RelicModel } from '../game/rendering/models/RelicModel';
 import { recoveredRelics, relicLocations, RELICS, type Relic } from '../game/story/relics';
 import { MenuNav } from './MenuNav';
+import { SproutlingGuide } from './SquadRoster';
 
 const MATERIAL_NAMES: Record<Relic['material'], string> = {
   brass: 'Brass',
@@ -68,6 +69,7 @@ export function FieldGuide() {
           The Relics of Harmony: lost things of the founders, each with a Sunshard set into it.
           {` ${found.size} of ${RELICS.length} recovered.`}
         </p>
+        <SproutlingGuide />
         <div className="guide">
           <figure className="guide-stage">
             <div className="guide-canvas">

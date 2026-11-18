@@ -138,7 +138,7 @@ export const LESSON_STORY: Record<string, LessonStory> = {
   },
   'divide-and-conquer': {
     briefing:
-      'Second term. The field is wider than your legs are fast. Split the squad and trust them. They finish the job without you; that is the entire point of them.',
+      'Second term, and a new colour in the Kiln. Emberlings are only one kind of Sproutling, cadet: these blue ones are Dewlings, and they walk into a pond as if it were a puddle. The field is wider than your legs are fast. Split the squad and trust them.',
     journal:
       'Four jobs running at once and me standing in the middle like a signpost. For one moment today I think I understood what dandori means.',
   },
@@ -150,13 +150,13 @@ export const LESSON_STORY: Record<string, LessonStory> = {
   },
   'growing-pains': {
     briefing:
-      'Small squad, heavy shards. You cannot lift the big one yet, so do not stand there looking at it. Hatch, hunt, and come back when you can.',
+      'Small squad, heavy shards, and two Stonelings. They are slow, they are grey, and they lift like two. The big one sits behind crystal, and only a Stoneling cracks crystal properly. Hatch, hunt, and come back when you can.',
     journal:
       'Started with seven. Finished with dozens. Tindle rode home on top of the last shard and I pretended not to notice.',
   },
   switchbacks: {
     briefing:
-      'The path home doubles back on itself. A shard walks the road, an Emberling flies the wall. Start the furthest haul first and it will arrive with the rest.',
+      'The path home doubles back on itself. A shard walks the road, a Sproutling flies the wall. Start the furthest haul first and it will arrive with the rest.',
     journal:
       'Everything came home in the same minute, from four directions. Ashwick wrote something in the book. I was not shown what.',
   },
@@ -168,13 +168,13 @@ export const LESSON_STORY: Record<string, LessonStory> = {
   },
   'bramble-gate': {
     briefing:
-      'Beyond the fence the old paths are grown shut. Bramble does not bite, but it stands between your shards and home. Put a crew on it before you need the road, not after.',
+      'Beyond the fence the old paths are grown shut, and the old spark coils still hum. Meet the Sparklings: they fly farthest and a coil cannot touch them. Bramble does not bite, but it stands between your shards and home. Put a crew on it before you need the road.',
     journal:
       'Third term. The marsh smells of rain and something older. The brambles were planted in rows once. Somebody farmed here.',
   },
   'drip-line': {
     briefing:
-      'Dew falls here in drops the size of your head. It will not kill an Emberling, only knock it flat and make it drop what it carried. Watch the rhythm. Cross between drops.',
+      'Dew falls here in drops the size of your head. It will not kill a Sproutling, only knock it flat and make it drop what it carried. Watch the rhythm. Cross between drops.',
     journal:
       'The drips keep time like a clock. Glowcaps came up after the rain and wilted before I could send anyone. Next time I leave a pair free.',
   },
@@ -182,7 +182,7 @@ export const LESSON_STORY: Record<string, LessonStory> = {
     briefing:
       'The first of the three. A Gravelmaw: plated all over and soft only when it has thrown itself at the ground and missed. Let it miss. It has a shard in its belly that belongs to us.',
     journal:
-      'It reared, we scattered, it fell on its face, and thirty Emberlings landed on it at once. There were tunnels in the walls of that pit. It did not dig them. It came up through them.',
+      'It reared, we scattered, it fell on its face, and thirty Sproutlings landed on it at once. There were tunnels in the walls of that pit. It did not dig them. It came up through them.',
   },
   'three-roots': {
     briefing:
@@ -194,7 +194,7 @@ export const LESSON_STORY: Record<string, LessonStory> = {
     briefing:
       'Everything on this field happens at once and none of it waits. Glowcaps do not keep. You will not get all of it by being careful; you will get it by being organised.',
     journal:
-      'I gave up trying to watch everything and started trusting the jobs I had already set. The Emberlings sang on the way home. It may have been squeaking.',
+      'I gave up trying to watch everything and started trusting the jobs I had already set. The Sproutlings sang on the way home. It may have been squeaking.',
   },
   'the-bellwether': {
     briefing:
@@ -210,7 +210,7 @@ export const LESSON_STORY: Record<string, LessonStory> = {
   },
   'the-span': {
     briefing:
-      'The river took the old bridge. There are logs enough to build another if your Emberlings carry them to the bank. Nothing on the far side comes home until it stands.',
+      'The river took the old bridge. There are logs enough to build another if your Sproutlings carry them to the bank. Nothing on the far side comes home until it stands.',
     journal:
       'They built it plank by plank while I was off fighting a Mossback. I came back and there was a bridge. I have rarely been prouder of anything I did not do.',
   },
@@ -251,7 +251,7 @@ Object.assign(LESSON_STORY, {
     briefing:
       'Skitters. A great many, and this is where they come from. They are nothing one at a time and a disaster in a crowd. Throw before they reach you, Warden, not after.',
     journal:
-      'Fifteen rooms, and something with too many legs in most of them. We went through it one chamber at a time, lighting as we went. The Emberlings would like a bath. So would I.',
+      'Fifteen rooms, and something with too many legs in most of them. We went through it one chamber at a time, lighting as we went. The Sproutlings would like a bath. So would I.',
   },
   'the-root-cellar': {
     briefing:
@@ -264,7 +264,7 @@ Object.assign(LESSON_STORY, {
 Object.assign(LESSON_STORY, {
   'terrace-gardens': {
     briefing:
-      'The Headmaster has been planning these examinations for forty years, Warden, so please look impressed. The terraces are cliffs to you and a short hop to an Emberling. What they lift comes down by the stairs. Plan for that.',
+      'The Headmaster has been planning these examinations for forty years, Warden, so please look impressed. The terraces are cliffs to you and a short hop to a Sproutling. What they lift comes down by the stairs. Plan for that.',
     journal:
       'Threw a whole squad up a cliff and walked round to meet them at the bottom of the stairs, relic and all. The Headmaster applauded from the gallery. He applauds a lot.',
   },
@@ -305,7 +305,7 @@ export const PROLOGUE: readonly string[] = [
 export const EPILOGUE: readonly string[] = [
   'The last relic went into the Great Kiln on the evening of Restoration Day, and the old Terrarium lit from end to end: every pane of glass under the hill, every gear in the clock towers, turning together for the first time in a hundred years.',
   'Headmaster Sprocket gave a speech. It was very long and mostly about gears. Proctor Ashwick retired that spring, and left the pocket watch on your desk with a note: \u201cYou never needed it. Try to be on time anyway.\u201d',
-  'The Field Guide cabinet is nearly full now. There is one shelf left empty, with a label in the founders\u2019 own hand that just says \u201cnext\u201d. The Emberlings say they have no idea what it means. They say it very quickly, and all at once.',
+  'The Field Guide cabinet is nearly full now. There is one shelf left empty, with a label in the founders\u2019 own hand that just says \u201cnext\u201d. The Sproutlings say they have no idea what it means. They say it very quickly, and all at once.',
 ];
 
 export function chapterOf(stage: number): Chapter {
