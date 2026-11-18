@@ -6,13 +6,21 @@ import { rankTargets } from './targets';
 describe.each(LEVELS)('$name rank targets', (level) => {
   const targets = rankTargets(level);
 
-  it('asks for Platinum at exactly the lesson’s Platinum time', () => {
+  it('asks for Platinum and Diamond at exactly the lesson’s Platinum and Diamond times', () => {
     expect(level.platinumTime).toBeGreaterThan(0);
     expect(level.platinumTime).toBeLessThan(level.dayLength);
+    expect(level.diamondTime).toBeGreaterThan(0);
+    expect(level.diamondTime).toBeLessThan(level.platinumTime);
+    expect(targets.map((target) => target.rank)).toEqual(['Silver', 'Gold', 'Platinum', 'Diamond']);
     expect(targets[2]).toEqual({
       rank: 'Platinum',
       score: level.parScore,
       timeLeft: level.dayLength - level.platinumTime,
+    });
+    expect(targets[3]).toEqual({
+      rank: 'Diamond',
+      score: level.diamondScore,
+      timeLeft: level.dayLength - level.diamondTime,
     });
   });
 
@@ -36,9 +44,10 @@ describe.each(LEVELS)('$name rank targets', (level) => {
             workersAlive: level.startingWorkers,
             workersLost: 0,
           },
-          level.parScore,
+          level,
         );
       expect(day(target.timeLeft).total).toBeGreaterThanOrEqual(target.score);
+      expect(day(target.timeLeft).rank).toBe(target.rank);
       expect(day(target.timeLeft - 1).total).toBeLessThan(target.score);
     }
   });

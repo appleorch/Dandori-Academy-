@@ -1,4 +1,5 @@
 import { DIFFICULTIES, HARD } from '../game/core/difficulty';
+import { rankValue } from '../game/dandori/scoring';
 import { useGameStore } from '../game/core/gameStore';
 import {
   bestRank,
@@ -36,7 +37,7 @@ export function LessonSelect() {
     MAIN_LEVELS.find((level) => {
       if (level.stage > save.stage) return false;
       const rank = bestRank(save, level.id);
-      return rank === null || rank === 'Bronze';
+      return rank === null || rankValue(rank) < rankValue(UNLOCK_RANK);
     }) ??
     LEVELS.find((level) => level.id === lastPlayed) ??
     MAIN_LEVELS[0];

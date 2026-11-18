@@ -165,6 +165,17 @@ tr.total td {
   color: #d99562;
 }
 
+.rank-copper {
+  color: #c4734a;
+}
+
+.rank-diamond {
+  color: #f2fbff;
+  text-shadow:
+    0 0 8px rgba(160, 230, 255, 0.85),
+    0 0 18px rgba(200, 160, 255, 0.5);
+}
+
 .hud {
   position: absolute;
   inset: 0;
@@ -2101,4 +2112,101 @@ button.touch-button.cycle {
 .chip.below-chip {
   color: #d4deff;
   background: rgba(30, 40, 80, 0.75);
+}
+
+/* Leaderboard */
+.board-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.board-pick label {
+  display: grid;
+  gap: 4px;
+  flex: 1 1 220px;
+  font-size: 0.85rem;
+}
+.board-pick select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 246, 220, 0.4);
+  background: rgba(20, 14, 8, 0.6);
+  color: var(--ink);
+  font: inherit;
+}
+.board-difficulty {
+  display: flex;
+  gap: 4px;
+}
+.board {
+  margin-top: 16px;
+}
+.board h2 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+.board h2 small {
+  font-weight: 400;
+  opacity: 0.7;
+  margin-left: 6px;
+}
+.board .button-row {
+  align-items: center;
+  margin-top: 8px;
+}
+.board .button-row button {
+  flex: 0 0 auto;
+}
+.board-table {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+}
+.board-table th,
+.board-table td {
+  padding: 4px 6px;
+  text-align: left;
+}
+.board-table a {
+  color: var(--ink);
+}
+.panel > .note,
+.board .note {
+  font-size: 0.82rem;
+  opacity: 0.8;
+}
+.note.warn {
+  color: #ffc9a0;
+  opacity: 1;
+}
+.link-button {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 246, 220, 0.4);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.results-actions .link-button {
+  display: block;
+  margin-top: 8px;
+  padding: 12px;
+  text-align: center;
+  font-size: 1rem;
+}
+.link-button:hover,
+.link-button:focus-visible {
+  background: rgba(255, 246, 220, 0.12);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

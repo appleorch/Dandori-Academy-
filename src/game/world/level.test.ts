@@ -1,10 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { evaluateDay } from '../dandori/scoring';
+import { evaluateDay, rankValue } from '../dandori/scoring';
 import { initPhysics } from '../simulation/physics';
 import { Simulation } from '../simulation/Simulation';
 import { penaltyPerLoss } from '../core/difficulty';
 import { forDifficulty, LEVELS } from './level';
 import { playGreedy } from './testBot';
+
+/** Platinum is the bot's clear time rounded up to five seconds. */
+const PLATINUM_SLACK = 5;
 
 beforeAll(async () => {
   await initPhysics();
@@ -25,7 +28,7 @@ describe.each(LEVELS)('$name on Hard', (base) => {
         workersAlive: sim.workers.size,
         workersLost: sim.stats.workersLost,
       },
-      level.parScore,
+      level,
       penaltyPerLoss('hard'),
     );
     expect(sim.stats.treasuresCollected.length).toBeGreaterThanOrEqual(
@@ -64,7 +67,7 @@ describe.each(LEVELS)('$name', (level) => {
     sim.dispose();
   });
 
-  it('can be cleared at Platinum pace by a simple greedy player', () => {
+  it('has a Platinum time set at a simple greedy player’s clear time', () => {
     const sim = new Simulation(level);
     playGreedy(sim);
     const score = evaluateDay(
@@ -76,11 +79,15 @@ describe.each(LEVELS)('$name', (level) => {
         workersAlive: sim.workers.size,
         workersLost: sim.stats.workersLost,
       },
-      level.parScore,
+      level,
     );
     expect(sim.ended).toBe('allCollected');
-    // Platinum times are measured from this bot, so it must keep reaching them.
-    expect(score.rank).toBe('Platinum');
+    // Platinum times are set from this bot's clear time, rounded up to five seconds: it must
+    // keep making them, and they must not drift slack. Its losses cost it Platinum, but never
+    // so many that it falls below Gold.
+    expect(sim.elapsed).toBeLessThanOrEqual(level.platinumTime);
+    expect(sim.elapsed).toBeGreaterThan(level.platinumTime - PLATINUM_SLACK);
+    expect(rankValue(score.rank)).toBeGreaterThanOrEqual(rankValue('Gold'));
     sim.dispose();
   });
 });

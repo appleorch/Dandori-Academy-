@@ -5,7 +5,7 @@ import { Expedition } from './expedition';
 import { initPhysics } from './physics';
 import { Simulation } from './Simulation';
 
-const SURFACE = LEVELS.find((level) => level.id === 'matched-pairs')!;
+const SURFACE = LEVELS.find((level) => level.id === 'matched-pairs') ?? LEVELS[0];
 
 function walk(sim: Simulation, steps: number): void {
   for (let i = 0; i < steps && !sim.ended; i++) {
@@ -24,6 +24,10 @@ beforeAll(async () => {
 });
 
 describe('expedition', () => {
+  it('starts from a lesson with a way down', () => {
+    expect(SURFACE.descent?.to).toBe('the-cistern');
+  });
+
   it('takes the squad down, freezes the surface, and brings everyone back up', () => {
     const expedition = new Expedition(new Simulation(SURFACE));
     const surface = expedition.surface;

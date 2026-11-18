@@ -84,8 +84,12 @@ describe('Hard mode', () => {
       workersAlive: 8,
       workersLost: 4,
     };
-    const normal = evaluateDay(stats, 2000, penaltyPerLoss('normal'));
-    const hard = evaluateDay(stats, 2000, penaltyPerLoss('hard'));
+    const normal = evaluateDay(
+      stats,
+      { parScore: 2000, diamondScore: 2500 },
+      penaltyPerLoss('normal'),
+    );
+    const hard = evaluateDay(stats, { parScore: 2000, diamondScore: 2500 }, penaltyPerLoss('hard'));
     expect(normal.lossPenalty).toBe(40);
     expect(hard.lossPenalty).toBe(80);
   });

@@ -108,14 +108,19 @@ export interface LevelDefinition {
   depth: number;
   dayLength: number;
   /**
-   * Seconds into the day by which every Sunshard must be home, with no Emberlings
-   * lost, to earn Platinum. Set about 10% slower than the greedy test bot (30% on the
-   * first three lessons, 20% on boss fights, which vary more), so a planned day beats it
-   * and a sloppy one does not. `npm run balance` measures every lesson into BALANCE.md.
+   * Seconds into the day by which every Sunshard must be home, with no Sproutlings
+   * lost, to earn Platinum. Set at the greedy test bot's own clear time, rounded up to
+   * five seconds: Platinum means matching a player who knows the map perfectly, and
+   * losing fewer Sproutlings than it does. `npm run balance` measures every lesson into
+   * BALANCE.md.
    */
   platinumTime: number;
   /** Score that earns Platinum. Derived from `platinumTime`; see `withPar`. */
   parScore: number;
+  /** Seconds into the day for Diamond: a clear well ahead of the bot. Derived; see `withPar`. */
+  diamondTime: number;
+  /** Score that earns Diamond. Derived from `diamondTime`; see `withPar`. */
+  diamondScore: number;
   /** Normal, or Hard with the modifiers in core/difficulty. */
   difficulty: Difficulty;
   seed: number;
@@ -162,6 +167,9 @@ export interface LevelDefinition {
 }
 
 /** A lesson as written, before its par score is derived. The theme defaults to its chapter's. */
-export type LevelSpec = Omit<LevelDefinition, 'parScore' | 'difficulty' | 'theme'> & {
+export type LevelSpec = Omit<
+  LevelDefinition,
+  'parScore' | 'diamondTime' | 'diamondScore' | 'difficulty' | 'theme'
+> & {
   theme?: LevelTheme;
 };

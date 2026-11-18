@@ -8,6 +8,8 @@ import { HARD_UNLOCK_RANK, hardUnlocked, UNLOCK_RANK } from '../game/save/saveMa
 import type { DayEnd } from '../game/simulation/Simulation';
 import { LEVELS, MAIN_LEVELS, type LevelDefinition } from '../game/world/level';
 import { RankTargets } from './RankTargets';
+import { PostRunLink } from './LeaderboardScreen';
+import { rankValue, type Rank } from '../game/dandori/scoring';
 import { SprocketPortrait } from './Portrait';
 import { evaluation } from '../game/story/headmaster';
 
@@ -58,11 +60,13 @@ function TallyRow({
   );
 }
 
-const STINGERS: Record<string, SoundName> = {
+const STINGERS: Record<Rank, SoundName> = {
+  Diamond: 'rankDiamond',
   Platinum: 'rankPlatinum',
   Gold: 'rankGold',
   Silver: 'rankSilver',
   Bronze: 'rankBronze',
+  Copper: 'rankCopper',
 };
 
 export function ResultsScreen({ level }: { level: LevelDefinition }) {
@@ -72,7 +76,11 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
   const showScreen = useGameStore((state) => state.showScreen);
   const showStory = useGameStore((state) => state.showStory);
   const rank = result?.score.rank;
-  const failed = result !== null && result.reason !== 'allCollected' && rank === 'Bronze';
+  const failed =
+    result !== null &&
+    result.reason !== 'allCollected' &&
+    rank !== undefined &&
+    rankValue(rank) < rankValue('Silver');
   // The fanfare matches the medal; a day that fell apart gets something more rueful.
   // The medal lands after the tally; its fanfare's first note (0.4s in) lands with it.
   useEffect(() => {
@@ -110,7 +118,9 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
           </p>
           <h1 className={`rank stamp rank-${score.rank.toLowerCase()}`}>{score.rank}</h1>
           <figure className="speech verdict">
-            <SprocketPortrait mood={score.rank === 'Bronze' ? 'muse' : 'cheer'} />
+            <SprocketPortrait
+              mood={rankValue(score.rank) < rankValue('Silver') ? 'muse' : 'cheer'}
+            />
             <div>
               <blockquote>{evaluation(score.rank, level.id)}</blockquote>
               <figcaption>Headmaster Sprocket</figcaption>
@@ -150,6 +160,11 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
             </p>
           )}
           {result.bestChain >= 3 && <p className="day-stats">Longest chain: ×{result.bestChain}</p>}
+          {result.caveRelics > 0 && (
+            <p className="day-stats">
+              Relics brought up from below: {result.caveRelics} (added to the Field Guide)
+            </p>
+          )}
           {result.isBestScore && <p className="best">New best score</p>}
           {result.unlockedNext && next && <p className="best">Unlocked: {next.name}</p>}
           <div className="results-actions">
@@ -186,6 +201,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
             <button type="button" className="secondary" onClick={() => showScreen('menu')}>
               All lessons
             </button>
+            {result.run && <PostRunLink run={result.run} />}
           </div>
         </section>
         <section className="results-side">

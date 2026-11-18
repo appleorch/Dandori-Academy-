@@ -106,6 +106,13 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   counter('platinum-student', 'Platinum Student', 'Earn Platinum in any lesson.', 1, (s) =>
     lessonsAtLeast(s, 'Platinum'),
   ),
+  counter(
+    'diamond-cut',
+    'Diamond Cut',
+    'Earn Diamond in any lesson: beat the Platinum time by a sixth.',
+    1,
+    (s) => lessonsAtLeast(s, 'Diamond'),
+  ),
   counter('honor-roll', 'Honor Roll', 'Earn Gold or better in five lessons.', 5, (s) =>
     lessonsAtLeast(s, 'Gold'),
   ),
@@ -177,7 +184,10 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     id: 'hard-as-stone',
     name: 'Hard as Stone',
     description: 'Earn Platinum on Hard against the Bellwether.',
-    earned: (save) => bestRank(save, 'the-bellwether', 'hard') === 'Platinum',
+    earned: (save) => {
+      const rank = bestRank(save, 'the-bellwether', 'hard');
+      return rank !== null && rankValue(rank) >= rankValue('Platinum');
+    },
   },
   counter(
     'dandori-master',

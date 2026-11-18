@@ -18,6 +18,8 @@ import type { DayEnd, Simulation } from '../simulation/Simulation';
 import { LEVELS } from '../world/level';
 import type { Line } from '../story/headmaster';
 import type { Haul } from '../simulation/expedition';
+import { makeRun, type RunEntry } from '../leaderboard/runCode';
+import { GAME_VERSION } from './changelog';
 import type { SproutKind } from '../workers/sprouts';
 import { CHAIN } from './config';
 import { penaltyPerLoss, type Difficulty } from './difficulty';
@@ -35,7 +37,7 @@ function deviceDefaults(): Settings {
 }
 
 /** Screens reachable from the main menu. */
-export type MenuScreen = 'menu' | 'achievements' | 'settings' | 'journal' | 'guide';
+export type MenuScreen = 'menu' | 'achievements' | 'settings' | 'journal' | 'guide' | 'leaderboard';
 export type GamePhase = MenuScreen | 'story' | 'playing' | 'results';
 
 /** Low-frequency copy of simulation state for the HUD. */
@@ -86,6 +88,8 @@ export interface DayResult {
   bestChain: number;
   /** Relics brought up from caves on the way: for the Field Guide, not the rank. */
   caveRelics: number;
+  /** The day as a leaderboard run, or null when it cannot be posted. */
+  run: RunEntry | null;
   enemiesDefeated: number;
   workersAlive: number;
   /** Ids of achievements earned by this day. */
@@ -359,7 +363,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           workersAlive,
           workersLost: stats.workersLost,
         },
-        level.parScore,
+        level,
         penaltyPerLoss(level.difficulty),
       );
       const day: DayRecord = {
@@ -382,6 +386,22 @@ export const useGameStore = create<GameStore>((set, get) => {
         bloomsCollected: stats.bloomsCollected,
         splits: cleared ? stats.deliveryTimes : undefined,
         extraTreasures: haul?.relics ?? [],
+        run:
+          makeRun(
+            {
+              levelId: level.id,
+              difficulty: level.difficulty,
+              score,
+              shards: stats.treasuresCollected.length,
+              shardsTotal: stats.treasuresTotal,
+              elapsed: sim.elapsed,
+              timeLeft: sim.timeLeft,
+              alive: workersAlive,
+              lost: stats.workersLost,
+            },
+            GAME_VERSION,
+            new Date(),
+          ) ?? undefined,
       };
       const previous = get().save;
       const { save, unlocked } = unlockAchievements(recordDay(previous, day), day, new Date());
@@ -410,6 +430,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           previousBest: bestClearTime(previous, level.id, level.difficulty),
           bestChain: stats.bestChain,
           caveRelics: haul?.relics.length ?? 0,
+          run: day.run ?? null,
           enemiesDefeated: stats.enemiesDefeated,
           workersAlive,
           difficulty: level.difficulty,

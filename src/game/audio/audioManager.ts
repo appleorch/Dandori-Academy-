@@ -56,10 +56,12 @@ export type SoundName =
   | 'warning'
   | 'tick'
   | 'dayEnd'
+  | 'rankCopper'
   | 'rankBronze'
   | 'rankSilver'
   | 'rankGold'
   | 'rankPlatinum'
+  | 'rankDiamond'
   | 'fail'
   | 'step'
   | 'uiClick'
@@ -498,6 +500,9 @@ class AudioManager {
       case 'dayEnd':
         this.notes(out, [523, 659, 784], 0.11, 0.3, 0.16);
         break;
+      case 'rankCopper':
+        [349, 440].forEach((hz, i) => this.bell(out, hz, 0.6, 0.18, 0.4 + i * 0.16));
+        break;
       case 'rankBronze':
         [392, 494, 587].forEach((hz, i) => this.bell(out, hz, 0.7, 0.2, 0.4 + i * 0.14));
         break;
@@ -516,6 +521,15 @@ class AudioManager {
         );
         this.notes(out, [262, 330, 392, 523], 0.3, 1.4, 0.1, 'sawtooth');
         this.burst(out, 1.4, 6000, 0.07, 1, 'highpass');
+        break;
+      case 'rankDiamond':
+        // Platinum's fanfare, then a glassy shimmer climbing over it.
+        [523, 659, 784, 1047, 1319, 1568, 2093].forEach((hz, i) =>
+          this.bell(out, hz, 1.2, 0.19, 0.4 + i * 0.1),
+        );
+        [2637, 3136, 3520, 4186].forEach((hz, i) => this.bell(out, hz, 1.6, 0.1, 1.1 + i * 0.08));
+        this.notes(out, [262, 330, 392, 523, 659], 0.3, 1.6, 0.1, 'sawtooth');
+        this.burst(out, 1.8, 7000, 0.08, 1, 'highpass');
         break;
       case 'fail':
         this.notes(out, [392, 349, 311, 262], 0.22, 0.5, 0.18);

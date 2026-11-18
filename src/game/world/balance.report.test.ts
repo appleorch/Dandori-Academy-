@@ -9,7 +9,7 @@ import { playGreedy } from './testBot';
 /**
  * Not a test: a measurement. `npm run balance` plays every lesson with the test bot on both
  * difficulties and rewrites BALANCE.md with a table of how it went. Platinum times are
- * meant to sit a little slower than the bot's Normal clear time.
+ * the bot's Normal clear time rounded up to five seconds.
  */
 const enabled = Boolean(import.meta.env.VITE_BALANCE);
 
@@ -26,7 +26,7 @@ function play(base: (typeof LEVELS)[number], difficulty: Difficulty) {
       workersAlive: sim.workers.size,
       workersLost: sim.stats.workersLost,
     },
-    level.parScore,
+    level,
     penaltyPerLoss(difficulty),
   );
   const row = {
@@ -51,16 +51,16 @@ describe.skipIf(!enabled)('balance report', () => {
       '# Balance report',
       '',
       'Written by `npm run balance`. A simple greedy test player plays every lesson on Normal and on Hard.',
-      'On Normal it must clear each lesson at Platinum pace; on Hard it must bring home at least 80% of the Sunshards.',
+      'On Normal it must clear each lesson by the Platinum time (which is set from its own clear time) and earn at least Gold; on Hard it must bring home at least 80% of the Sunshards.',
       '',
-      '| # | Lesson | Day | Platinum by | Bot clear | Bot / Platinum | Bot lost | Hard day | Hard shards | Hard lost | Hard rank |',
-      '|---|---|---|---|---|---|---|---|---|---|---|',
+      '| # | Lesson | Day | Diamond by | Platinum by | Bot clear | Bot / Platinum | Bot lost | Bot rank | Hard day | Hard shards | Hard lost | Hard rank |',
+      '|---|---|---|---|---|---|---|---|---|---|---|---|---|',
     ];
     for (const base of LEVELS) {
       const normal = play(base, 'normal');
       const hard = play(base, 'hard');
       lines.push(
-        `| ${base.stage} | ${base.name} | ${base.dayLength}s | ${base.platinumTime}s | ${normal.cleared ? `${Math.round(normal.time)}s` : `not cleared (${normal.shards})`} | ${(normal.time / base.platinumTime).toFixed(2)} | ${normal.lost} | ${hard.level.dayLength}s | ${hard.shards} | ${hard.lost} | ${hard.rank} |`,
+        `| ${base.stage} | ${base.name} | ${base.dayLength}s | ${base.diamondTime}s | ${base.platinumTime}s | ${normal.cleared ? `${normal.time.toFixed(1)}s` : `not cleared (${normal.shards})`} | ${(normal.time / base.platinumTime).toFixed(2)} | ${normal.lost} | ${normal.rank} | ${hard.level.dayLength}s | ${hard.shards} | ${hard.lost} | ${hard.rank} |`,
       );
     }
     await expect(`${lines.join('\n')}\n`).toMatchFileSnapshot('../../../BALANCE.md');

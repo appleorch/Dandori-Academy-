@@ -1,5 +1,6 @@
 import type { Difficulty } from '../core/difficulty';
 import { rankValue, RANKS, type Rank } from '../dandori/scoring';
+import { compareRuns, type RunEntry } from '../leaderboard/runCode';
 
 export const SAVE_VERSION = '1';
 const STORAGE_KEY = 'dandori-academy-save';
@@ -47,7 +48,12 @@ export interface SaveData {
    * each Sunshard arrived. The last entry is the clear time.
    */
   bestSplits: Record<string, number[]>;
+  /** The best runs per lesson and difficulty (key as for splits), best first, for the leaderboard. */
+  runs: Record<string, RunEntry[]>;
 }
+
+/** How many of a player's own runs are kept per lesson and difficulty. */
+export const RUNS_KEPT = 10;
 
 export interface DayRecord {
   levelId: string;
@@ -72,6 +78,8 @@ export interface DayRecord {
   splits?: readonly number[];
   /** Relics found elsewhere on the day (in a cave gone down into), already keyed `levelId:id`. */
   extraTreasures?: readonly string[];
+  /** The day written down for the leaderboard. */
+  run?: RunEntry;
 }
 
 /** The subset of the Web Storage API the save manager needs. */
@@ -92,6 +100,7 @@ export function emptySave(): SaveData {
     totals: { days: 0, treasures: 0, enemies: 0, workersLost: 0 },
     discovered: [],
     bestSplits: {},
+    runs: {},
   };
 }
 
@@ -151,6 +160,36 @@ function fasterSplits(
   return { ...record, [key]: [...splits] };
 }
 
+function parseRuns(value: unknown): Record<string, RunEntry[]> {
+  if (!isRecord(value)) return {};
+  const runs: Record<string, RunEntry[]> = {};
+  for (const [key, list] of Object.entries(value)) {
+    if (!Array.isArray(list)) continue;
+    const kept = list.filter(
+      (run): run is RunEntry =>
+        isRecord(run) &&
+        run.v === 1 &&
+        typeof run.level === 'string' &&
+        typeof run.score === 'number' &&
+        typeof run.time === 'number' &&
+        typeof run.at === 'string',
+    );
+    if (kept.length > 0) runs[key] = kept.slice(0, RUNS_KEPT);
+  }
+  return runs;
+}
+
+/** A player's kept runs with one more added, best first, cut to `RUNS_KEPT`. */
+function keepRun(
+  runs: Record<string, RunEntry[]>,
+  key: string,
+  run: RunEntry | undefined,
+): Record<string, RunEntry[]> {
+  if (!run) return runs;
+  const list = [...(runs[key] ?? []), run].sort(compareRuns).slice(0, RUNS_KEPT);
+  return { ...runs, [key]: list };
+}
+
 /** Validates parsed JSON and fills in fields added after version 1 first shipped. */
 export function parseSave(value: unknown): SaveData | null {
   if (
@@ -184,6 +223,7 @@ export function parseSave(value: unknown): SaveData | null {
       ? value.discovered.filter((id): id is string => typeof id === 'string')
       : [],
     bestSplits: parseSplits(value.bestSplits),
+    runs: parseRuns(value.runs),
   };
 }
 
@@ -272,6 +312,7 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
     achievements: save.achievements,
     discovered: save.discovered,
     bestSplits: fasterSplits(save.bestSplits, splitKey(day.levelId, day.difficulty), day.splits),
+    runs: keepRun(save.runs, splitKey(day.levelId, day.difficulty), day.run),
     totals: {
       days: save.totals.days + 1,
       treasures: save.totals.treasures + day.treasureIds.length,

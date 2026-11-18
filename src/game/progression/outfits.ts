@@ -107,6 +107,16 @@ export const OUTFITS: readonly Outfit[] = [
     lamp: '#bff4ff',
     unlocked: (save) => lessonsAtLeast(save, 'Platinum') >= LEVELS.length,
   },
+  {
+    id: 'diamond',
+    name: 'Diamond',
+    requirement: 'Earn Diamond in five lessons.',
+    suit: '#eef6ff',
+    trim: '#b48cff',
+    hat: '#ffffff',
+    lamp: '#e6f6ff',
+    unlocked: (save) => lessonsAtLeast(save, 'Diamond') >= 5,
+  },
 ];
 
 /** The outfit to wear: the chosen one if it is unlocked, otherwise the cadet's. */

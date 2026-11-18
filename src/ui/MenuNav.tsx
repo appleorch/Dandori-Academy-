@@ -7,6 +7,7 @@ const TABS: readonly (readonly [MenuScreen, string])[] = [
   ['menu', 'Lessons'],
   ['journal', 'Journal'],
   ['guide', 'Field Guide'],
+  ['leaderboard', 'Leaderboard'],
   ['achievements', 'Achievements'],
   ['settings', 'Wardrobe & settings'],
 ];

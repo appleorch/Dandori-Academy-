@@ -41,18 +41,24 @@ export function shardCount(
   );
 }
 
+/** Diamond asks for a clear in this share of the Platinum time. */
+export const DIAMOND_SHARE = 0.85;
+
 /**
  * Par is exactly the score of a Platinum-pace day: every Sunshard home at
- * `platinumTime`, with the starting squad alive and nobody lost.
+ * `platinumTime`, with the starting squad alive and nobody lost. Diamond is the same
+ * day with every Sunshard home by `diamondTime`.
  */
 function withPar(spec: LevelSpec, difficulty: Difficulty = 'normal'): LevelDefinition {
-  const timeLeft = spec.dayLength - spec.platinumTime;
+  const base = treasureTotal(spec) + spec.startingWorkers * POINTS_PER_WORKER;
+  const diamondTime = Math.floor(spec.platinumTime * DIAMOND_SHARE);
   return {
     ...spec,
     theme: spec.theme ?? themeOf(spec.stage),
     difficulty,
-    parScore:
-      treasureTotal(spec) + spec.startingWorkers * POINTS_PER_WORKER + timeLeft * POINTS_PER_SECOND,
+    parScore: base + (spec.dayLength - spec.platinumTime) * POINTS_PER_SECOND,
+    diamondTime,
+    diamondScore: base + (spec.dayLength - diamondTime) * POINTS_PER_SECOND,
   };
 }
 

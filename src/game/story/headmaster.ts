@@ -90,12 +90,16 @@ const EVENT_LINES: Partial<Record<SimEvent['type'], readonly Line[]>> = {
 
 /** What he has to say at the end of a day, by rank. */
 const EVALUATIONS: Record<Rank, readonly string[]> = {
+  Diamond: [
+    'Diamond. DIAMOND. I am rewriting the textbook and you are the only chapter.',
+    'I timed that twice because I did not believe the first watch. Diamond, cadet.',
+  ],
   Platinum: [
     'Platinum! I’m having it engraved. On something. Possibly you.',
     'Flawless dandori. The founders would weep. I am weeping. It is fine.',
   ],
   Gold: [
-    'Gold! A proper Warden’s day. Shave a little off the walk home and it’s Platinum.',
+    'Gold! A proper Warden’s day. Platinum wants it faster still, with nobody lost.',
     'Splendid! Golden! Nearly perfect, which is the best kind of nearly.',
   ],
   Silver: [
@@ -105,6 +109,10 @@ const EVALUATIONS: Record<Rank, readonly string[]> = {
   Bronze: [
     'Bronze. Well. Everyone has a Bronze day. I had eleven in a row once.',
     'Hmm. Plan the order before you start, cadet. The clock does not wait for anyone.',
+  ],
+  Copper: [
+    'Copper. A coin is a coin, cadet. Now let us earn a shinier one.',
+    'Copper. Plan the order before you start: what goes first, who carries it, who fights.',
   ],
 };
 

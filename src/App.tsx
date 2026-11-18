@@ -10,6 +10,7 @@ import { Briefing } from './ui/Briefing';
 import { FieldGuide } from './ui/FieldGuide';
 import { Hud } from './ui/Hud';
 import { JournalScreen } from './ui/JournalScreen';
+import { LeaderboardScreen } from './ui/LeaderboardScreen';
 import { LessonSelect } from './ui/LessonSelect';
 import { PauseMenu } from './ui/PauseMenu';
 import { ResultsScreen } from './ui/ResultsScreen';
@@ -92,6 +93,7 @@ export function App() {
       {phase === 'achievements' && <AchievementsScreen />}
       {phase === 'settings' && <SettingsScreen />}
       {phase === 'journal' && <JournalScreen />}
+      {phase === 'leaderboard' && <LeaderboardScreen />}
       {phase === 'guide' && <FieldGuide />}
       {phase === 'story' && <StoryScreen />}
       {inGame && (
