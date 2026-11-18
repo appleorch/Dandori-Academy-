@@ -200,17 +200,19 @@ par score (`src/game/dandori/scoring.ts`). Silver or better unlocks the next les
 best score per lesson are saved in the browser. Each lesson sets a Platinum time
 (`platinumTime` in `src/game/world/levels/`): bring every Sunshard home by then without losing a
 Sproutling and the day is Platinum. The par score is derived from that time; Bronze, Silver and
-Gold need 35%, 55% and 75% of par. Diamond needs the same day finished in 85% of the Platinum
+Gold need 35%, 55% and 75% of par. Par counts every bonus the lesson offers (Glowcaps, twins
+delivered on time, Dewglass kept whole), so bonuses never stand in for pace. Diamond needs the same day finished in 85% of the Platinum
 time. Platinum and Diamond also need every Sunshard home, whatever the score. The lesson list,
 the briefing, the pause menu and the results screen show every rank's score and the clock time it
 needs.
 
 Platinum times are set at the clear time of the greedy test player in
-`src/game/world/testBot.ts`, rounded up to five seconds. That player knows every map perfectly,
-throws the right kind at every job, and still loses Sproutlings on the way, so it usually ends a
-lesson on Gold: Platinum means keeping its pace with fewer losses, and Diamond means beating it
-clearly. `level.test.ts` requires the bot to clear every lesson within five seconds under its
-Platinum time and to earn at least Gold, so the targets cannot drift slack or out of reach. `npm run balance` plays every lesson on both
+`src/game/world/testBot.ts`, rounded up to the next second. That player knows every map perfectly,
+throws the right kind at every job, and still loses Sproutlings and misses bonuses on the way,
+so it ends about half the lessons on Gold and the rest on Platinum: Platinum means keeping its
+pace and losing no more than it does, and Diamond means beating it clearly. `level.test.ts` requires the bot to clear every lesson within a second under its
+Platinum time, to earn at least Gold and never Diamond, so the targets cannot drift slack or out
+of reach. `npm run balance` plays every lesson on both
 difficulties and rewrites [BALANCE.md](BALANCE.md) with clear times, losses and ranks; that table
 is how the targets are checked whenever a lesson or a rule changes.
 

@@ -1,4 +1,9 @@
-import { SHARD_VALUE_PER_WEIGHT } from '../core/config';
+import {
+  BLOOM_VALUE_PER_WEIGHT,
+  DEWGLASS_BONUS_PER_WEIGHT,
+  SHARD_VALUE_PER_WEIGHT,
+  TWIN,
+} from '../core/config';
 import { HARD, type Difficulty } from '../core/difficulty';
 import { POINTS_PER_SECOND, POINTS_PER_WORKER } from '../dandori/scoring';
 import type { LevelDefinition, LevelSpec, LevelTheme } from './levelTypes';
@@ -30,6 +35,27 @@ export function treasureTotal(
   return weights * SHARD_VALUE_PER_WEIGHT;
 }
 
+/**
+ * Most bonus score a lesson offers on top of its Sunshards' value: every Glowcap, every
+ * Dewglass brought home whole, and every twin pair delivered on time.
+ */
+export function bonusTotal(level: Pick<LevelDefinition, 'treasures' | 'blooms'>): number {
+  const blooms = (level.blooms ?? []).reduce((sum, bloom) => sum + bloom.weight, 0);
+  const valueOf = (shard: LevelDefinition['treasures'][number]) =>
+    shard.weight *
+    (SHARD_VALUE_PER_WEIGHT + (shard.variant === 'dewglass' ? DEWGLASS_BONUS_PER_WEIGHT : 0));
+  let bonus = blooms * BLOOM_VALUE_PER_WEIGHT;
+  const pairs = new Map<string, number[]>();
+  for (const shard of level.treasures) {
+    if (shard.variant === 'dewglass') bonus += shard.weight * DEWGLASS_BONUS_PER_WEIGHT;
+    if (shard.twin) pairs.set(shard.twin, [...(pairs.get(shard.twin) ?? []), valueOf(shard)]);
+  }
+  for (const values of pairs.values()) {
+    if (values.length === 2) bonus += Math.round((values[0] + values[1]) * TWIN.bonus);
+  }
+  return bonus;
+}
+
 /** Number of Sunshards in a lesson, counting those that bosses drop. */
 export function shardCount(
   level: Pick<LevelDefinition, 'treasures' | 'enemies' | 'roots'>,
@@ -45,12 +71,13 @@ export function shardCount(
 export const DIAMOND_SHARE = 0.85;
 
 /**
- * Par is exactly the score of a Platinum-pace day: every Sunshard home at
- * `platinumTime`, with the starting squad alive and nobody lost. Diamond is the same
- * day with every Sunshard home by `diamondTime`.
+ * Par is exactly the score of a Platinum-pace day: every Sunshard home at `platinumTime`
+ * with every bonus taken (Glowcaps, twins on time, Dewglass whole), the starting squad alive
+ * and nobody lost. Diamond is the same day with every Sunshard home by `diamondTime`. The
+ * bonuses are in par so that taking them never stands in for pace.
  */
 function withPar(spec: LevelSpec, difficulty: Difficulty = 'normal'): LevelDefinition {
-  const base = treasureTotal(spec) + spec.startingWorkers * POINTS_PER_WORKER;
+  const base = treasureTotal(spec) + bonusTotal(spec) + spec.startingWorkers * POINTS_PER_WORKER;
   const diamondTime = Math.floor(spec.platinumTime * DIAMOND_SHARE);
   return {
     ...spec,

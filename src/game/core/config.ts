@@ -44,6 +44,8 @@ export const SHARD_VALUE_PER_WEIGHT = 100;
 
 /** Dewglass is worth this much more per weight while intact; a crack takes it away. */
 export const DEWGLASS_BONUS_PER_WEIGHT = 50;
+/** Score per point of weight for a Glowcap bloom. */
+export const BLOOM_VALUE_PER_WEIGHT = 150;
 /** A Lodestone crawls with a minimum crew and needs up to triple its weight to run. */
 export const LODESTONE = { crew: 3, baseSpeed: 1, bonusSpeed: 2.8 } as const;
 export const SAP = { weight: 1, maxCarriers: 2, radius: 0.4, seconds: 30, speedUp: 1.4 } as const;

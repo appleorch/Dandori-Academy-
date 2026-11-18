@@ -110,7 +110,7 @@ export interface LevelDefinition {
   /**
    * Seconds into the day by which every Sunshard must be home, with no Sproutlings
    * lost, to earn Platinum. Set at the greedy test bot's own clear time, rounded up to
-   * five seconds: Platinum means matching a player who knows the map perfectly, and
+   * the next second: Platinum means matching a player who knows the map perfectly, and
    * losing fewer Sproutlings than it does. `npm run balance` measures every lesson into
    * BALANCE.md.
    */

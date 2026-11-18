@@ -23,8 +23,8 @@ function segmentDistance(x: number, z: number, a: Point, b: Point): number {
   return Math.hypot(x - (a.x + dx * t), z - (a.z + dz * t));
 }
 
-/** Platinum is the bot's clear time rounded up to five seconds. */
-const PLATINUM_SLACK = 5;
+/** Platinum is the bot's clear time rounded up to the next whole second. */
+const PLATINUM_SLACK = 1;
 
 beforeAll(async () => {
   await initPhysics();
@@ -212,12 +212,13 @@ describe.each(LEVELS)('$name', (level) => {
       level,
     );
     expect(sim.ended).toBe('allCollected');
-    // Platinum times are set from this bot's clear time, rounded up to five seconds: it must
-    // keep making them, and they must not drift slack. Its losses cost it Platinum, but never
-    // so many that it falls below Gold.
+    // Platinum times are set from this bot's clear time, rounded up to the next second: it
+    // must keep making them, and they must not drift slack. Its losses can cost it Platinum,
+    // but never so many that it falls below Gold; and Diamond is always beyond it.
     expect(sim.elapsed).toBeLessThanOrEqual(level.platinumTime);
     expect(sim.elapsed).toBeGreaterThan(level.platinumTime - PLATINUM_SLACK);
     expect(rankValue(score.rank)).toBeGreaterThanOrEqual(rankValue('Gold'));
+    expect(score.rank).not.toBe('Diamond');
     sim.dispose();
   });
 });

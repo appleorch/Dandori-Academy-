@@ -158,14 +158,18 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
       {expedition && sim && (
         <GameLoop expedition={expedition} input={input} fx={fx} onSwitch={setSim} />
       )}
-      {/* Everything that belongs to one place is rebuilt when the Warden goes down or up. */}
-      <group key={sim?.level.id ?? level.id}>
+      {/*
+        Everything that belongs to one place is rebuilt when the Warden goes down or up. The two
+        groups are siblings, so their keys carry different prefixes: equal keys would make React
+        mix up the two and leave the old place's ground behind.
+      */}
+      <group key={`world-${sim?.level.id ?? level.id}`}>
         <Terrain level={sim?.level ?? level} />
         <Architecture level={sim?.level ?? level} />
         <Scenery level={sim?.level ?? level} sim={sim ?? undefined} />
       </group>
       {sim && (
-        <group key={sim.level.id}>
+        <group key={`day-${sim.level.id}`}>
           <CameraRig sim={sim} input={input} fx={fx} />
           <SkyLight sim={sim} shadowMapSize={quality.shadowMapSize} />
           <Atmosphere sim={sim} />

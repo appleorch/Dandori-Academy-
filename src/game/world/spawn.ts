@@ -1,5 +1,6 @@
 import {
   CARRY,
+  BLOOM_VALUE_PER_WEIGHT,
   DEWGLASS_BONUS_PER_WEIGHT,
   LODESTONE,
   LOG,
@@ -19,8 +20,7 @@ import { mostCommon, type SproutKind } from '../workers/sprouts';
 import type { BloomSpawn, TreasureSpawn } from './level';
 
 const CARCASS_RADIUS = 0.9;
-/** Score per point of weight for a Glowcap bloom. */
-export const BLOOM_VALUE_PER_WEIGHT = 150;
+export { BLOOM_VALUE_PER_WEIGHT };
 
 export function spawnWorker(
   sim: Simulation,

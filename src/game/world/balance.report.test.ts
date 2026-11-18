@@ -9,7 +9,7 @@ import { BOT_STYLES, playGreedy } from './testBot';
 /**
  * Not a test: a measurement. `npm run balance` plays every lesson with the test bot on both
  * difficulties and rewrites BALANCE.md with a table of how it went. Platinum times are
- * the bot's Normal clear time rounded up to five seconds.
+ * the bot's Normal clear time rounded up to the next second.
  */
 const enabled = Boolean(import.meta.env.VITE_BALANCE);
 

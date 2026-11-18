@@ -1,4 +1,4 @@
-import { treasureTotal, type LevelDefinition } from '../world/level';
+import { bonusTotal, treasureTotal, type LevelDefinition } from '../world/level';
 import { POINTS_PER_SECOND, POINTS_PER_WORKER, rankScore, type Rank } from './scoring';
 
 /** The ranks with a target worth showing: Copper and Bronze need next to nothing. */
@@ -9,8 +9,8 @@ export interface RankTarget {
   /** Lowest total score that earns the rank. */
   score: number;
   /**
-   * Seconds that must still be on the clock when the last Sunshard arrives, if the
-   * starting squad is all alive and nobody was lost. Null when collecting every
+   * Seconds that must still be on the clock when the last Sunshard arrives, if every bonus
+   * was taken, the starting squad is all alive and nobody was lost. Null when collecting every
    * Sunshard is enough at any time.
    */
   timeLeft: number | null;
@@ -18,7 +18,7 @@ export interface RankTarget {
 
 /** What it takes to earn Silver, Gold, Platinum and Diamond on a lesson. */
 export function rankTargets(level: LevelDefinition): RankTarget[] {
-  const base = treasureTotal(level) + level.startingWorkers * POINTS_PER_WORKER;
+  const base = treasureTotal(level) + bonusTotal(level) + level.startingWorkers * POINTS_PER_WORKER;
   return TARGET_RANKS.map((rank) => {
     const score = rankScore(rank, level);
     const missing = score - base;

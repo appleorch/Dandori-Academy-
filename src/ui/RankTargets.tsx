@@ -56,8 +56,9 @@ export function RankTargets({ level, earned }: RankTargetsProps) {
         </tbody>
       </table>
       <p className="note">
-        Times assume no Sproutlings lost. Each extra Sproutling alive at the end is worth half a
-        second; each one lost costs {lossSeconds(level)} seconds.
+        Times assume every bonus taken (Glowcaps, twins on time, Dewglass whole) and no Sproutlings
+        lost. Each extra Sproutling alive at the end is worth half a second; each one lost costs{' '}
+        {lossSeconds(level)} seconds.
       </p>
     </div>
   );
