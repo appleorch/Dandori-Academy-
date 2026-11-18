@@ -97,7 +97,7 @@ export function App() {
       {inGame && (
         <div className="game">
           <GameCanvas key={runId} level={level} input={input} />
-          <Hud level={level} touch={touch} />
+          <Hud level={level} touch={touch} input={input} />
           {touch && phase === 'playing' && !paused && !briefing && <TouchControls input={input} />}
           {phase === 'playing' && briefing && <Briefing level={level} />}
           {phase === 'playing' && paused && !pokerOpen && <PauseMenu level={level} />}

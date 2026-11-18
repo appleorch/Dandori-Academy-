@@ -5,6 +5,7 @@ import { audio } from '../audio/audioManager';
 import { useGameStore } from '../core/gameStore';
 import { CameraRig } from '../camera/CameraRig';
 import type { InputController } from '../commands/input';
+import { Expedition } from '../simulation/expedition';
 import { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
 import type { GraphicsLevel } from '../core/settings';
@@ -61,6 +62,8 @@ interface GameCanvasProps {
 }
 
 export function GameCanvas({ level, input }: GameCanvasProps) {
+  // The day: the surface and any caves gone down into. `sim` is whichever is being played.
+  const [expedition, setExpedition] = useState<Expedition | null>(null);
   const [sim, setSim] = useState<Simulation | null>(null);
   const [fx] = useState(() => new Feedback());
   const playing = useGameStore((state) => state.phase === 'playing' && !state.paused);
@@ -71,11 +74,17 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   const pauseOnBlur = useGameStore((state) => state.settings.pauseOnBlur);
 
   useEffect(() => {
-    fx.ground = (x, z) => heightAt(level, x, z);
-    const created = new Simulation(level);
-    setSim(created);
+    const created = new Expedition(new Simulation(level));
+    setExpedition(created);
+    setSim(created.active);
     return () => created.dispose();
-  }, [level, fx]);
+  }, [level]);
+
+  // Effects sit on raised ground of whichever place is being played.
+  useEffect(() => {
+    const ground = sim?.level ?? level;
+    fx.ground = (x, z) => heightAt(ground, x, z);
+  }, [sim, level, fx]);
 
   useEffect(() => {
     input.zoomSpeed = zoomSpeed;
@@ -142,12 +151,17 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
       ) : (
         <OverlayInMainPass />
       )}
-      <Terrain level={level} />
-      <Architecture level={level} />
-      <Scenery level={level} sim={sim ?? undefined} />
+      {expedition && sim && (
+        <GameLoop expedition={expedition} input={input} fx={fx} onSwitch={setSim} />
+      )}
+      {/* Everything that belongs to one place is rebuilt when the Warden goes down or up. */}
+      <group key={sim?.level.id ?? level.id}>
+        <Terrain level={sim?.level ?? level} />
+        <Architecture level={sim?.level ?? level} />
+        <Scenery level={sim?.level ?? level} sim={sim ?? undefined} />
+      </group>
       {sim && (
-        <>
-          <GameLoop sim={sim} input={input} fx={fx} />
+        <group key={sim.level.id}>
           <CameraRig sim={sim} input={input} fx={fx} />
           <SkyLight sim={sim} shadowMapSize={quality.shadowMapSize} />
           <Atmosphere sim={sim} />
@@ -163,7 +177,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
           <CursorFx sim={sim} />
           <ParticleField particles={fx.particles} />
           <Popups fx={fx} />
-        </>
+        </group>
       )}
     </Canvas>
   );

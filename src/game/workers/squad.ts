@@ -5,6 +5,7 @@ import type { Entity } from '../core/ecs';
 import { NO_ENTITY } from '../core/ecs';
 import type { Enemy, Worker } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
+import { SPROUTS, type SproutKind } from './sprouts';
 
 function removeFrom(list: Entity[], entity: Entity): void {
   const index = list.indexOf(entity);
@@ -41,6 +42,19 @@ export function joinSquad(sim: Simulation, entity: Entity, worker: Worker): void
   detachWorker(sim, entity, worker);
   worker.state = 'follow';
   worker.stun = Math.min(worker.stun, 0.2);
+  // The whistle is what saves a burning or floundering Sproutling.
+  if (worker.peril) {
+    const at = sim.transforms.require(entity);
+    sim.emit('rescued', at.x, at.z);
+  }
+  worker.peril = null;
+  worker.perilTime = 0;
+}
+
+/** Takes a worker out of the world without it counting as lost: it went somewhere else. */
+export function removeWorker(sim: Simulation, entity: Entity, worker: Worker): void {
+  detachWorker(sim, entity, worker);
+  sim.ecs.destroy(entity);
 }
 
 /** Sends every squad member off duty; they pick up nearby work on their own. */
@@ -112,16 +126,27 @@ export function killWorker(sim: Simulation, entity: Entity, worker: Worker): voi
  * Nearest job within range and line of sight: a haul with a free carrier slot that
  * has a way home, or an enemy or gate that can be hurt. NO_ENTITY when there is none.
  */
-export function findTask(sim: Simulation, x: number, z: number, range: number): Entity {
+export function findTask(
+  sim: Simulation,
+  x: number,
+  z: number,
+  range: number,
+  kind: SproutKind = 'ember',
+): Entity {
   let best: Entity = NO_ENTITY;
   let bestDist = range;
+  const wades = SPROUTS[kind].wades;
+  const nav = wades ? sim.wadeNav : sim.nav;
   for (const [entity, carryable] of sim.carryables.entries()) {
     if (carryable.claimed.length >= carryable.maxCarriers) continue;
     const at = sim.transforms.require(entity);
-    // A haul shut off from where it goes (behind a gate or a river) waits until the way is open.
-    if (!hasRoute(sim, carryable, at)) continue;
+    // Only a wader goes into the water after a haul.
+    if (!wades && sim.inWater(at.x, at.z)) continue;
+    // A haul shut off from where it goes (behind a gate or a river) waits until the way is
+    // open; Dewlings may carry it through the water instead.
+    if (!hasRoute(sim, carryable, at) && !(wades && hasRoute(sim, carryable, at, true))) continue;
     const dist = Math.hypot(at.x - x, at.z - z) - carryable.radius;
-    if (dist < bestDist && sim.nav.lineOfSight(x, z, at.x, at.z)) {
+    if (dist < bestDist && nav.lineOfSight(x, z, at.x, at.z)) {
       best = entity;
       bestDist = dist;
     }
@@ -131,7 +156,7 @@ export function findTask(sim: Simulation, x: number, z: number, range: number): 
     const at = sim.transforms.require(entity);
     const dist = enemyReach(enemy, at, x, z);
     const spot = approachPoint(sim, enemy, at, x, z);
-    if (dist < bestDist && sim.nav.lineOfSight(x, z, spot.x, spot.z)) {
+    if (dist < bestDist && nav.lineOfSight(x, z, spot.x, spot.z)) {
       best = entity;
       bestDist = dist;
     }

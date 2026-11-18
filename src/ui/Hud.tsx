@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { audio } from '../game/audio/audioManager';
 import { useGameStore, type BossSnapshot } from '../game/core/gameStore';
 import { formatTime } from './format';
+import type { InputController } from '../game/commands/input';
+import { SPROUT_KINDS, SPROUTS } from '../game/workers/sprouts';
 import { SprocketPortrait } from './Portrait';
 import { rankTargets } from '../game/dandori/targets';
 import { LEVELS, type LevelDefinition } from '../game/world/level';
@@ -18,7 +20,15 @@ const GUARD_TEXT: Record<BossSnapshot['guard'], string> = {
 
 /** In-day overlay: clock, treasure progress, a day bar marked with each rank's deadline, where
  * the workforce is, and the pause button. */
-export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }) {
+export function Hud({
+  level,
+  touch,
+  input,
+}: {
+  level: LevelDefinition;
+  touch: boolean;
+  input?: InputController;
+}) {
   const hud = useGameStore((state) => state.hud);
   const phase = useGameStore((state) => state.phase);
   const pause = useGameStore((state) => state.pause);
@@ -27,7 +37,7 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
   const nearSecret = useGameStore((state) => state.nearSecret);
   const openPoker = useGameStore((state) => state.openPoker);
   const nearDescent = useGameStore((state) => state.nearDescent);
-  const startDay = useGameStore((state) => state.startDay);
+  const nearAscent = useGameStore((state) => state.nearAscent);
   const below = LEVELS.find((candidate) => candidate.id === nearDescent);
   useEffect(() => {
     if (hint) audio.play('hint');
@@ -46,8 +56,21 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
   // Where the workforce is: along the bottom on a desktop; on touch, up top, clear of the controls.
   const counts = (
     <div className={touch ? 'hud-row counts' : 'hud-row bottom'}>
-      <div className="chip">
-        <span className="dot squad" /> Squad {hud.squad}
+      <div className="chip squad-kinds" aria-label="Squad by kind">
+        {SPROUT_KINDS.map((kind, i) =>
+          hud.squadKinds[kind] > 0 || hud.selected === kind ? (
+            <button
+              key={kind}
+              type="button"
+              className={hud.selected === kind ? `kind ${kind} chosen` : `kind ${kind}`}
+              onClick={() => input?.queueSelect(kind)}
+              title={`${SPROUTS[kind].plural}: ${SPROUTS[kind].knack}${touch ? '' : ` (key ${i + 1})`}`}
+            >
+              <span className="dot" /> {hud.squadKinds[kind]}
+              {hud.selected === kind && <small>{SPROUTS[kind].plural}</small>}
+            </button>
+          ) : null,
+        )}
       </div>
       <div className="chip">
         <span className="dot working" /> Working {hud.working}
@@ -66,12 +89,28 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
           {level.stage}. {level.name}
         </div>
         {level.difficulty === 'hard' && <div className="chip hard-chip">Hard</div>}
-        <div className={hud.timeLeft <= 30 ? 'chip clock urgent' : 'chip clock'}>
+        <div
+          className={
+            hud.below
+              ? 'chip clock stopped'
+              : hud.timeLeft <= 30
+                ? 'chip clock urgent'
+                : 'chip clock'
+          }
+          title={hud.below ? 'The day above waits until you come back up' : undefined}
+        >
           {formatTime(hud.timeLeft)}
+          {hud.below && ' ⏸'}
         </div>
-        <div className="chip">
-          Sunshards {hud.treasuresCollected}/{hud.treasuresTotal} · {hud.treasureValue} pts
-        </div>
+        {hud.below ? (
+          <div className="chip below-chip">
+            Below: {hud.below} · Relics {hud.treasuresCollected}/{hud.treasuresTotal}
+          </div>
+        ) : (
+          <div className="chip">
+            Sunshards {hud.treasuresCollected}/{hud.treasuresTotal} · {hud.treasureValue} pts
+          </div>
+        )}
         {hud.split !== null && (
           <div
             className={hud.split <= 0 ? 'chip split ahead' : 'chip split behind'}
@@ -111,27 +150,29 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
           </span>
         </div>
       )}
-      <div
-        className="daybar"
-        role="img"
-        aria-label={`Day ${Math.round(elapsed * 100)} percent over`}
-      >
-        <div className="daybar-fill" style={{ width: `${elapsed * 100}%` }} />
-        {rankTargets(level).map(
-          (target) =>
-            target.timeLeft !== null && (
-              <span
-                key={target.rank}
-                className={`daybar-mark rank-${target.rank.toLowerCase()}`}
-                style={{ left: `${(1 - target.timeLeft / level.dayLength) * 100}%` }}
-                title={`${target.rank} deadline`}
-              >
-                {target.rank[0]}
-              </span>
-            ),
-        )}
-        <span className="daybar-sun" style={{ left: `${elapsed * 100}%` }} />
-      </div>
+      {!hud.below && (
+        <div
+          className="daybar"
+          role="img"
+          aria-label={`Day ${Math.round(elapsed * 100)} percent over`}
+        >
+          <div className="daybar-fill" style={{ width: `${elapsed * 100}%` }} />
+          {rankTargets(level).map(
+            (target) =>
+              target.timeLeft !== null && (
+                <span
+                  key={target.rank}
+                  className={`daybar-mark rank-${target.rank.toLowerCase()}`}
+                  style={{ left: `${(1 - target.timeLeft / level.dayLength) * 100}%` }}
+                  title={`${target.rank} deadline`}
+                >
+                  {target.rank[0]}
+                </span>
+              ),
+          )}
+          <span className="daybar-sun" style={{ left: `${elapsed * 100}%` }} />
+        </div>
+      )}
       {touch && counts}
       {phase === 'playing' && (
         <div className="callouts">
@@ -141,8 +182,21 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
             </button>
           )}
           {below && (
-            <button type="button" className="chip knock descend" onClick={() => startDay(below.id)}>
-              Go down to {below.name} (leaves this lesson) {!touch && <kbd>E</kbd>}
+            <button
+              type="button"
+              className="chip knock descend"
+              onClick={() => input?.queueInteract()}
+            >
+              Go down to {below.name} (the day above waits) {!touch && <kbd>E</kbd>}
+            </button>
+          )}
+          {nearAscent && (
+            <button
+              type="button"
+              className="chip knock descend"
+              onClick={() => input?.queueInteract()}
+            >
+              Go back up {!touch && <kbd>E</kbd>}
             </button>
           )}
           {hint ? (
@@ -168,7 +222,7 @@ export function Hud({ level, touch }: { level: LevelDefinition; touch: boolean }
       )}
       <div className="hud-spacer" />
       {!touch && counts}
-      {phase === 'playing' && hud.timeLeft <= 30 && hud.timeLeft > 0 && (
+      {phase === 'playing' && !hud.below && hud.timeLeft <= 30 && hud.timeLeft > 0 && (
         <div className="urgent-vignette" aria-hidden="true" />
       )}
     </div>

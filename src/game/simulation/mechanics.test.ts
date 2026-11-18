@@ -101,8 +101,9 @@ describe('special hauls', () => {
     });
     const [[, stone]] = [...sim.carryables.entries()];
     expect(stone.maxCarriers).toBe(2 * LODESTONE.crew);
-    expect(carrySpeed(sim, { ...stone, carriers: [1, 2] })).toBe(LODESTONE.baseSpeed);
-    expect(carrySpeed(sim, { ...stone, carriers: [1, 2, 3, 4, 5, 6] })).toBe(
+    const crew = [...sim.workers.entries()].map(([entity]) => entity);
+    expect(carrySpeed(sim, { ...stone, carriers: crew.slice(0, 2) })).toBe(LODESTONE.baseSpeed);
+    expect(carrySpeed(sim, { ...stone, carriers: crew.slice(0, 6) })).toBe(
       LODESTONE.baseSpeed + LODESTONE.bonusSpeed,
     );
     expect(LODESTONE.baseSpeed).toBeLessThan(CARRY.baseSpeed);

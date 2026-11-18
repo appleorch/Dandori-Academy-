@@ -41,6 +41,8 @@ function idleSpot(sim: Simulation): { x: number; z: number } {
 export function CameraRig({ sim, input, fx }: CameraRigProps): null {
   const lean = useRef({ x: 0, z: 0 });
   const lift = useRef(0);
+  // Mounted mid-day means the Warden just went down or came back up: cut, do not pan across.
+  const cut = useRef(!useGameStore.getState().briefing);
 
   useFrame(({ camera, clock }, delta) => {
     const { level } = sim;
@@ -72,7 +74,8 @@ export function CameraRig({ sim, input, fx }: CameraRigProps): null {
     lean.current.x += ((sim.cursor.x - captain.x) * leanTo - lean.current.x) * follow;
     lean.current.z += ((sim.cursor.z - captain.z) * leanTo - lean.current.z) * follow;
 
-    const ease = 1 - Math.exp(-delta * (tactical ? 3 : 6));
+    const ease = cut.current ? 1 : 1 - Math.exp(-delta * (tactical ? 3 : 6));
+    cut.current = false;
     const overview = Math.max(level.width * 0.5, level.depth * 0.75);
     const zoom = (tactical ? overview : input.zoom) * (1 - fx.punch * PUNCH);
     const x = target.x + lean.current.x;

@@ -31,6 +31,7 @@ const GLOW: Rgb = [0.4, 1, 0.9];
 const SOIL: Rgb = [0.45, 0.33, 0.2];
 const SAPGOLD: Rgb = [1, 0.75, 0.25];
 const GLOOM: Rgb = [0.3, 0.3, 0.5];
+const ZAP: Rgb = [1, 0.95, 0.5];
 
 function style(
   count: number,
@@ -81,6 +82,12 @@ const REACTIONS: Partial<Record<SimEventType, Reaction>> = {
   logPlaced: { height: 0.3, burst: style(14, DUST, 3, 2, 0.5, 0.14) },
   bridgeBuilt: { height: 0.3, burst: style(40, DUST, 5, 3, 0.8, 0.18), shake: 0.3 },
   chain: { height: 2.2, burst: style(14, GOLD, 3, 6, 0.7, 0.12) },
+  rescued: { height: 0.6, burst: style(10, WISP, 1.5, 2, 0.5, 0.1) },
+  burned: { height: 0.5, burst: style(16, EMBER, 2, 3, 0.8, 0.14, -0.2) },
+  drowned: { height: 0.2, burst: style(14, DEW, 1.5, 3, 0.6, 0.1) },
+  ignite: { height: 0.6, burst: style(12, EMBER, 2.5, 4, 0.5, 0.12) },
+  zap: { height: 1, burst: style(20, ZAP, 6, 4, 0.35, 0.1), shake: 0.25 },
+  flare: { height: 0.4, burst: style(34, EMBER, 3.5, 7, 0.9, 0.2, -0.3), shake: 0.15 },
   beaconLit: { height: 1.8, burst: style(36, EMBER, 4, 6, 1, 0.16) },
   snuff: { height: 1.8, burst: style(30, GLOOM, 3, 2, 1.2, 0.2, -0.1), shake: 0.35 },
 };

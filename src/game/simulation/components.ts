@@ -2,6 +2,7 @@ import type { Entity } from '../core/ecs';
 import type { EnemyKind, HazardKind } from '../enemies/enemyKinds';
 import type { Box } from '../navigation/NavGrid';
 import type { Mover } from '../navigation/steering';
+import type { SproutKind } from '../workers/sprouts';
 
 /** Ground position (x, z), height above ground (y) and heading in radians (0 faces +z). */
 export interface Transform {
@@ -15,6 +16,12 @@ export interface Captain {
   hp: number;
   invuln: number;
   throwCooldown: number;
+  /**
+   * Set when the chosen kind ran out mid-volley and another took over: no more throws until
+   * the throw is released, so a volley meant for Dewlings never carries on into the water
+   * with someone who would drown there.
+   */
+  throwLatched: boolean;
   /** Current whistle radius; 0 while not whistling. */
   whistleRadius: number;
 }
@@ -22,7 +29,11 @@ export interface Captain {
 export type WorkerState =
   'idle' | 'follow' | 'thrown' | 'rush' | 'toCarry' | 'carrying' | 'toAttack' | 'attacking';
 
+/** A danger a worker can be saved from by a whistle in time: on fire, or out of its depth. */
+export type Peril = 'fire' | 'water';
+
 export interface Worker {
+  kind: SproutKind;
   state: WorkerState;
   /** The haul or enemy this worker is assigned to, or NO_ENTITY. */
   target: Entity;
@@ -40,6 +51,9 @@ export interface Worker {
   rushX: number;
   rushZ: number;
   rushTime: number;
+  /** What is about to finish it off, and the seconds left to whistle it out; null when safe. */
+  peril: Peril | null;
+  perilTime: number;
   mover: Mover;
 }
 
@@ -77,6 +91,8 @@ export interface Carryable {
   bonusSpeed: number;
   /** Span-logs: the bridge site it is heading for, or -1 for none chosen yet. */
   dest: number;
+  /** Seed pods: the kind of Sproutling it grows into; null for hauls that grow the crew's own kind. */
+  seed: SproutKind | null;
 }
 
 export type EnemyState = 'roam' | 'windup' | 'charge' | 'recover';
@@ -138,7 +154,7 @@ export interface Hazard {
 }
 
 export interface Kiln {
-  /** Workers waiting to be produced. */
-  queue: number;
+  /** Sproutlings waiting to be grown, in order. */
+  queue: SproutKind[];
   spawnTimer: number;
 }

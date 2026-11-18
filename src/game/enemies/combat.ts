@@ -3,6 +3,8 @@ import type { Enemy, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { BEACON } from '../core/config';
 import { ENEMY_SPECS } from './enemyKinds';
+import type { GateSpawn } from '../world/levelTypes';
+import { SPROUTS, type SproutKind } from '../workers/sprouts';
 
 /** Distance from a point to an enemy's surface: its circle, or a gate's rectangle. */
 export function enemyReach(enemy: Enemy, at: Transform, x: number, z: number): number {
@@ -45,8 +47,20 @@ export function isTargetable(sim: Simulation, entity: Entity, enemy: Enemy): boo
   return enemy.hp > 0 && damageTaken(sim, entity, enemy) > 0;
 }
 
-export function damageEnemy(sim: Simulation, entity: Entity, enemy: Enemy, amount: number): void {
-  enemy.hp -= amount * damageTaken(sim, entity, enemy);
+/**
+ * Deals `amount` damage from a Sproutling of `kind`. Crystal gates only really give way to
+ * Stonelings; everyone else barely scratches them.
+ */
+export function damageEnemy(
+  sim: Simulation,
+  entity: Entity,
+  enemy: Enemy,
+  amount: number,
+  kind: SproutKind = 'ember',
+): void {
+  const crystal = (enemy.shape as GateSpawn | null)?.style === 'crystal';
+  const share = crystal ? SPROUTS[kind].crystal : 1;
+  enemy.hp -= amount * share * damageTaken(sim, entity, enemy);
 }
 
 /** Where a worker should stand to attack: the gate face nearest to it, or the enemy itself. */

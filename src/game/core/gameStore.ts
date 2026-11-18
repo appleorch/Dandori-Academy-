@@ -17,6 +17,8 @@ import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { DayEnd, Simulation } from '../simulation/Simulation';
 import { LEVELS } from '../world/level';
 import type { Line } from '../story/headmaster';
+import type { Haul } from '../simulation/expedition';
+import type { SproutKind } from '../workers/sprouts';
 import { CHAIN } from './config';
 import { penaltyPerLoss, type Difficulty } from './difficulty';
 import { loadSettings, writeSettings, DEFAULT_SETTINGS, type Settings } from './settings';
@@ -51,6 +53,11 @@ export interface HudSnapshot {
   /** Seconds ahead (negative) or behind (positive) the best clear at the last delivery, or null. */
   split: number | null;
   chain: number;
+  /** Sproutlings in the squad by kind, and the kind the Warden throws next. */
+  squadKinds: Record<SproutKind, number>;
+  selected: SproutKind;
+  /** The cave the Warden is in, by name, or null on the surface (whose clock is then stopped). */
+  below: string | null;
 }
 
 export interface BossSnapshot {
@@ -77,6 +84,8 @@ export interface DayResult {
   clearTime: number | null;
   previousBest: number | null;
   bestChain: number;
+  /** Relics brought up from caves on the way: for the Field Guide, not the rank. */
+  caveRelics: number;
   enemiesDefeated: number;
   workersAlive: number;
   /** Ids of achievements earned by this day. */
@@ -104,6 +113,8 @@ interface GameStore {
   nearSecret: boolean;
   /** Id of the side lesson whose way down the Warden is standing at, or null. */
   nearDescent: string | null;
+  /** True while the Warden stands at the way back up out of a cave. */
+  nearAscent: boolean;
   /** True while the back room is open, over whatever screen was showing. */
   pokerOpen: boolean;
   /** Which pages the story screen is showing. */
@@ -126,6 +137,7 @@ interface GameStore {
   setNearSecret: (near: boolean) => void;
   /** The Warden is at a way down (or has left it): the side lesson is found for good. */
   setNearDescent: (levelId: string | null) => void;
+  setNearAscent: (near: boolean) => void;
   openPoker: () => void;
   closePoker: () => void;
   /** Grants an achievement earned outside a day. Returns true if it is new. */
@@ -133,9 +145,13 @@ interface GameStore {
   updateSettings: (patch: Partial<Settings>) => void;
   /** Replaces all progress, for loading a save file or erasing progress. */
   replaceSave: (save: SaveData) => void;
-  publish: (sim: Simulation) => void;
+  /**
+   * Publishes the HUD. `below` is set while the Warden is down a cave: the cave's name and the
+   * surface clock, which stands still until they come back up.
+   */
+  publish: (sim: Simulation, below?: { name: string; timeLeft: number } | null) => void;
   setSplit: (split: number) => void;
-  finishDay: (sim: Simulation, reason: DayEnd) => void;
+  finishDay: (sim: Simulation, reason: DayEnd, haul?: Haul) => void;
 }
 
 function browserStorage(): Storage | null {
@@ -144,6 +160,13 @@ function browserStorage(): Storage | null {
   } catch {
     return null;
   }
+}
+
+function squadKinds(sim: Simulation): Record<SproutKind, number> {
+  const counts: Record<SproutKind, number> = { ember: 0, dew: 0, stone: 0, spark: 0 };
+  for (const [, worker] of sim.workers.entries())
+    if (worker.state === 'follow') counts[worker.kind]++;
+  return counts;
 }
 
 function snapshot(sim: Simulation): HudSnapshot {
@@ -160,6 +183,9 @@ function snapshot(sim: Simulation): HudSnapshot {
     captainHp: sim.captainState.hp,
     boss: bossSnapshot(sim),
     split: null,
+    squadKinds: squadKinds(sim),
+    below: null,
+    selected: sim.selected,
     chain: sim.chain >= 2 && sim.elapsed - sim.lastDelivery <= CHAIN.window ? sim.chain : 0,
   };
 }
@@ -216,6 +242,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     sprocket: null,
     nearSecret: false,
     nearDescent: null,
+    nearAscent: false,
     pokerOpen: false,
     hud: null,
     entityVersion: 0,
@@ -272,6 +299,10 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ nearDescent: levelId, save });
     },
 
+    setNearAscent: (near) => {
+      if (near !== get().nearAscent) set({ nearAscent: near });
+    },
+
     openPoker: () => set((state) => ({ pokerOpen: true, paused: state.phase === 'playing' })),
 
     closePoker: () => set({ pokerOpen: false }),
@@ -303,15 +334,19 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ save: checked });
     },
 
-    publish: (sim) =>
+    publish: (sim, below = null) =>
       set((state) => ({
-        hud: { ...snapshot(sim), split: state.hud?.split ?? null },
+        hud: {
+          ...snapshot(sim),
+          ...(below ? { below: below.name, timeLeft: below.timeLeft } : {}),
+          split: state.hud?.split ?? null,
+        },
         entityVersion: sim.entityVersion,
       })),
 
     setSplit: (split) => set((state) => (state.hud ? { hud: { ...state.hud, split } } : {})),
 
-    finishDay: (sim, reason) => {
+    finishDay: (sim, reason, haul) => {
       const { level, stats } = sim;
       const workersAlive = sim.workers.size;
       const cleared = stats.treasuresCollected.length === stats.treasuresTotal;
@@ -346,6 +381,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         bossesDefeated: stats.bossesDefeated,
         bloomsCollected: stats.bloomsCollected,
         splits: cleared ? stats.deliveryTimes : undefined,
+        extraTreasures: haul?.relics ?? [],
       };
       const previous = get().save;
       const { save, unlocked } = unlockAchievements(recordDay(previous, day), day, new Date());
@@ -373,6 +409,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           clearTime: cleared ? sim.elapsed : null,
           previousBest: bestClearTime(previous, level.id, level.difficulty),
           bestChain: stats.bestChain,
+          caveRelics: haul?.relics.length ?? 0,
           enemiesDefeated: stats.enemiesDefeated,
           workersAlive,
           difficulty: level.difficulty,

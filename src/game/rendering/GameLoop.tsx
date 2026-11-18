@@ -9,6 +9,7 @@ import { SIM_DT } from '../core/config';
 import { useGameStore } from '../core/gameStore';
 import { splitKey } from '../save/saveManager';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
+import type { Expedition } from '../simulation/expedition';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
 import { Coach } from '../story/coach';
@@ -30,9 +31,11 @@ const SECRET_RANGE = 2.6;
 const probe = new Vector3();
 
 interface GameLoopProps {
-  sim: Simulation;
+  expedition: Expedition;
   input: InputController;
   fx: Feedback;
+  /** Called when the Warden goes down a way down or comes back up: the scene follows. */
+  onSwitch: (sim: Simulation) => void;
 }
 
 /** How tense the music should be: a boss fight, danger nearby, or an ordinary working day. */
@@ -56,28 +59,31 @@ function mood(sim: Simulation): { boss: boolean; intensity: Intensity } {
  * While the game is paused, or the briefing is still up, no steps run and no time
  * accumulates. It runs before every other frame callback so meshes read fresh state.
  */
-export function GameLoop({ sim, input, fx }: GameLoopProps): null {
+export function GameLoop({ expedition, input, fx, onSwitch }: GameLoopProps): null {
+  const surface = expedition.surface;
   const element = useThree((state) => state.gl.domElement);
   const [clock] = useState(() => new FixedClock(SIM_DT, 5 * FAST_FORWARD));
   const [coach] = useState(
     () =>
       new Coach(typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches),
   );
-  const [headmaster] = useState(() => new Headmaster(sim));
+  const [headmaster] = useState(() => new Headmaster(surface));
   const frame = useRef(0);
   const walked = useRef(0);
-  const lastSpot = useRef({ x: sim.captainTransform.x, z: sim.captainTransform.z });
+  const lastSpot = useRef({ x: surface.captainTransform.x, z: surface.captainTransform.z });
   const wasFast = useRef(false);
   // Starts true if the scene remounts after the day already ended (a settings change).
-  const finished = useRef(sim.ended !== null);
+  const finished = useRef(surface.ended !== null);
   // The splits of the best clear, kept from before this day started.
   const bestSplits = useRef(
-    useGameStore.getState().save.bestSplits[splitKey(sim.level.id, sim.level.difficulty)] ?? null,
+    useGameStore.getState().save.bestSplits[splitKey(surface.level.id, surface.level.difficulty)] ??
+      null,
   );
 
   useEffect(() => input.attach(element), [input, element]);
 
   useFrame(({ camera }, delta) => {
+    const sim = expedition.active;
     probe.set(input.pointerX, input.pointerY, 0.5).unproject(camera).sub(camera.position);
     // Where the pointer meets the ground: first the flat floor, then the height found there,
     // twice, which settles onto a terrace top or a ramp.
@@ -113,12 +119,26 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
     const steps = fx.hitstop > 0 ? 0 : clock.advance(delta * (fast ? FAST_FORWARD : 1));
     fx.listenerX = sim.captainTransform.x;
     fx.listenerZ = sim.captainTransform.z;
+    let switched = false;
     for (let i = 0; i < steps && !sim.ended; i++) {
       sim.step(input.sample(cursorX, cursorZ));
       for (const event of sim.events) fx.handle(event);
-      headmaster.events(sim.events);
+      if (sim === surface) headmaster.events(sim.events);
+      // Below: a cave that is finished, or a Warden who fell there, settles the visit.
+      if (expedition.below) {
+        expedition.settle();
+        if (!expedition.below) {
+          switched = true;
+          break;
+        }
+      }
     }
     fx.update(delta);
+    if (switched) {
+      audio.play('doorOpen');
+      onSwitch(expedition.active);
+      return;
+    }
     // Each relic home is announced by name, and logged in the Field Guide by the save.
     for (let i = delivered; i < sim.stats.treasuresCollected.length; i++) {
       const id = sim.stats.treasuresCollected[i];
@@ -127,8 +147,8 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
       fx.popup(relic.name, sim.level.kiln.x, sim.level.kiln.z - 3, '#fff2c8');
       headmaster.relic(relic);
     }
-    // Each Sunshard home is compared with the same shard on the best clear so far.
-    for (let i = delivered; i < sim.stats.deliveryTimes.length; i++) {
+    // Each Sunshard home is compared with the same shard on the best clear so far (surface only).
+    for (let i = delivered; sim === surface && i < sim.stats.deliveryTimes.length; i++) {
       const best = bestSplits.current?.[i];
       if (best === undefined) continue;
       const diff = sim.stats.deliveryTimes[i] - best;
@@ -159,11 +179,11 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
       audio.play('step', { gain: 0.8 });
     }
 
-    if (sim.ended) {
+    if (surface.ended) {
       if (!finished.current) {
         finished.current = true;
         audio.play('dayEnd');
-        store.finishDay(sim, sim.ended);
+        store.finishDay(surface, surface.ended, expedition.haul);
       }
       return;
     }
@@ -172,31 +192,52 @@ export function GameLoop({ sim, input, fx }: GameLoopProps): null {
     const atDoor =
       secret !== undefined && Math.hypot(spot.x - secret.x, spot.z - secret.z) < SECRET_RANGE;
     store.setNearSecret(atDoor);
-    const { descent } = sim.level;
+    // The way down (on the surface) and the way back up (where the Warden arrived below).
+    const descent = expedition.below ? undefined : sim.level.descent;
     const atStair =
       descent !== undefined && Math.hypot(spot.x - descent.x, spot.z - descent.z) < SECRET_RANGE;
+    const start = sim.level.captain;
+    const atAscent =
+      expedition.below && Math.hypot(spot.x - start.x, spot.z - start.z) < SECRET_RANGE;
     if (atStair && store.nearDescent === null) audio.play('beaconLit');
     store.setNearDescent(atStair && descent ? descent.to : null);
+    store.setNearAscent(atAscent);
     if (input.takeInteract()) {
       if (atDoor) {
         audio.play('knock');
         store.openPoker();
-      } else if (atStair && descent) {
+      } else if (atStair) {
+        const why = expedition.blocked();
+        if (why) {
+          fx.popup(why, spot.x, spot.z, '#ffd0a0');
+        } else if (expedition.descend()) {
+          audio.play('doorOpen');
+          onSwitch(expedition.active);
+          return;
+        }
+      } else if (atAscent) {
+        expedition.ascend();
         audio.play('doorOpen');
-        store.startDay(descent.to);
+        onSwitch(expedition.active);
         return;
       }
     }
 
     frame.current++;
     if (frame.current % HUD_INTERVAL_FRAMES === 0 || sim.entityVersion !== store.entityVersion) {
-      store.publish(sim);
+      store.publish(
+        sim,
+        expedition.below ? { name: sim.level.name, timeLeft: surface.timeLeft } : null,
+      );
     }
     if (frame.current % HUD_INTERVAL_FRAMES === 0) {
       const seconds = steps * SIM_DT * HUD_INTERVAL_FRAMES;
-      store.setHint(store.settings.hints ? coach.update(sim, seconds) : null);
-      const line = headmaster.update(seconds);
-      if (line && store.settings.commentary) store.say(line);
+      // Ashwick and the Headmaster watch the surface; below, the Warden is on their own.
+      if (sim === surface) {
+        store.setHint(store.settings.hints ? coach.update(sim, seconds) : null);
+        const line = headmaster.update(seconds);
+        if (line && store.settings.commentary) store.say(line);
+      }
       const { boss, intensity } = mood(sim);
       audio.playMusic(boss ? 'boss' : sim.level.theme);
       audio.setMusicMood(intensity, sim.timeLeft <= LAST_CALL_SECONDS);

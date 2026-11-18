@@ -35,6 +35,13 @@ export type SimEventType =
   | 'bridgeBuilt'
   | 'beaconLit'
   | 'chain'
+  | 'rescued'
+  | 'burned'
+  | 'drowned'
+  | 'ignite'
+  | 'zap'
+  | 'flare'
+  | 'select'
   | 'snuff';
 
 export interface SimEvent {

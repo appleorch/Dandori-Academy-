@@ -45,6 +45,13 @@ export type SoundName =
   | 'bridgeBuilt'
   | 'beaconLit'
   | 'chain'
+  | 'rescued'
+  | 'burned'
+  | 'drowned'
+  | 'ignite'
+  | 'zap'
+  | 'flare'
+  | 'select'
   | 'snuff'
   | 'warning'
   | 'tick'
@@ -571,6 +578,43 @@ class AudioManager {
       case 'pokerWin':
         [587, 740, 880, 1175].forEach((hz, i) => this.bell(out, hz, 0.6, 0.18, i * 0.09));
         for (let i = 0; i < 6; i++) this.bell(out, rand(2600, 4400), 0.08, 0.08, 0.3 + i * 0.05);
+        break;
+      case 'rescued':
+        // A relieved little chirp, and the hiss of a flame put out or water shaken off.
+        this.burst(out, 0.18, 3200, 0.12, 0, 'highpass');
+        this.chirp(out, 700, 1100, 0.12, 0.16, 0.04);
+        break;
+      case 'burned':
+        this.burst(out, 0.5, 1600, 0.3, 0, 'bandpass', 400);
+        this.chirp(out, 900, 260, 0.4, 0.18);
+        break;
+      case 'drowned':
+        this.tone(out, 600, 140, 0.45, 'sine', 0.18);
+        for (let i = 0; i < 4; i++)
+          this.tone(out, rand(500, 900), rand(900, 1400), 0.06, 'sine', 0.06, 0.1 + i * 0.09);
+        break;
+      case 'ignite':
+        // A whoomph and a frightened squeak.
+        this.burst(out, 0.35, 300, 0.35, 0, 'lowpass', 2200);
+        this.chirp(out, 1000, 1400, 0.1, 0.16, 0.05);
+        break;
+      case 'zap':
+        for (let i = 0; i < 5; i++) this.burst(out, 0.03, 6000, 0.3, i * 0.035, 'highpass');
+        this.tone(out, 1800, 220, 0.25, 'sawtooth', 0.14);
+        break;
+      case 'flare':
+        this.burst(out, 0.6, 250, 0.4, 0, 'lowpass', 1800);
+        this.tone(out, 80, 160, 0.5, 'sawtooth', 0.08);
+        break;
+      case 'select':
+        this.tone(
+          out,
+          880 * (options?.pitch ?? 1),
+          1100 * (options?.pitch ?? 1),
+          0.06,
+          'triangle',
+          0.12,
+        );
         break;
       case 'chain': {
         // Each link of the chain rings a step higher up the scale.

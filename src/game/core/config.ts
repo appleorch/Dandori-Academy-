@@ -72,3 +72,6 @@ export const KILN = {
  * Kiln, and its glow strips the Snuffer's armour.
  */
 export const BEACON = { lightRange: 2.4, glow: 10 } as const;
+
+/** Seconds a Sproutling lasts on fire, or out of its depth, before it is lost unless whistled. */
+export const PERIL_SECONDS = 3;

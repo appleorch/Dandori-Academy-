@@ -70,6 +70,8 @@ export interface DayRecord {
   bloomsCollected: number;
   /** Arrival time of each Sunshard, when every one came home; otherwise empty. */
   splits?: readonly number[];
+  /** Relics found elsewhere on the day (in a cave gone down into), already keyed `levelId:id`. */
+  extraTreasures?: readonly string[];
 }
 
 /** The subset of the Web Storage API the save manager needs. */
@@ -242,7 +244,10 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
   const previous = bestRank(save, day.levelId, day.difficulty);
   const improved = previous === null || rankValue(day.rank) > rankValue(previous);
   const unlocksNext = !hard && rankValue(day.rank) >= rankValue(UNLOCK_RANK);
-  const ids = day.treasureIds.map((id) => `${day.levelId}:${id}`);
+  const ids = [
+    ...day.treasureIds.map((id) => `${day.levelId}:${id}`),
+    ...(day.extraTreasures ?? []),
+  ];
   const scores = hard ? save.bestScoresHard : save.bestScores;
   const ranks = hard ? save.bestRanksHard : save.bestRanks;
   const nextScores = { ...scores, [day.levelId]: Math.max(scores[day.levelId] ?? 0, day.score) };

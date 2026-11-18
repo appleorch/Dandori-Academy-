@@ -1,5 +1,6 @@
 import type { InputState } from '../commands/input';
 import { CAPTAIN } from '../core/config';
+import { SPROUTS } from '../workers/sprouts';
 import type { Simulation } from '../simulation/Simulation';
 
 /** Moves the captain, clamps the cursor to command range and refreshes the squad's path field. */
@@ -27,7 +28,9 @@ export function updateCaptain(sim: Simulation, input: InputState, dt: number): v
   const dx = input.cursorX - transform.x;
   const dz = input.cursorZ - transform.z;
   const reach = Math.hypot(dx, dz);
-  const scale = reach > CAPTAIN.cursorRange ? CAPTAIN.cursorRange / reach : 1;
+  // How far the cursor reaches is how far the chosen kind of Sproutling can be thrown.
+  const range = SPROUTS[sim.selected].throwRange;
+  const scale = reach > range ? range / reach : 1;
   sim.cursor.x = transform.x + dx * scale;
   sim.cursor.z = transform.z + dz * scale;
 

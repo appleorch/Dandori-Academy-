@@ -1,3 +1,5 @@
+import type { SproutKind } from '../workers/sprouts';
+
 export type EnemyKind =
   | 'mossback'
   | 'ramhorn'
@@ -259,7 +261,7 @@ export const ENEMY = {
   snuffBrood: 2,
 } as const;
 
-export type HazardKind = 'glob' | 'pebble' | 'drip' | 'slam' | 'stomp';
+export type HazardKind = 'glob' | 'pebble' | 'drip' | 'slam' | 'stomp' | 'flame' | 'arc';
 
 export interface HazardSpec {
   radius: number;
@@ -274,13 +276,49 @@ export interface HazardSpec {
   arc: number;
   /** Starting height of a projectile that falls straight down. */
   drop: number;
+  /** The kind of Sproutling it cannot touch. */
+  spares?: SproutKind;
+  /** Sets workers on fire (to be whistled out) instead of killing them outright. */
+  ignites?: boolean;
 }
 
 export const HAZARDS: Record<HazardKind, HazardSpec> = {
   glob: { radius: 1.7, flight: 1, kills: 5, stun: 0, hurtsCaptain: true, arc: 5, drop: 0 },
   pebble: { radius: 1.7, flight: 1, kills: 3, stun: 0, hurtsCaptain: true, arc: 4, drop: 0 },
   /** A dewdrop from overhead: it douses, knocking workers down and off their haul. */
-  drip: { radius: 1.6, flight: 1.5, kills: 0, stun: 3, hurtsCaptain: false, arc: 0, drop: 9 },
+  drip: {
+    radius: 1.6,
+    flight: 1.5,
+    kills: 0,
+    stun: 3,
+    hurtsCaptain: false,
+    arc: 0,
+    drop: 9,
+    spares: 'dew',
+  },
   slam: { radius: 3.6, flight: 1.2, kills: 6, stun: 0, hurtsCaptain: true, arc: 0, drop: 0 },
   stomp: { radius: 5, flight: 1, kills: 0, stun: 1.6, hurtsCaptain: true, arc: 0, drop: 0 },
+  /** A flame vent's burst: its ring glows first, then everything in it but an Emberling catches fire. */
+  flame: {
+    radius: 2,
+    flight: 1.4,
+    kills: 0,
+    stun: 0,
+    hurtsCaptain: true,
+    arc: 0,
+    drop: 0,
+    spares: 'ember',
+    ignites: true,
+  },
+  /** One stretch of a spark coil's arc: anything but a Sparkling caught in it is lost at once. */
+  arc: {
+    radius: 1.1,
+    flight: 1.2,
+    kills: Infinity,
+    stun: 0,
+    hurtsCaptain: true,
+    arc: 0,
+    drop: 0,
+    spares: 'spark',
+  },
 };

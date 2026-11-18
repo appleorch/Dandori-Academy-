@@ -97,7 +97,7 @@ describe('Ramhorn', () => {
   it('misses a captain who steps out of the charge line', () => {
     const sim = arena('ramhorn', 9, { startingWorkers: 0, treasures: ARENA.treasures });
     // No workers would end the day at once, so keep one pod's worth in the Kiln queue.
-    sim.kiln.queue = 1;
+    sim.kiln.queue = ['ember'];
     run(sim, 60 * 3, { moveZ: 1 });
     expect(sim.captainState.hp).toBe(CAPTAIN.maxHp);
     sim.dispose();

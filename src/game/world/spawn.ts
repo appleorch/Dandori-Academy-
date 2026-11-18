@@ -15,16 +15,24 @@ import type { Box, Point } from '../navigation/NavGrid';
 import { createMover } from '../navigation/steering';
 import type { Carryable, WorkerState } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
+import { mostCommon, type SproutKind } from '../workers/sprouts';
 import type { BloomSpawn, TreasureSpawn } from './level';
 
 const CARCASS_RADIUS = 0.9;
 /** Score per point of weight for a Glowcap bloom. */
 export const BLOOM_VALUE_PER_WEIGHT = 150;
 
-export function spawnWorker(sim: Simulation, x: number, z: number, state: WorkerState): Entity {
+export function spawnWorker(
+  sim: Simulation,
+  x: number,
+  z: number,
+  state: WorkerState,
+  kind: SproutKind = 'ember',
+): Entity {
   const entity = sim.ecs.create();
   sim.transforms.set(entity, { x, y: 0, z, facing: 0 });
   sim.workers.set(entity, {
+    kind,
     state,
     target: NO_ENTITY,
     stun: 0,
@@ -39,6 +47,8 @@ export function spawnWorker(sim: Simulation, x: number, z: number, state: Worker
     rushX: 0,
     rushZ: 0,
     rushTime: 0,
+    peril: null,
+    perilTime: 0,
     mover: createMover(),
   });
   return entity;
@@ -48,7 +58,8 @@ export function spawnWorker(sim: Simulation, x: number, z: number, state: Worker
 function addCarryable(
   sim: Simulation,
   at: Point,
-  fields: Pick<Carryable, 'id' | 'kind' | 'weight' | 'maxCarriers' | 'radius'> & Partial<Carryable>,
+  fields: Pick<Carryable, 'id' | 'kind' | 'weight' | 'maxCarriers' | 'radius'> &
+    Partial<Omit<Carryable, 'seed'>> & { seed?: SproutKind },
 ): Entity {
   const entity = sim.ecs.create();
   sim.transforms.set(entity, { x: at.x, y: 0, z: at.z, facing: 0 });
@@ -65,6 +76,7 @@ function addCarryable(
     baseSpeed: CARRY.baseSpeed,
     bonusSpeed: CARRY.bonusSpeed,
     dest: -1,
+    seed: null,
     ...fields,
   });
   sim.entityVersion++;
@@ -91,9 +103,13 @@ export function spawnTreasure(sim: Simulation, spawn: TreasureSpawn): Entity {
   });
 }
 
-/** An Emberpod: one carrier can take it home, where it hatches into new workers. */
-export function spawnPod(sim: Simulation, at: Point, index: number): Entity {
-  return addCarryable(sim, at, { id: `pod-${index}`, kind: 'pod', ...POD });
+/**
+ * A seed pod: one carrier can take it home, where it grows into Sproutlings of its own kind,
+ * or of the lesson's most common kind when it does not say.
+ */
+export function spawnPod(sim: Simulation, at: Point, index: number, kind?: SproutKind): Entity {
+  const seed = kind ?? mostCommon(sim.level.squad ?? { ember: 1 });
+  return addCarryable(sim, at, { id: `pod-${index}`, kind: 'pod', ...POD, seed });
 }
 
 /** A Sapdrop: delivered to the Kiln, it speeds every haul up for a while. */

@@ -153,9 +153,9 @@ function SecretDoor({ at }: { at: Point }) {
 }
 
 /** A way down: a ring of old stones round a dark stair, with cold air and blue light coming up. */
-function Descent({ at }: { at: Point }) {
+function Descent({ at, up = false }: { at: Point; up?: boolean }) {
   const glow = useRef<MeshBasicMaterial>(null);
-  const near = useGameStore((state) => state.nearDescent !== null);
+  const near = useGameStore((state) => (up ? state.nearAscent : state.nearDescent !== null));
   useFrame(({ clock }) => {
     if (glow.current) glow.current.opacity = 0.35 + Math.sin(clock.elapsedTime * 1.8) * 0.15;
   });
@@ -204,7 +204,13 @@ function Descent({ at }: { at: Point }) {
         );
       })}
       <pointLight position={[0, 0.8, 0]} color="#6a8aff" intensity={5} distance={7} decay={1.6} />
-      <TextSprite y={2.6} getText={() => (near ? 'Go down: E' : 'A way down')} color="#bcd0ff" />
+      <TextSprite
+        y={2.6}
+        getText={() =>
+          up ? (near ? 'Go up: E' : 'The way up') : near ? 'Go down: E' : 'A way down'
+        }
+        color="#bcd0ff"
+      />
     </group>
   );
 }
@@ -236,7 +242,9 @@ export function Beacons({ sim }: { sim: Simulation }) {
       ))}
       {look.lantern > 0 && <Lantern sim={sim} power={look.lantern} />}
       {sim.level.secret && <SecretDoor at={sim.level.secret} />}
-      {sim.level.descent && <Descent at={sim.level.descent} />}
+      {sim.level.descent && !sim.visit && <Descent at={sim.level.descent} />}
+      {/* Down a cave, the stair the Warden came down by is the way back up. */}
+      {sim.visit && <Descent at={sim.level.captain} up />}
     </>
   );
 }

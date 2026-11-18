@@ -3,7 +3,20 @@ import type { Hazard } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { killWorker, setIdle } from '../workers/squad';
 import { HARD } from '../core/difficulty';
-import { HAZARDS } from './enemyKinds';
+import { HAZARDS, type HazardKind } from './enemyKinds';
+import { PERIL_SECONDS } from '../core/config';
+import type { SimEventType } from '../simulation/events';
+
+/** What a hazard sounds like when it lands. */
+const LANDING_EVENT: Record<HazardKind, SimEventType> = {
+  glob: 'splat',
+  pebble: 'slam',
+  drip: 'splash',
+  slam: 'slam',
+  stomp: 'slam',
+  flame: 'flare',
+  arc: 'zap',
+};
 
 /** Resolves a hazard where it lands: kills up to its limit, stuns the rest, hurts the captain. */
 function land(sim: Simulation, hazard: Hazard): void {
@@ -12,8 +25,19 @@ function land(sim: Simulation, hazard: Hazard): void {
   let killed = 0;
   for (const [entity, worker] of sim.workers.entries()) {
     if (worker.state === 'thrown' || worker.state === 'attacking') continue;
+    if (spec.spares === worker.kind) continue;
     const at = sim.transforms.require(entity);
     if (Math.hypot(at.x - hazard.toX, at.z - hazard.toZ) > hazard.radius) continue;
+    if (spec.ignites) {
+      if (worker.peril !== 'fire') {
+        setIdle(sim, entity, worker);
+        worker.peril = 'fire';
+        worker.perilTime = PERIL_SECONDS;
+        worker.scan = 0;
+        sim.emit('ignite', at.x, at.z);
+      }
+      continue;
+    }
     if (killed < kills) {
       killWorker(sim, entity, worker);
       killed++;
@@ -29,11 +53,7 @@ function land(sim: Simulation, hazard: Hazard): void {
   ) {
     damageCaptain(sim, hazard.toX, hazard.toZ);
   }
-  sim.emit(
-    hazard.kind === 'drip' ? 'splash' : hazard.kind === 'glob' ? 'splat' : 'slam',
-    hazard.toX,
-    hazard.toZ,
-  );
+  sim.emit(LANDING_EVENT[hazard.kind], hazard.toX, hazard.toZ);
 }
 
 /** Moves every hazard along its path and resolves the ones that arrive. */

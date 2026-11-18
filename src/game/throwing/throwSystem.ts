@@ -3,18 +3,59 @@ import { THROW } from '../core/config';
 import type { Entity } from '../core/ecs';
 import { NO_ENTITY } from '../core/ecs';
 import type { Simulation } from '../simulation/Simulation';
+import { SPROUT_KINDS, type SproutKind } from '../workers/sprouts';
 
-/** While throw is held, launches the squad member nearest the captain at the cursor. */
+/** The kinds of Sproutling in the squad right now, ready to throw. */
+function readyKinds(sim: Simulation): Set<SproutKind> {
+  const kinds = new Set<SproutKind>();
+  for (const [, worker] of sim.workers.entries()) {
+    if (worker.state === 'follow' && worker.stun <= 0) kinds.add(worker.kind);
+  }
+  return kinds;
+}
+
+/** The next kind after `from`, in table order, that is in `kinds`; `from` itself if none is. */
+function nextKind(from: SproutKind, kinds: Set<SproutKind>): SproutKind {
+  const start = SPROUT_KINDS.indexOf(from);
+  for (let step = 1; step <= SPROUT_KINDS.length; step++) {
+    const kind = SPROUT_KINDS[(start + step) % SPROUT_KINDS.length];
+    if (kinds.has(kind)) return kind;
+  }
+  return from;
+}
+
+/**
+ * Chooses which kind of Sproutling the Warden throws: a key picks one, the cycle button steps
+ * to the next, and when the chosen kind runs out of the squad the next one present takes over.
+ */
+export function updateSelection(sim: Simulation, input: InputState): void {
+  const kinds = readyKinds(sim);
+  const before = sim.selected;
+  if (input.selectKind && kinds.has(input.selectKind)) sim.selected = input.selectKind;
+  else if (input.cycleKind) sim.selected = nextKind(sim.selected, kinds);
+  else if (!kinds.has(sim.selected) && kinds.size > 0) {
+    sim.selected = nextKind(sim.selected, kinds);
+    if (input.throwHeld) sim.captainState.throwLatched = true;
+  }
+  if (sim.selected !== before && (input.selectKind || input.cycleKind)) {
+    const { x, z } = sim.captainTransform;
+    sim.emit('select', x, z, 1 + SPROUT_KINDS.indexOf(sim.selected) * 0.12);
+  }
+}
+
+/** While throw is held, launches the squad member of the chosen kind nearest the captain at the cursor. */
 export function updateThrowing(sim: Simulation, input: InputState, dt: number): void {
   const state = sim.captainState;
   state.throwCooldown = Math.max(0, state.throwCooldown - dt);
-  if (!input.throwHeld || input.whistleHeld || state.throwCooldown > 0) return;
+  if (!input.throwHeld) state.throwLatched = false;
+  if (!input.throwHeld || input.whistleHeld || state.throwCooldown > 0 || state.throwLatched)
+    return;
 
   const from = sim.captainTransform;
   let chosen: Entity = NO_ENTITY;
   let chosenDist: number = THROW.pickupRange;
   for (const [entity, worker] of sim.workers.entries()) {
-    if (worker.state !== 'follow' || worker.stun > 0) continue;
+    if (worker.state !== 'follow' || worker.stun > 0 || worker.kind !== sim.selected) continue;
     const at = sim.transforms.require(entity);
     const dist = Math.hypot(at.x - from.x, at.z - from.z);
     if (dist < chosenDist) {
@@ -40,8 +81,9 @@ export function updateThrowing(sim: Simulation, input: InputState, dt: number): 
       aimZ = at.z;
     }
   }
-  // A little scatter keeps a volley from landing on a single point.
-  const landing = sim.nav.nearestWalkable(
+  // A little scatter keeps a volley from landing on a single point. Water is somewhere a
+  // Sproutling can land: a Dewling wades, anything else flounders until whistled out.
+  const landing = sim.wadeNav.nearestWalkable(
     aimX + sim.rng.range(-THROW.scatter, THROW.scatter),
     aimZ + sim.rng.range(-THROW.scatter, THROW.scatter),
   );

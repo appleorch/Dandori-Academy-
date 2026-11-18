@@ -12,6 +12,7 @@ import {
 import { WORKER } from '../core/config';
 import type { Entity } from '../core/ecs';
 import type { Worker, WorkerState } from '../simulation/components';
+import type { SproutKind } from '../workers/sprouts';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
 import { inDanger } from './danger';
@@ -48,11 +49,30 @@ const BASKET_PROFILE: readonly (readonly [number, number])[] = [
   [0.15, 0.2],
   [0.155, 0.22],
 ];
-const SQUAD_BODY = new Color('#e8432d');
-const WORKING_BODY = new Color('#b8301f');
-const IDLE_BODY = new Color('#d9a79c');
-const LIT_FLAME = new Color('#ffb02e');
-const COLD_FLAME = new Color('#8fa3ad');
+/** Each kind's body colour while in the squad, while working, and while idle (paler). */
+const BODIES: Record<SproutKind, readonly [Color, Color, Color]> = {
+  ember: [new Color('#e8432d'), new Color('#b8301f'), new Color('#d9a79c')],
+  dew: [new Color('#3a8ae8'), new Color('#2a68b8'), new Color('#a8c4e0')],
+  stone: [new Color('#8a8a92'), new Color('#6a6a72'), new Color('#c4c4c8')],
+  spark: [new Color('#f2c62a'), new Color('#c89a1a'), new Color('#ecdca0')],
+};
+/** The glow on each kind's head-sprout, lit (working or in the squad) and cold (idle). */
+const CROWNS: Record<SproutKind, readonly [Color, Color]> = {
+  ember: [new Color('#ffb02e'), new Color('#8fa3ad')],
+  dew: [new Color('#9ae0ff'), new Color('#7a98a8')],
+  stone: [new Color('#d8d4c8'), new Color('#9a9890')],
+  spark: [new Color('#fff27a'), new Color('#a8a070')],
+};
+/** How each kind's crown sits: offset up the stalk, and its scale. */
+const CROWN_SHAPE: Record<SproutKind, { y: number; size: number }> = {
+  ember: { y: 0.32, size: 1 },
+  dew: { y: 0.3, size: 1 },
+  stone: { y: 0.3, size: 1 },
+  spark: { y: 0.32, size: 1 },
+};
+/** Stonelings are a size bigger. */
+const BULK: Record<SproutKind, number> = { ember: 1, dew: 1, stone: 1.18, spark: 0.95 };
+const FIRE = new Color('#ff7a1a');
 const EYE_WHITE = new Color('#fff8ec');
 const DANGER = new Color('#ffffff');
 const dummy = new Object3D();
@@ -112,9 +132,10 @@ interface Drop {
   life: number;
 }
 
-function bodyColor(state: WorkerState): Color {
-  if (state === 'follow' || state === 'thrown' || state === 'rush') return SQUAD_BODY;
-  return state === 'idle' ? IDLE_BODY : WORKING_BODY;
+function bodyColor(state: WorkerState, kind: SproutKind): Color {
+  const [squad, working, idle] = BODIES[kind];
+  if (state === 'follow' || state === 'thrown' || state === 'rush') return squad;
+  return state === 'idle' ? idle : working;
 }
 
 function newAnim(x: number, z: number, facing: number, state: WorkerState): Anim {
@@ -160,6 +181,10 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
   const refs = {
     body: useRef<InstancedMesh>(null),
     ember: useRef<InstancedMesh>(null),
+    droplet: useRef<InstancedMesh>(null),
+    pebble: useRef<InstancedMesh>(null),
+    spark: useRef<InstancedMesh>(null),
+    blaze: useRef<InstancedMesh>(null),
     stalk: useRef<InstancedMesh>(null),
     leaf: useRef<InstancedMesh>(null),
     eye: useRef<InstancedMesh>(null),
@@ -195,6 +220,10 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
     const m = {
       body: refs.body.current,
       ember: refs.ember.current,
+      droplet: refs.droplet.current,
+      pebble: refs.pebble.current,
+      spark: refs.spark.current,
+      blaze: refs.blaze.current,
       stalk: refs.stalk.current,
       leaf: refs.leaf.current,
       eye: refs.eye.current,
@@ -217,6 +246,9 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
     let index = 0;
     let stars = 0;
     let ribbons = 0;
+    // Each kind's crown is its own instanced mesh, filled in its own order.
+    const crowns: Record<SproutKind, number> = { ember: 0, dew: 0, stone: 0, spark: 0 };
+    let blazes = 0;
 
     // Idle Emberlings near each other strike up a conversation; found once per frame.
     const idle: { entity: Entity; x: number; z: number }[] = [];
@@ -314,6 +346,10 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       if (state === 'thrown') {
         // A forward flip through the air.
         pitch = worker.throwTime * 13;
+      } else if (worker.peril === 'water') {
+        // Out of its depth: bobbing, arms up, half under.
+        lift = -0.3 + Math.sin(time * 7 + entity) * 0.08;
+        pitch = -0.2;
       } else if (dazed) {
         pitch = 1.45;
         lift = 0.2;
@@ -358,11 +394,13 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
         at.z - Math.cos(yaw) * backstep,
       );
       dummy.rotation.set(pitch, yaw, roll, 'YXZ');
-      dummy.scale.set(squashXZ, squashY, squashXZ);
+      const bulk = BULK[worker.kind];
+      dummy.scale.set(squashXZ * bulk, squashY * bulk, squashXZ * bulk);
       dummy.updateMatrix();
       const body = dummy.matrix.clone();
       mesh.body.setMatrixAt(index, body);
-      const color = bodyColor(state);
+      const color =
+        worker.peril === 'fire' && Math.sin(time * 20) > 0 ? FIRE : bodyColor(state, worker.kind);
       mesh.body.setColorAt(
         index,
         threatened && Math.sin(time * 30) > 0 ? tint.copy(color).lerp(DANGER, 0.7) : color,
@@ -457,25 +495,63 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
         );
       }
       const lit = state !== 'idle';
-      const flicker = lit ? 1 + Math.sin(time * 17 + entity * 3.1) * 0.12 : 0.75;
+      const kind = worker.kind;
+      const crown =
+        kind === 'ember'
+          ? mesh.ember
+          : kind === 'dew'
+            ? mesh.droplet
+            : kind === 'stone'
+              ? mesh.pebble
+              : mesh.spark;
+      const slot = crowns[kind]++;
+      const shape = CROWN_SHAPE[kind];
+      // Embers flicker, droplets wobble, pebbles sit still, sparks crackle.
+      const flicker =
+        kind === 'ember'
+          ? lit
+            ? 1 + Math.sin(time * 17 + entity * 3.1) * 0.12
+            : 0.75
+          : kind === 'dew'
+            ? 1 + Math.sin(time * 6 + entity) * 0.06
+            : kind === 'spark'
+              ? 0.8 + Math.abs(Math.sin(time * 31 + entity * 2.3)) * 0.4
+              : 1;
       place(
-        mesh.ember,
-        index,
+        crown,
+        slot,
         0,
-        0.32,
+        shape.y,
         0,
         0,
-        time * 2 + entity,
+        time * (kind === 'spark' ? 6 : 2) + entity,
         0,
-        flicker,
-        flicker * 1.25,
-        flicker,
+        flicker * shape.size,
+        flicker * shape.size * (kind === 'ember' ? 1.25 : 1),
+        flicker * shape.size,
         stalk,
       );
-      mesh.ember.setColorAt(
-        index,
-        flame.copy(lit ? LIT_FLAME : COLD_FLAME).multiplyScalar(lit ? 2.2 : 0.9),
-      );
+      const [hot, cold] = CROWNS[kind];
+      crown.setColorAt(slot, flame.copy(lit ? hot : cold).multiplyScalar(lit ? 2.2 : 0.9));
+      // On fire: flames lick up from the body until it is whistled out or lost.
+      if (worker.peril === 'fire') {
+        for (let k = 0; k < 3; k++) {
+          const a = time * 9 + k * 2.1 + entity;
+          place(
+            mesh.blaze,
+            blazes++,
+            Math.sin(a) * 0.15,
+            0.5 + Math.abs(Math.sin(time * 13 + k)) * 0.2,
+            Math.cos(a) * 0.15,
+            0,
+            a,
+            0,
+            1,
+            1 + Math.abs(Math.sin(time * 17 + k)) * 0.6,
+            1,
+          );
+        }
+      }
 
       // ---- Eyes: blink, glance, widen in fright ----
       const fright = threatened || anim.leap > 0 || state === 'thrown';
@@ -595,9 +671,14 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       return true;
     });
 
-    for (const one of [mesh.body, mesh.ember, mesh.stalk, mesh.blob, mesh.basket, mesh.rim]) {
+    for (const one of [mesh.body, mesh.stalk, mesh.blob, mesh.basket, mesh.rim]) {
       one.count = index;
     }
+    mesh.ember.count = crowns.ember;
+    mesh.droplet.count = crowns.dew;
+    mesh.pebble.count = crowns.stone;
+    mesh.spark.count = crowns.spark;
+    mesh.blaze.count = blazes;
     for (const two of [mesh.eye, mesh.pupil, mesh.arm, mesh.leg, mesh.foot, mesh.leaf]) {
       two.count = index * 2;
     }
@@ -632,6 +713,22 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       <instancedMesh ref={refs.ember} args={[undefined, undefined, MAX]} frustumCulled={false}>
         <coneGeometry args={[0.1, 0.24, 6]} />
         <meshBasicMaterial toneMapped={false} />
+      </instancedMesh>
+      <instancedMesh ref={refs.droplet} args={[undefined, undefined, MAX]} frustumCulled={false}>
+        <sphereGeometry args={[0.1, 10, 8]} />
+        <meshBasicMaterial toneMapped={false} transparent opacity={0.85} />
+      </instancedMesh>
+      <instancedMesh ref={refs.pebble} args={[undefined, undefined, MAX]} frustumCulled={false}>
+        <dodecahedronGeometry args={[0.11, 0]} />
+        <meshStandardMaterial roughness={0.9} flatShading />
+      </instancedMesh>
+      <instancedMesh ref={refs.spark} args={[undefined, undefined, MAX]} frustumCulled={false}>
+        <octahedronGeometry args={[0.11, 0]} />
+        <meshBasicMaterial toneMapped={false} />
+      </instancedMesh>
+      <instancedMesh ref={refs.blaze} args={[undefined, undefined, MAX * 3]} frustumCulled={false}>
+        <coneGeometry args={[0.12, 0.4, 6]} />
+        <meshBasicMaterial color={[3, 1.4, 0.3]} toneMapped={false} transparent opacity={0.9} />
       </instancedMesh>
       <instancedMesh ref={refs.eye} args={[undefined, undefined, MAX * 2]} frustumCulled={false}>
         <sphereGeometry args={[0.065, 10, 8]} />

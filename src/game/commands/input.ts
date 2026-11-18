@@ -1,3 +1,5 @@
+import { SPROUT_KINDS, type SproutKind } from '../workers/sprouts';
+
 /** One simulation step's worth of player commands. */
 export interface InputState {
   moveX: number;
@@ -9,6 +11,9 @@ export interface InputState {
   dismiss: boolean;
   /** Send the whole squad running to the cursor. */
   rush: boolean;
+  /** Switch the kind of Sproutling to throw: to the next one in the squad, or to a given kind. */
+  cycleKind: boolean;
+  selectKind: SproutKind | null;
 }
 
 export const NO_INPUT: InputState = {
@@ -20,6 +25,8 @@ export const NO_INPUT: InputState = {
   whistleHeld: false,
   dismiss: false,
   rush: false,
+  cycleKind: false,
+  selectKind: null,
 };
 
 const MIN_ZOOM = 14;
@@ -63,6 +70,8 @@ export class InputController {
   private dismissQueued = false;
   private rushQueued = false;
   private interactQueued = false;
+  private cycleQueued = false;
+  private selectQueued: SproutKind | null = null;
   /** True while the on-screen fast-forward button is held. */
   fastButton = false;
   /** The tactical view: the camera pulls right out to show the whole course. Toggled with V. */
@@ -76,6 +85,11 @@ export class InputController {
   /** Look at idle Emberlings: Tab. */
   get peek(): boolean {
     return this.keys.has('Tab');
+  }
+
+  /** The on-screen counterpart of E: knock, go down or come back up. */
+  queueInteract(): void {
+    this.interactQueued = true;
   }
 
   /** True once per press of the interact key (E). */
@@ -94,6 +108,16 @@ export class InputController {
 
   queueRush(): void {
     this.rushQueued = true;
+  }
+
+  /** Chooses a kind of Sproutling to throw (a HUD chip). */
+  queueSelect(kind: SproutKind): void {
+    this.selectQueued = kind;
+  }
+
+  /** Switches to the next kind of Sproutling in the squad (the on-screen button). */
+  queueCycle(): void {
+    this.cycleQueued = true;
   }
 
   queueDismiss(): void {
@@ -124,6 +148,9 @@ export class InputController {
       if (event.code === 'KeyQ' && !event.repeat) this.dismissQueued = true;
       if (event.code === 'KeyF' && !event.repeat) this.rushQueued = true;
       if (event.code === 'KeyE' && !event.repeat) this.interactQueued = true;
+      if (event.code === 'KeyC' && !event.repeat) this.cycleQueued = true;
+      const digit = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(event.code);
+      if (digit >= 0 && !event.repeat) this.selectQueued = SPROUT_KINDS[digit];
       if (event.code === 'KeyV' && !event.repeat) this.tactical = !this.tactical;
       if (event.code === 'Space' || event.code === 'Tab') event.preventDefault();
       this.keys.add(event.code);
@@ -230,8 +257,12 @@ export class InputController {
     const stick = Math.hypot(this.stickX, this.stickZ) > STICK_DEADZONE ? 1 : 0;
     const dismiss = this.dismissQueued;
     const rush = this.rushQueued;
+    const cycleKind = this.cycleQueued;
+    const selectKind = this.selectQueued;
     this.dismissQueued = false;
     this.rushQueued = false;
+    this.cycleQueued = false;
+    this.selectQueued = null;
     return {
       moveX: clamp(right - left + this.stickX * stick, -1, 1),
       moveZ: clamp(down - up + this.stickZ * stick, -1, 1),
@@ -241,6 +272,8 @@ export class InputController {
       whistleHeld: this.rightDown || keys.has('Space') || this.whistleButton,
       dismiss,
       rush,
+      cycleKind,
+      selectKind,
     };
   }
 }

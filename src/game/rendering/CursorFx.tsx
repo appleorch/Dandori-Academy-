@@ -1,10 +1,11 @@
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
-import type { Mesh } from 'three';
+import type { Mesh, MeshBasicMaterial } from 'three';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
+import { SPROUTS } from '../workers/sprouts';
 
-/** Ground markers for the command cursor and the whistle's growing call circle. */
+/** Ground markers for the command cursor (red where a throw would land a non-wader in water) and the whistle's growing call circle. */
 export function CursorFx({ sim }: { sim: Simulation }) {
   const cursor = useRef<Mesh>(null);
   const whistle = useRef<Mesh>(null);
@@ -15,6 +16,9 @@ export function CursorFx({ sim }: { sim: Simulation }) {
     const ground = heightAt(sim.level, x, z);
     cursor.current.position.set(x, ground + 0.05, z);
     cursor.current.rotation.z = clock.elapsedTime * 2;
+    // Red over water when the kind about to be thrown would flounder there.
+    const unsafe = sim.inWater(x, z) && !SPROUTS[sim.selected].wades;
+    (cursor.current.material as MeshBasicMaterial).color.set(unsafe ? '#ff4a3a' : '#fff6dc');
     const radius = sim.captainState.whistleRadius;
     whistle.current.visible = radius > 0;
     whistle.current.position.set(x, ground + 0.06, z);

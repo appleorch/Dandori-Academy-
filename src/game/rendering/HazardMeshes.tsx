@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import type { Group, Mesh, MeshBasicMaterial } from 'three';
 import type { Entity } from '../core/ecs';
 import { useGameStore } from '../core/gameStore';
-import type { HazardKind } from '../enemies/enemyKinds';
+import { HAZARDS, type HazardKind } from '../enemies/enemyKinds';
 import type { Hazard } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
@@ -23,6 +23,8 @@ const LOOK: Record<
   drip: { body: '#cfeaff', ring: '#5ab8ff', size: 0.35 },
   slam: { body: null, ring: '#ff3a2a', size: 0 },
   stomp: { body: null, ring: '#ffb02a', size: 0 },
+  flame: { body: null, ring: '#ff7a1a', size: 0 },
+  arc: { body: null, ring: '#ffe84a', size: 0 },
 };
 
 /**
@@ -134,11 +136,192 @@ function DripSpots({ sim }: { sim: Simulation }) {
   );
 }
 
+/** Where a repeating fixture is in its cycle: seconds since it last came round. */
+function phaseOf(sim: Simulation, period: number, offset: number): number {
+  if (sim.elapsed < offset) return -1;
+  return (sim.elapsed - offset) % period;
+}
+
+/**
+ * Flame vents: an iron grate over a glowing pit. The glow brightens as the next burst comes,
+ * and when it comes a column of flame stands over the grate for a moment.
+ */
+function Vents({ sim }: { sim: Simulation }) {
+  const flames = useRef<(Group | null)[]>([]);
+  const glows = useRef<(MeshBasicMaterial | null)[]>([]);
+  const vents = sim.level.vents ?? [];
+  useFrame(({ clock }) => {
+    vents.forEach((vent, i) => {
+      const phase = phaseOf(sim, vent.period, vent.offset);
+      const flight = HAZARDS.flame.flight;
+      const burning = phase >= flight && phase < flight + 0.8;
+      const flame = flames.current[i];
+      if (flame) {
+        flame.visible = burning;
+        const k = burning ? (phase - flight) / 0.8 : 0;
+        flame.scale.set(1, Math.max(0.05, Math.sin(k * Math.PI) * 1.2), 1);
+        flame.rotation.y = clock.elapsedTime * 3;
+      }
+      const glow = glows.current[i];
+      if (glow) glow.opacity = phase >= 0 && phase < flight ? 0.3 + (phase / flight) * 0.6 : 0.2;
+    });
+  });
+  return (
+    <>
+      {vents.map((vent, i) => {
+        const y = heightAt(sim.level, vent.x, vent.z);
+        return (
+          <group key={`${vent.x}:${vent.z}`} position={[vent.x, y, vent.z]}>
+            <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[1.2, 24]} />
+              <meshBasicMaterial
+                ref={(node) => {
+                  glows.current[i] = node;
+                }}
+                color="#ff5a1a"
+                transparent
+                opacity={0.2}
+                toneMapped={false}
+              />
+            </mesh>
+            {[-0.6, -0.2, 0.2, 0.6].map((x) => (
+              <mesh key={x} position={[x, 0.06, 0]}>
+                <boxGeometry args={[0.12, 0.08, 2]} />
+                <meshStandardMaterial color="#2a2420" metalness={0.6} roughness={0.5} />
+              </mesh>
+            ))}
+            <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[1.15, 1.35, 24]} />
+              <meshStandardMaterial color="#4a3a30" metalness={0.5} roughness={0.6} />
+            </mesh>
+            <group
+              ref={(node) => {
+                flames.current[i] = node;
+              }}
+              visible={false}
+            >
+              {[0, 1, 2, 3, 4].map((k) => (
+                <mesh
+                  key={k}
+                  position={[
+                    Math.sin(k * 1.26) * 0.5 * (k ? 1 : 0),
+                    1.2,
+                    Math.cos(k * 1.26) * 0.5 * (k ? 1 : 0),
+                  ]}
+                >
+                  <coneGeometry args={[k ? 0.45 : 0.7, k ? 2 : 2.8, 7]} />
+                  <meshBasicMaterial
+                    color={k % 2 ? '#ffd27a' : '#ff6a1a'}
+                    toneMapped={false}
+                    transparent
+                    opacity={0.85}
+                  />
+                </mesh>
+              ))}
+            </group>
+          </group>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * Spark coils: two brass pylons wound with copper. Their tops glow as a discharge builds, then
+ * a jagged arc snaps across the gap between them.
+ */
+function Coils({ sim }: { sim: Simulation }) {
+  const arcs = useRef<(Group | null)[]>([]);
+  const tops = useRef<(MeshBasicMaterial | null)[]>([]);
+  const coils = sim.level.coils ?? [];
+  useFrame(({ clock }) => {
+    coils.forEach((coil, i) => {
+      const phase = phaseOf(sim, coil.period, coil.offset);
+      const flight = HAZARDS.arc.flight;
+      const arcing = phase >= flight && phase < flight + 0.35;
+      const arc = arcs.current[i];
+      if (arc) {
+        arc.visible = arcing;
+        // A new jag every frame it is up.
+        arc.children.forEach((piece, k) => {
+          piece.position.y = 1.6 + Math.sin(clock.elapsedTime * 60 + k * 2.1) * 0.25;
+        });
+      }
+      for (const end of [0, 1]) {
+        const top = tops.current[i * 2 + end];
+        if (top) top.opacity = phase >= 0 && phase < flight ? 0.4 + (phase / flight) * 0.6 : 0.25;
+      }
+    });
+  });
+  return (
+    <>
+      {coils.map((coil, i) => {
+        const dx = coil.b.x - coil.a.x;
+        const dz = coil.b.z - coil.a.z;
+        const length = Math.hypot(dx, dz);
+        const pieces = Math.max(3, Math.round(length / 0.8));
+        const angle = Math.atan2(dx, dz);
+        return (
+          <group key={i}>
+            {[coil.a, coil.b].map((end, k) => (
+              <group key={k} position={[end.x, heightAt(sim.level, end.x, end.z), end.z]}>
+                <mesh position={[0, 0.8, 0]} castShadow>
+                  <cylinderGeometry args={[0.18, 0.28, 1.6, 10]} />
+                  <meshStandardMaterial color="#b08a48" metalness={0.8} roughness={0.35} />
+                </mesh>
+                {[0.4, 0.7, 1.0, 1.3].map((y) => (
+                  <mesh key={y} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                    <torusGeometry args={[0.28, 0.05, 6, 16]} />
+                    <meshStandardMaterial color="#c8642a" metalness={0.7} roughness={0.4} />
+                  </mesh>
+                ))}
+                <mesh position={[0, 1.7, 0]}>
+                  <sphereGeometry args={[0.2, 12, 10]} />
+                  <meshBasicMaterial
+                    ref={(node) => {
+                      tops.current[i * 2 + k] = node;
+                    }}
+                    color="#fff27a"
+                    transparent
+                    opacity={0.25}
+                    toneMapped={false}
+                  />
+                </mesh>
+              </group>
+            ))}
+            <group
+              ref={(node) => {
+                arcs.current[i] = node;
+              }}
+              position={[coil.a.x, heightAt(sim.level, coil.a.x, coil.a.z), coil.a.z]}
+              rotation={[0, angle, 0]}
+              visible={false}
+            >
+              {Array.from({ length: pieces }, (_, k) => (
+                <mesh
+                  key={k}
+                  position={[0, 1.6, ((k + 0.5) / pieces) * length]}
+                  rotation={[0, 0, k % 2 ? 0.6 : -0.6]}
+                >
+                  <boxGeometry args={[0.08, 0.5, length / pieces + 0.1]} />
+                  <meshBasicMaterial color={[3, 2.8, 1.2]} toneMapped={false} />
+                </mesh>
+              ))}
+            </group>
+          </group>
+        );
+      })}
+    </>
+  );
+}
+
 export function HazardMeshes({ sim }: { sim: Simulation }) {
   useGameStore((state) => state.entityVersion);
   return (
     <>
       <DripSpots sim={sim} />
+      <Vents sim={sim} />
+      <Coils sim={sim} />
       {[...sim.hazards.entries()].map(([entity, hazard]) => (
         <HazardMesh key={entity} sim={sim} entity={entity} hazard={hazard} />
       ))}

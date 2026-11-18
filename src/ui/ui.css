@@ -2020,3 +2020,85 @@ button.touch-button.map {
   height: 54px;
   font-size: 0.75rem;
 }
+
+/* ----- Squad by kind ----- */
+
+.chip.squad-kinds {
+  gap: 4px;
+  padding: 3px 5px;
+  pointer-events: auto;
+}
+
+button.kind {
+  width: auto;
+  margin: 0;
+  padding: 3px 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+button.kind small {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+button.kind.chosen {
+  background: rgba(255, 246, 220, 0.18);
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+button.kind .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+button.kind.ember {
+  color: #ffb08a;
+}
+button.kind.ember .dot {
+  background: #e8432d;
+}
+button.kind.dew {
+  color: #9ac8ff;
+}
+button.kind.dew .dot {
+  background: #3a8ae8;
+}
+button.kind.stone {
+  color: #d8d8de;
+}
+button.kind.stone .dot {
+  background: #8a8a92;
+}
+button.kind.spark {
+  color: #ffe68a;
+}
+button.kind.spark .dot {
+  background: #f2c62a;
+}
+
+button.touch-button.cycle {
+  right: 108px;
+  bottom: 84px;
+  width: 58px;
+  height: 58px;
+}
+
+/* Down a cave: the surface clock stands still. */
+.chip.clock.stopped {
+  color: #bcd0ff;
+  border-color: rgba(120, 150, 255, 0.5);
+}
+.chip.below-chip {
+  color: #d4deff;
+  background: rgba(30, 40, 80, 0.75);
+}

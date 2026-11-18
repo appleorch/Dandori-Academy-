@@ -2,6 +2,26 @@ import type { EnemyKind } from '../enemies/enemyKinds';
 import type { Box, Ledge, Point } from '../navigation/NavGrid';
 import type { ShardVariant } from '../simulation/components';
 import type { Difficulty } from '../core/difficulty';
+import type { Squad, SproutKind } from '../workers/sprouts';
+
+/** A seed pod lying in the field. */
+export interface PodSpawn extends Point {
+  kind?: SproutKind;
+}
+
+/** A vent in the ground that bursts into flame every `period` seconds, starting `offset` seconds in. */
+export interface VentSpawn extends Point {
+  period: number;
+  offset: number;
+}
+
+/** Two pylons that arc between `a` and `b` every `period` seconds, starting `offset` seconds in. */
+export interface CoilSpawn {
+  a: Point;
+  b: Point;
+  period: number;
+  offset: number;
+}
 
 /** The look and sound of a lesson's setting. It changes nothing about the rules. */
 export type LevelTheme = 'meadow' | 'autumn' | 'marsh' | 'dusk' | 'cave' | 'terrarium';
@@ -100,6 +120,8 @@ export interface LevelDefinition {
   difficulty: Difficulty;
   seed: number;
   startingWorkers: number;
+  /** Which kinds the starting squad is made of; it must add up to `startingWorkers`. All Emberlings if absent. */
+  squad?: Squad;
   captain: Point;
   kiln: Point;
   obstacles: Wall[];
@@ -109,7 +131,12 @@ export interface LevelDefinition {
   ledges?: Ledge[];
   treasures: TreasureSpawn[];
   /** Emberpods: light hauls that hatch into new workers. */
-  pods: Point[];
+  /** Seed pods; each grows into Sproutlings of its kind (the lesson's most common kind if not given). */
+  pods: PodSpawn[];
+  /** Flame vents: they flare every `period` seconds. Only Emberlings walk through fire. */
+  vents?: VentSpawn[];
+  /** Spark coils: a pair of pylons that arc across the gap between them now and then. Only Sparklings are safe. */
+  coils?: CoilSpawn[];
   enemies: EnemySpawn[];
   gates?: GateSpawn[];
   drips?: DripSpawn[];

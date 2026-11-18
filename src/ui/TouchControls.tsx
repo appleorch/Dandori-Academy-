@@ -107,6 +107,14 @@ export function TouchControls({ input }: { input: InputController }) {
         </button>
         <button
           type="button"
+          className="touch-button cycle"
+          aria-label="Next kind of Sproutling"
+          onPointerDown={() => input.queueCycle()}
+        >
+          Kind
+        </button>
+        <button
+          type="button"
           className="touch-button charge"
           onPointerDown={() => input.queueRush()}
         >

@@ -1,4 +1,4 @@
-import { THROW, WORKER } from '../core/config';
+import { PERIL_SECONDS, THROW, WORKER } from '../core/config';
 import type { Entity } from '../core/ecs';
 import { NO_ENTITY } from '../core/ecs';
 import { moveAgent, steerTo } from '../navigation/steering';
@@ -6,13 +6,27 @@ import type { Transform, Worker } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { approachPoint, damageEnemy, enemyReach } from '../enemies/combat';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
-import { assignTask, findTask, latchOn, setIdle } from './squad';
+import { assignTask, findTask, killWorker, latchOn, setIdle } from './squad';
+import { SPROUTS } from './sprouts';
+import type { NavGrid } from '../navigation/NavGrid';
 
 const LANDING_SCAN_RANGE = 2.5;
 const RUSH_SCAN_INTERVAL = 0.15;
 /** Rings at least this wide are the slow boss slams and stomps that workers flee on their own. */
 const BIG_RING = 3;
 const dir = { x: 0, z: 0 };
+
+/**
+ * The ground a worker moves on: Dewlings wade; anyone else standing in water may only use
+ * the wading grid to get out of it.
+ */
+export function navFor(sim: Simulation, worker: Worker, at: Transform): NavGrid {
+  return SPROUTS[worker.kind].wades || sim.inWater(at.x, at.z) ? sim.wadeNav : sim.nav;
+}
+
+function speedOf(worker: Worker): number {
+  return WORKER.speed * SPROUTS[worker.kind].speed;
+}
 
 function walkToward(
   sim: Simulation,
@@ -22,8 +36,10 @@ function walkToward(
   z: number,
   dt: number,
 ): void {
-  steerTo(sim.nav, worker.mover, transform, x, z, dt, dir);
-  moveAgent(sim.nav, transform, dir.x * WORKER.speed * dt, dir.z * WORKER.speed * dt);
+  const nav = navFor(sim, worker, transform);
+  const speed = speedOf(worker);
+  steerTo(nav, worker.mover, transform, x, z, dt, dir);
+  moveAgent(nav, transform, dir.x * speed * dt, dir.z * speed * dt);
   if (dir.x !== 0 || dir.z !== 0) transform.facing = Math.atan2(dir.x, dir.z);
 }
 
@@ -34,6 +50,11 @@ function follow(sim: Simulation, worker: Worker, transform: Transform, dt: numbe
   const dz = anchor.z - transform.z;
   const dist = Math.hypot(dx, dz);
   if (dist <= 1 + 0.3 * Math.sqrt(sim.squadSize)) return;
+  // Out of the water first: the squad's path field only covers dry ground.
+  if (sim.inWater(transform.x, transform.z)) {
+    walkToward(sim, worker, transform, anchor.x, anchor.z, dt);
+    return;
+  }
   if (nav.lineOfSight(transform.x, transform.z, anchor.x, anchor.z)) {
     dir.x = dx / dist;
     dir.z = dz / dist;
@@ -42,7 +63,7 @@ function follow(sim: Simulation, worker: Worker, transform: Transform, dt: numbe
     dir.x = sim.squadField.dirX[cell];
     dir.z = sim.squadField.dirZ[cell];
   }
-  moveAgent(nav, transform, dir.x * WORKER.speed * dt, dir.z * WORKER.speed * dt);
+  moveAgent(nav, transform, dir.x * speedOf(worker) * dt, dir.z * speedOf(worker) * dt);
   worker.mover.path.length = 0;
   if (dir.x !== 0 || dir.z !== 0) transform.facing = Math.atan2(dir.x, dir.z);
 }
@@ -55,7 +76,13 @@ function land(sim: Simulation, entity: Entity, worker: Worker, transform: Transf
   for (const [enemyEntity, enemy] of sim.enemies.entries()) {
     const at = sim.transforms.require(enemyEntity);
     if (enemy.hp > 0 && enemyReach(enemy, at, transform.x, transform.z) <= 1) {
-      damageEnemy(sim, enemyEntity, enemy, WORKER.impactDamage);
+      damageEnemy(
+        sim,
+        enemyEntity,
+        enemy,
+        WORKER.impactDamage * SPROUTS[worker.kind].impact,
+        worker.kind,
+      );
       latchOn(sim, entity, worker, enemyEntity, enemy);
       return;
     }
@@ -63,7 +90,14 @@ function land(sim: Simulation, entity: Entity, worker: Worker, transform: Transf
   sim.emit('land', transform.x, transform.z);
   worker.state = 'idle';
   worker.scan = WORKER.scanInterval;
-  const task = findTask(sim, transform.x, transform.z, LANDING_SCAN_RANGE);
+  // Thrown into water: a Dewling just gets on with it; anyone else flounders.
+  if (sim.inWater(transform.x, transform.z) && !SPROUTS[worker.kind].wades) {
+    worker.peril = 'water';
+    worker.perilTime = PERIL_SECONDS;
+    sim.emit('splash', transform.x, transform.z);
+    return;
+  }
+  const task = findTask(sim, transform.x, transform.z, LANDING_SCAN_RANGE, worker.kind);
   if (task !== NO_ENTITY) assignTask(sim, entity, worker, task);
 }
 
@@ -129,6 +163,37 @@ function escapeHazard(sim: Simulation, transform: Transform, dt: number): boolea
   return false;
 }
 
+/**
+ * A Sproutling on fire runs about wildly; one out of its depth splashes where it is. Either
+ * way, unless the whistle reaches it first, it is lost when the time runs out.
+ */
+function sufferPeril(
+  sim: Simulation,
+  entity: Entity,
+  worker: Worker,
+  transform: Transform,
+  dt: number,
+): void {
+  worker.perilTime -= dt;
+  if (worker.perilTime <= 0) {
+    sim.emit(worker.peril === 'fire' ? 'burned' : 'drowned', transform.x, transform.z);
+    killWorker(sim, entity, worker);
+    return;
+  }
+  if (worker.peril === 'fire') {
+    // Panic: a new direction every so often, from the simulation's own random numbers.
+    worker.scan -= dt;
+    if (worker.scan <= 0) {
+      worker.scan = 0.4;
+      worker.slot = sim.rng.range(0, Math.PI * 2);
+    }
+    const nav = navFor(sim, worker, transform);
+    const step = speedOf(worker) * 0.8 * dt;
+    moveAgent(nav, transform, Math.sin(worker.slot) * step, Math.cos(worker.slot) * step);
+    transform.facing = worker.slot;
+  }
+}
+
 /** Runs every worker's state machine for one step. */
 export function updateWorkers(sim: Simulation, dt: number): void {
   let squadSize = 0;
@@ -139,6 +204,10 @@ export function updateWorkers(sim: Simulation, dt: number): void {
     const transform = sim.transforms.require(entity);
     if (worker.state === 'thrown') {
       fly(sim, entity, worker, transform, dt);
+      continue;
+    }
+    if (worker.peril) {
+      sufferPeril(sim, entity, worker, transform, dt);
       continue;
     }
     if (worker.stun > 0) {
@@ -152,19 +221,20 @@ export function updateWorkers(sim: Simulation, dt: number): void {
         worker.scan -= dt;
         if (worker.scan > 0) break;
         worker.scan = WORKER.scanInterval;
-        const task = findTask(sim, transform.x, transform.z, WORKER.scanRange);
+        const task = findTask(sim, transform.x, transform.z, WORKER.scanRange, worker.kind);
         if (task !== NO_ENTITY) assignTask(sim, entity, worker, task);
         break;
       }
       case 'follow':
-        if (!escapeHazard(sim, transform, dt)) follow(sim, worker, transform, dt);
+        // The squad trusts the Warden: it follows into danger rather than dodging by itself.
+        follow(sim, worker, transform, dt);
         break;
       case 'rush': {
         worker.rushTime -= dt;
         worker.scan -= dt;
         if (worker.scan <= 0) {
           worker.scan = RUSH_SCAN_INTERVAL;
-          const task = findTask(sim, transform.x, transform.z, WORKER.rushScanRange);
+          const task = findTask(sim, transform.x, transform.z, WORKER.rushScanRange, worker.kind);
           if (task !== NO_ENTITY) {
             assignTask(sim, entity, worker, task);
             break;
@@ -203,7 +273,13 @@ export function updateWorkers(sim: Simulation, dt: number): void {
         break;
       }
       case 'attacking':
-        damageEnemy(sim, worker.target, sim.enemies.require(worker.target), WORKER.attackDps * dt);
+        damageEnemy(
+          sim,
+          worker.target,
+          sim.enemies.require(worker.target),
+          WORKER.attackDps * SPROUTS[worker.kind].attack * dt,
+          worker.kind,
+        );
         break;
       case 'carrying':
         // Position is driven by the carry system.

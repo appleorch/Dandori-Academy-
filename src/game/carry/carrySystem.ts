@@ -1,24 +1,45 @@
 import { CARRY, CHAIN, DEWGLASS_BONUS_PER_WEIGHT, SAP, TWIN } from '../core/config';
 import type { Entity } from '../core/ecs';
-import type { Point } from '../navigation/NavGrid';
+import type { NavGrid, Point } from '../navigation/NavGrid';
 import { moveAgent } from '../navigation/steering';
 import type { FlowField } from '../pathfinding/flowField';
 import type { Carryable, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { setIdle } from '../workers/squad';
+import { mostCommon, SPROUTS, type Squad, type SproutKind } from '../workers/sprouts';
+
+/** How many carriers a crew counts as: a Stoneling lifts like two. */
+export function crewStrength(sim: Simulation, crew: readonly Entity[]): number {
+  let strength = 0;
+  for (const entity of crew) {
+    const worker = sim.workers.get(entity);
+    if (worker) strength += SPROUTS[worker.kind].strength;
+  }
+  return strength;
+}
+
+/** True when a haul has a crew and every one of them can wade. */
+export function crewWades(sim: Simulation, carryable: Carryable): boolean {
+  return (
+    carryable.carriers.length > 0 &&
+    carryable.carriers.every((entity) => SPROUTS[sim.workers.require(entity).kind].wades)
+  );
+}
 
 /** Travel speed of a haul: nothing below its weight, faster with every extra carrier and with Sap. */
 export function carrySpeed(sim: Simulation, carryable: Carryable): number {
-  const count = carryable.carriers.length;
+  const count = crewStrength(sim, carryable.carriers);
   if (count < carryable.weight) return 0;
   const spare = carryable.maxCarriers - carryable.weight;
-  const extra = spare > 0 ? (count - carryable.weight) / spare : 0;
+  const extra = spare > 0 ? Math.min(1, (count - carryable.weight) / spare) : 0;
   const sap = sim.sapTimer > 0 ? SAP.speedUp : 1;
   return (carryable.baseSpeed + carryable.bonusSpeed * extra) * sap;
 }
 
 interface Destination extends Point {
   field: FlowField;
+  /** The ground the haul moves on: the dry nav grid, or the wading one for a crew of Dewlings. */
+  nav: NavGrid;
   /** The bridge site a Span-log is headed for, or -1 for the Kiln. */
   site: number;
 }
@@ -27,7 +48,12 @@ interface Destination extends Point {
  * Where a haul goes. Span-logs go to the bank of the nearest unbuilt bridge (by path,
  * chosen once); everything else goes to the Kiln or a lit beacon, whichever is the shorter walk.
  */
-export function destinationOf(sim: Simulation, carryable: Carryable, at: Point): Destination {
+export function destinationOf(
+  sim: Simulation,
+  carryable: Carryable,
+  at: Point,
+  wading = false,
+): Destination {
   if (carryable.kind === 'log') {
     const current = sim.bridges[carryable.dest];
     if (!current || current.built) {
@@ -45,27 +71,42 @@ export function destinationOf(sim: Simulation, carryable: Carryable, at: Point):
       carryable.dest = best;
     }
     const site = sim.bridges[carryable.dest];
-    if (site) return { ...site.bank, field: site.field, site: carryable.dest };
+    if (site) return { ...site.bank, field: site.field, nav: sim.nav, site: carryable.dest };
   }
   // The Kiln, unless a lit beacon is a shorter walk.
   const cell = sim.nav.cellIndexAt(at.x, at.z);
-  let best: Destination = { ...sim.level.kiln, field: sim.kilnField, site: -1 };
+  let best: Destination = { ...sim.level.kiln, field: sim.kilnField, nav: sim.nav, site: -1 };
   let bestDist = sim.kilnField.dist[cell];
   for (const beacon of sim.beacons) {
     if (!beacon.lit) continue;
     const dist = beacon.field.dist[cell];
     if (dist < bestDist) {
-      best = { x: beacon.x, z: beacon.z, field: beacon.field, site: -1 };
+      best = { x: beacon.x, z: beacon.z, field: beacon.field, nav: sim.nav, site: -1 };
       bestDist = dist;
+    }
+  }
+  // A crew of Dewlings may cut straight through the water to the Kiln, if that is shorter.
+  if (wading) {
+    const wade = sim.wadeKilnField.dist[sim.wadeNav.cellIndexAt(at.x, at.z)];
+    if (wade < bestDist) {
+      return { ...sim.level.kiln, field: sim.wadeKilnField, nav: sim.wadeNav, site: -1 };
     }
   }
   return best;
 }
 
-/** Whether a haul has a way to its destination from where it lies. */
-export function hasRoute(sim: Simulation, carryable: Carryable, at: Point): boolean {
-  const { field } = destinationOf(sim, carryable, at);
-  return Number.isFinite(field.dist[sim.nav.cellIndexAt(at.x, at.z)]);
+/**
+ * Whether a haul has a way to its destination from where it lies: on dry ground, or, for a
+ * crew of Dewlings, through the water.
+ */
+export function hasRoute(
+  sim: Simulation,
+  carryable: Carryable,
+  at: Point,
+  wading = false,
+): boolean {
+  const { field, nav } = destinationOf(sim, carryable, at, wading);
+  return Number.isFinite(field.dist[nav.cellIndexAt(at.x, at.z)]);
 }
 
 /** Pays the twin bonus when a treasure's twin arrived recently; otherwise waits for it. */
@@ -91,6 +132,13 @@ function extendChain(sim: Simulation, at: Point): void {
 }
 
 function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Destination): void {
+  // A seed grows its own kind; anything else grows the kind most of its crew were.
+  const crew: Squad = {};
+  for (const carrier of carryable.carriers) {
+    const kind = sim.workers.require(carrier).kind;
+    crew[kind] = (crew[kind] ?? 0) + 1;
+  }
+  const grows: SproutKind = carryable.seed ?? mostCommon(crew);
   for (const worker of [...carryable.claimed]) {
     setIdle(sim, worker, sim.workers.require(worker));
   }
@@ -121,7 +169,7 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
     sim.emit('sap', to.x, to.z, SAP.seconds);
   }
   if (carryable.workerYield > 0) {
-    sim.kiln.queue += carryable.workerYield;
+    for (let i = 0; i < carryable.workerYield; i++) sim.kiln.queue.push(grows);
     sim.hatchAt.x = to.x;
     sim.hatchAt.z = to.z;
     sim.emit('grow', to.x, to.z, carryable.workerYield);
@@ -143,7 +191,7 @@ function arrangeCarriers(sim: Simulation, carryable: Carryable, at: Transform): 
 
 /** Dewglass cracks, once, when the crew carrying it breaks up mid-haul. */
 function checkCrack(sim: Simulation, carryable: Carryable, at: Transform): void {
-  const moving = carryable.carriers.length >= carryable.weight;
+  const moving = crewStrength(sim, carryable.carriers) >= carryable.weight;
   if (carryable.moving && !moving && carryable.variant === 'dewglass' && !carryable.cracked) {
     carryable.cracked = true;
     carryable.value -= carryable.weight * DEWGLASS_BONUS_PER_WEIGHT;
@@ -160,7 +208,7 @@ export function updateCarrying(sim: Simulation, dt: number): void {
     checkCrack(sim, carryable, at);
     const speed = carrySpeed(sim, carryable);
     if (speed > 0) {
-      const to = destinationOf(sim, carryable, at);
+      const to = destinationOf(sim, carryable, at, crewWades(sim, carryable));
       const toX = to.x - at.x;
       const toZ = to.z - at.z;
       const dist = Math.hypot(toX, toZ);
@@ -170,12 +218,12 @@ export function updateCarrying(sim: Simulation, dt: number): void {
       }
       let dirX = toX / dist;
       let dirZ = toZ / dist;
-      if (!sim.nav.lineOfSight(at.x, at.z, to.x, to.z)) {
-        const cell = sim.nav.cellIndexAt(at.x, at.z);
+      if (!to.nav.lineOfSight(at.x, at.z, to.x, to.z)) {
+        const cell = to.nav.cellIndexAt(at.x, at.z);
         dirX = to.field.dirX[cell];
         dirZ = to.field.dirZ[cell];
       }
-      moveAgent(sim.nav, at, dirX * speed * dt, dirZ * speed * dt);
+      moveAgent(to.nav, at, dirX * speed * dt, dirZ * speed * dt);
       at.facing = Math.atan2(dirX, dirZ);
     }
     arrangeCarriers(sim, carryable, at);
