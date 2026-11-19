@@ -50,6 +50,44 @@ export interface SaveData {
   bestSplits: Record<string, number[]>;
   /** The best runs per lesson and difficulty (key as for splits), best first, for the leaderboard. */
   runs: Record<string, RunEntry[]>;
+  /** New personal bests waiting to be posted to the Academy board. */
+  outbox: RunEntry[];
+  /** Runs already on their way to the board, by `runKey`, most recent last. */
+  posted: string[];
+}
+
+/** Most posted-run keys a save remembers. */
+const POSTED_KEPT = 500;
+
+/** A run's identity: its lesson, difficulty and the moment it ended. */
+export function runKey(run: RunEntry): string {
+  return `${run.level}:${run.difficulty}:${run.at}`;
+}
+
+/**
+ * Puts a finished day's run in the outbox if it is the player's new best on that lesson and
+ * difficulty. Only bests are posted: the board keeps one run per player anyway.
+ */
+export function queueForBoard(previous: SaveData, save: SaveData, run: RunEntry): SaveData {
+  const key = splitKey(run.level, run.difficulty);
+  const before = previous.runs[key]?.[0];
+  const best = save.runs[key]?.[0];
+  if (!best || runKey(best) !== runKey(run)) return save;
+  if (before && compareRuns(run, before) >= 0) return save;
+  const outbox = save.outbox.filter(
+    (queued) => !(queued.level === run.level && queued.difficulty === run.difficulty),
+  );
+  return { ...save, outbox: [...outbox, run] };
+}
+
+/** Takes a run out of the outbox once the relay has it. */
+export function markPosted(save: SaveData, run: RunEntry): SaveData {
+  const key = runKey(run);
+  return {
+    ...save,
+    outbox: save.outbox.filter((queued) => runKey(queued) !== key),
+    posted: [...save.posted.filter((done) => done !== key), key].slice(-POSTED_KEPT),
+  };
 }
 
 /** How many of a player's own runs are kept per lesson and difficulty. */
@@ -101,6 +139,8 @@ export function emptySave(): SaveData {
     discovered: [],
     bestSplits: {},
     runs: {},
+    outbox: [],
+    posted: [],
   };
 }
 
@@ -224,6 +264,12 @@ export function parseSave(value: unknown): SaveData | null {
       : [],
     bestSplits: parseSplits(value.bestSplits),
     runs: parseRuns(value.runs),
+    outbox: Array.isArray(value.outbox)
+      ? Object.values(parseRuns({ outbox: value.outbox })).flat()
+      : [],
+    posted: Array.isArray(value.posted)
+      ? value.posted.filter((key): key is string => typeof key === 'string').slice(-POSTED_KEPT)
+      : [],
   };
 }
 
@@ -313,6 +359,8 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
     discovered: save.discovered,
     bestSplits: fasterSplits(save.bestSplits, splitKey(day.levelId, day.difficulty), day.splits),
     runs: keepRun(save.runs, splitKey(day.levelId, day.difficulty), day.run),
+    outbox: save.outbox,
+    posted: save.posted,
     totals: {
       days: save.totals.days + 1,
       treasures: save.totals.treasures + day.treasureIds.length,

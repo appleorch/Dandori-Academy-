@@ -5,12 +5,25 @@ import { LEVELS } from '../world/level';
 import { spawnWorker } from '../world/spawn';
 import { Simulation } from './Simulation';
 
+/** Counts below that belong to the whole day once the Warden comes back up. */
+const CARRIED_STATS = [
+  'workersLost',
+  'enemiesDefeated',
+  'grown',
+  'rescued',
+  'perilLosses',
+] as const;
+type CarriedStat = (typeof CARRIED_STATS)[number];
+
 /** What the Warden brought back from below over a day: for the results and the Field Guide. */
 export interface Haul {
   /** Relics brought home below, as `caveId:treasureId`, for the Field Guide. */
   relics: string[];
   /** Score their relics were worth: shown, not counted towards the day's rank. */
   value: number;
+  /** Caves gone down into and come back up from, and those emptied of every relic. */
+  caves: string[];
+  emptied: string[];
 }
 
 /**
@@ -29,9 +42,9 @@ export class Expedition {
   private readonly caves = new Map<string, Simulation>();
   /** Per cave: relics already counted, so coming up twice never counts one twice. */
   private readonly counted = new Map<string, number>();
-  private readonly lossesCounted = new Map<string, number>();
-  private readonly enemiesCounted = new Map<string, number>();
-  readonly haul: Haul = { relics: [], value: 0 };
+  /** Per cave: the running counts already carried up to the surface's day. */
+  private readonly carried = new Map<string, Record<CarriedStat, number>>();
+  readonly haul: Haul = { relics: [], value: 0, caves: [], emptied: [] };
 
   constructor(surface: Simulation) {
     this.surface = surface;
@@ -76,8 +89,13 @@ export class Expedition {
       cave = new Simulation({ ...spec, startingWorkers: 0, squad: {} }, { visit: true });
       this.caves.set(spec.id, cave);
       this.counted.set(spec.id, 0);
-      this.lossesCounted.set(spec.id, 0);
-      this.enemiesCounted.set(spec.id, 0);
+      this.carried.set(spec.id, {
+        workersLost: 0,
+        enemiesDefeated: 0,
+        grown: 0,
+        rescued: 0,
+        perilLosses: 0,
+      });
     } else {
       cave.physics.placeCaptain(spec.captain);
       cave.captainTransform.x = spec.captain.x;
@@ -113,12 +131,17 @@ export class Expedition {
     for (const relic of found.slice(already)) this.haul.relics.push(`${id}:${relic}`);
     this.counted.set(id, found.length);
     this.haul.value = [...this.caves.values()].reduce((sum, c) => sum + c.stats.treasureValue, 0);
-    // Losses and wins below are the day's too.
-    this.surface.stats.workersLost += cave.stats.workersLost - (this.lossesCounted.get(id) ?? 0);
-    this.lossesCounted.set(id, cave.stats.workersLost);
-    this.surface.stats.enemiesDefeated +=
-      cave.stats.enemiesDefeated - (this.enemiesCounted.get(id) ?? 0);
-    this.enemiesCounted.set(id, cave.stats.enemiesDefeated);
+    // Losses, wins, growth and rescues below are the day's too.
+    const carried = this.carried.get(id);
+    if (carried) {
+      for (const stat of CARRIED_STATS) {
+        this.surface.stats[stat] += cave.stats[stat] - carried[stat];
+        carried[stat] = cave.stats[stat];
+      }
+    }
+    if (!this.haul.caves.includes(id)) this.haul.caves.push(id);
+    const empty = cave.stats.treasuresCollected.length === cave.stats.treasuresTotal;
+    if (empty && !this.haul.emptied.includes(id)) this.haul.emptied.push(id);
     for (const boss of cave.stats.bossesDefeated) {
       if (!this.surface.stats.bossesDefeated.includes(boss))
         this.surface.stats.bossesDefeated.push(boss);

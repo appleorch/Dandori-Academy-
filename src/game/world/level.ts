@@ -1,9 +1,11 @@
 import {
   BLOOM_VALUE_PER_WEIGHT,
   DEWGLASS_BONUS_PER_WEIGHT,
+  POD,
   SHARD_VALUE_PER_WEIGHT,
   TWIN,
 } from '../core/config';
+import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import { HARD, type Difficulty } from '../core/difficulty';
 import { POINTS_PER_SECOND, POINTS_PER_WORKER } from '../dandori/scoring';
 import type { LevelDefinition, LevelSpec, LevelTheme } from './levelTypes';
@@ -35,25 +37,77 @@ export function treasureTotal(
   return weights * SHARD_VALUE_PER_WEIGHT;
 }
 
+/** The optional treasure of a lesson: how many of each kind of bonus, and what each is worth. */
+export interface BonusParts {
+  /** Glowcaps: they sprout partway through the day and wilt if left. */
+  glowcaps: number;
+  glowcapPoints: number;
+  /** Twin pairs: both halves home within the twin window. */
+  twins: number;
+  twinPoints: number;
+  /** Dewglass shards brought home without cracking. */
+  dewglass: number;
+  dewglassPoints: number;
+}
+
 /**
- * Most bonus score a lesson offers on top of its Sunshards' value: every Glowcap, every
- * Dewglass brought home whole, and every twin pair delivered on time.
+ * The bonus score a lesson offers on top of its Sunshards' value, by kind: every Glowcap,
+ * every Dewglass brought home whole, and every twin pair delivered on time.
  */
-export function bonusTotal(level: Pick<LevelDefinition, 'treasures' | 'blooms'>): number {
-  const blooms = (level.blooms ?? []).reduce((sum, bloom) => sum + bloom.weight, 0);
+export function bonusParts(level: Pick<LevelDefinition, 'treasures' | 'blooms'>): BonusParts {
+  const blooms = level.blooms ?? [];
   const valueOf = (shard: LevelDefinition['treasures'][number]) =>
     shard.weight *
     (SHARD_VALUE_PER_WEIGHT + (shard.variant === 'dewglass' ? DEWGLASS_BONUS_PER_WEIGHT : 0));
-  let bonus = blooms * BLOOM_VALUE_PER_WEIGHT;
+  const parts: BonusParts = {
+    glowcaps: blooms.length,
+    glowcapPoints: blooms.reduce((sum, bloom) => sum + bloom.weight, 0) * BLOOM_VALUE_PER_WEIGHT,
+    twins: 0,
+    twinPoints: 0,
+    dewglass: 0,
+    dewglassPoints: 0,
+  };
   const pairs = new Map<string, number[]>();
   for (const shard of level.treasures) {
-    if (shard.variant === 'dewglass') bonus += shard.weight * DEWGLASS_BONUS_PER_WEIGHT;
+    if (shard.variant === 'dewglass') {
+      parts.dewglass++;
+      parts.dewglassPoints += shard.weight * DEWGLASS_BONUS_PER_WEIGHT;
+    }
     if (shard.twin) pairs.set(shard.twin, [...(pairs.get(shard.twin) ?? []), valueOf(shard)]);
   }
   for (const values of pairs.values()) {
-    if (values.length === 2) bonus += Math.round((values[0] + values[1]) * TWIN.bonus);
+    if (values.length !== 2) continue;
+    parts.twins++;
+    parts.twinPoints += Math.round((values[0] + values[1]) * TWIN.bonus);
   }
-  return bonus;
+  return parts;
+}
+
+/** Number of optional treasures in a lesson: Glowcaps, twin pairs and Dewglass. */
+export function bonusCount(parts: BonusParts): number {
+  return parts.glowcaps + parts.twins + parts.dewglass;
+}
+
+/** Most bonus score a lesson offers on top of its Sunshards' value. */
+export function bonusTotal(level: Pick<LevelDefinition, 'treasures' | 'blooms'>): number {
+  const parts = bonusParts(level);
+  return parts.glowcapPoints + parts.twinPoints + parts.dewglassPoints;
+}
+
+/**
+ * Most Sproutlings a lesson can end with: the starting squad, two from every seed pod (and
+ * every mound hiding one), and every carcass of the beasts placed in it. Sproutlings grown
+ * from beasts a boss calls in mid-fight come on top.
+ */
+export function sproutlingsPossible(level: LevelDefinition): number {
+  let total = level.startingWorkers + level.pods.length * POD.workerYield;
+  for (const enemy of level.enemies) {
+    if (enemy.kind === 'mound') total += enemy.reveals === 'pod' ? POD.workerYield : 0;
+    else total += ENEMY_SPECS[enemy.kind].carcassYield;
+  }
+  for (let i = 0; i < (level.roots ?? []).length; i++)
+    total += ENEMY_SPECS.lanternroot.carcassYield;
+  return total;
 }
 
 /** Number of Sunshards in a lesson, counting those that bosses drop. */

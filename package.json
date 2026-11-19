@@ -13,7 +13,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "build:docs": "tsc --noEmit && vite build --outDir docs --emptyOutDir",
-    "balance": "VITE_BALANCE=1 vitest run src/game/world/balance.report.test.ts -u"
+    "balance": "VITE_BALANCE=1 vitest run src/game/world/balance.report.test.ts -u",
+    "board:collect": "vite build --ssr scripts/collect-board.ts --outDir .board-build --emptyOutDir --logLevel warn && node .board-build/collect-board.js"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

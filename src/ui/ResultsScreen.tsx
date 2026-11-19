@@ -8,8 +8,10 @@ import { HARD_UNLOCK_RANK, hardUnlocked, UNLOCK_RANK } from '../game/save/saveMa
 import type { DayEnd } from '../game/simulation/Simulation';
 import { LEVELS, MAIN_LEVELS, type LevelDefinition } from '../game/world/level';
 import { RankTargets } from './RankTargets';
-import { PostRunLink } from './LeaderboardScreen';
+import { runStatus } from './LeaderboardScreen';
 import { rankValue, type Rank } from '../game/dandori/scoring';
+import type { Advice, DayTally } from '../game/dandori/tally';
+import type { RunEntry } from '../game/leaderboard/runCode';
 import { SprocketPortrait } from './Portrait';
 import { evaluation } from '../game/story/headmaster';
 
@@ -40,12 +42,15 @@ function useCountUp(target: number, delay: number, seconds = 0.7): number {
 /** One row of the tally: it counts up in its turn. */
 function TallyRow({
   label,
+  note,
   value,
   delay,
   negative = false,
   total = false,
 }: {
   label: string;
+  /** A second line under the label: what the row was made of. */
+  note?: string;
   value: number;
   delay: number;
   negative?: boolean;
@@ -54,9 +59,67 @@ function TallyRow({
   const shown = useCountUp(value, delay);
   return (
     <tr className={total ? 'tally total' : 'tally'} style={{ animationDelay: `${delay}s` }}>
-      <th>{label}</th>
+      <th>
+        {label}
+        {note && <small className="tally-note">{note}</small>}
+      </th>
       <td>{negative && value > 0 ? `−${shown}` : shown}</td>
     </tr>
+  );
+}
+
+/** The optional treasure a lesson has, as "Glowcaps 1/2 · Twin pairs 0/1", or null if none. */
+function optionalNote(tally: DayTally): string | null {
+  const { glowcaps, twins, dewglass } = tally.optional;
+  const parts = [
+    glowcaps.of > 0 ? `Glowcaps ${glowcaps.got}/${glowcaps.of}` : null,
+    twins.of > 0 ? `Twin pairs ${twins.got}/${twins.of}` : null,
+    dewglass.of > 0 ? `Dewglass whole ${dewglass.got}/${dewglass.of}` : null,
+  ].filter((part) => part !== null);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
+/** Whether the day went to the Academy board. */
+function BoardLine({ run }: { run: RunEntry }) {
+  const save = useGameStore((state) => state.save);
+  const postRuns = useGameStore((state) => state.settings.postRuns);
+  const status = runStatus(save, run, postRuns);
+  const text =
+    status === 'Posted'
+      ? 'New personal best: posted to the Academy board.'
+      : status === 'Posting…'
+        ? 'New personal best: posting to the Academy board.'
+        : status === 'Waiting (posting is off)'
+          ? 'New personal best, kept to post: posting is off on the Leaderboard tab.'
+          : 'Not a new personal best on this lesson, so the board keeps your earlier run.';
+  return <p className="day-stats board-line">{text}</p>;
+}
+
+/** What the next rank would take, and every place the day left points behind. */
+function NextRank({ advice }: { advice: Advice }) {
+  return (
+    <section className="next-rank" aria-label="How to do better">
+      <h2>
+        {advice.target ? (
+          <>
+            Next: <span className={`rank-${advice.target.toLowerCase()}`}>{advice.target}</span>
+          </>
+        ) : (
+          'Top rank'
+        )}
+      </h2>
+      <p>{advice.summary}</p>
+      {advice.levers.length > 0 && (
+        <ul>
+          {advice.levers.map((lever) => (
+            <li key={lever.kind} className={`lever ${lever.kind}`}>
+              <span>{lever.text}</span>
+              {lever.kind !== 'time' && <strong>+{lever.points}</strong>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -87,7 +150,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
     if (!rank) return;
     const fanfare = window.setTimeout(() => audio.play(failed ? 'fail' : STINGERS[rank]), 1050);
     const thump = window.setTimeout(() => audio.play('logPlaced'), 1500);
-    const ticks = [0.1, 0.35, 0.6, 0.85, 1.1].map((at) =>
+    const ticks = [0.1, 0.3, 0.5, 0.7, 0.9, 1.1].map((at) =>
       window.setTimeout(() => audio.play('tick', { gain: 0.5 }), at * 1000),
     );
     return () => [fanfare, thump, ...ticks].forEach((timer) => window.clearTimeout(timer));
@@ -97,7 +160,11 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
     document.querySelector<HTMLElement>('.results [data-primary]')?.focus({ preventScroll: true });
   }, [result]);
   if (!result) return null;
-  const { score } = result;
+  const { score, tally } = result;
+  const bonusNote = optionalNote(tally);
+  const { glowcaps, twins, dewglass } = tally.optional;
+  const bonusGot = glowcaps.got + twins.got + dewglass.got;
+  const bonusOf = glowcaps.of + twins.of + dewglass.of;
   const hard = level.difficulty === 'hard';
   const next = level.side
     ? undefined
@@ -129,16 +196,43 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
           <table>
             <tbody>
               <TallyRow
-                label={`Sunshards (${result.treasuresCollected}/${result.treasuresTotal})`}
-                value={score.treasure}
+                label={`Sunshards ${tally.required.got} of ${tally.required.of}`}
+                note="Required: every one must come home to clear the lesson"
+                value={tally.required.points}
                 delay={0.1}
               />
-              <TallyRow label="Time bonus" value={score.timeBonus} delay={0.35} />
-              <TallyRow label="Sproutlings alive" value={score.workerBonus} delay={0.6} />
-              <TallyRow label="Sproutlings lost" value={score.lossPenalty} delay={0.85} negative />
+              <TallyRow
+                label={
+                  bonusNote
+                    ? `Bonus treasure ${bonusGot} of ${bonusOf}`
+                    : 'Bonus treasure: none in this lesson'
+                }
+                note={bonusNote ? `Optional: ${bonusNote}` : undefined}
+                value={tally.optional.points}
+                delay={0.3}
+              />
+              <TallyRow
+                label={tally.cleared ? `Time bonus (${tally.timeLeft}s left)` : 'Time bonus'}
+                note={tally.cleared ? undefined : 'Only counts once every Sunshard is home'}
+                value={score.timeBonus}
+                delay={0.5}
+              />
+              <TallyRow
+                label={`Sproutlings: ended with ${tally.sproutlings.alive}`}
+                note={`Started with ${tally.sproutlings.start}, grew ${tally.sproutlings.grown}; this lesson can end with up to ${tally.sproutlings.possible}`}
+                value={score.workerBonus}
+                delay={0.7}
+              />
+              <TallyRow
+                label={`Sproutlings lost: ${tally.sproutlings.lost}`}
+                value={score.lossPenalty}
+                delay={0.9}
+                negative
+              />
               <TallyRow label="Total" value={score.total} delay={1.1} total />
             </tbody>
           </table>
+          <NextRank advice={result.advice} />
           <p className="day-stats">
             Day finished in {formatTime(result.elapsed)} · {result.workersAlive} Sproutlings home ·{' '}
             {result.enemiesDefeated} {result.enemiesDefeated === 1 ? 'enemy' : 'enemies'} defeated
@@ -166,6 +260,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
             </p>
           )}
           {result.isBestScore && <p className="best">New best score</p>}
+          {result.run && <BoardLine run={result.run} />}
           {result.unlockedNext && next && <p className="best">Unlocked: {next.name}</p>}
           <div className="results-actions">
             {next && !nextUnlocked && (
@@ -201,7 +296,6 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
             <button type="button" className="secondary" onClick={() => showScreen('menu')}>
               All lessons
             </button>
-            {result.run && <PostRunLink run={result.run} />}
           </div>
         </section>
         <section className="results-side">

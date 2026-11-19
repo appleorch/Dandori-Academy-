@@ -116,6 +116,8 @@ function settleTwin(sim: Simulation, carryable: Carryable, kiln: Point): void {
   if (partner && sim.elapsed - partner.time <= TWIN.window) {
     const bonus = Math.round((partner.value + carryable.value) * TWIN.bonus);
     sim.stats.treasureValue += bonus;
+    sim.stats.bonus.twins++;
+    sim.stats.bonus.twinPoints += bonus;
     sim.emit('twin', kiln.x, kiln.z, bonus);
     sim.twinArrivals.delete(carryable.twin);
   } else {
@@ -171,6 +173,10 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
     sim.stats.treasureValue += carryable.value;
     sim.stats.treasuresCollected.push(carryable.id);
     sim.stats.deliveryTimes.push(sim.elapsed);
+    if (carryable.variant === 'dewglass' && !carryable.cracked) {
+      sim.stats.bonus.dewglass++;
+      sim.stats.bonus.dewglassPoints += carryable.weight * DEWGLASS_BONUS_PER_WEIGHT;
+    }
     extendChain(sim, to);
     sim.emit('deliver', to.x, to.z, carryable.value);
     settleTwin(sim, carryable, to);
@@ -178,6 +184,8 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
     // Bonus score: it counts towards the total but not towards clearing the lesson.
     sim.stats.treasureValue += carryable.value;
     sim.stats.bloomsCollected++;
+    sim.stats.bonus.glowcaps++;
+    sim.stats.bonus.glowcapPoints += carryable.value;
     extendChain(sim, to);
     sim.emit('deliver', to.x, to.z, carryable.value);
   } else if (carryable.kind === 'sap') {
@@ -192,6 +200,7 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
     }
     sim.hatchAt.x = to.x;
     sim.hatchAt.z = to.z;
+    sim.stats.grown += carryable.workerYield;
     sim.emit('grow', to.x, to.z, carryable.workerYield);
   }
   sim.ecs.destroy(entity);

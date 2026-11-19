@@ -6,15 +6,32 @@ import { Simulation } from '../simulation/Simulation';
 import { forDifficulty, LEVELS, shardCount, treasureTotal } from '../world/level';
 import { playGreedy } from '../world/testBot';
 import {
+  BOARD_FILE_URL,
+  BOARD_TOPIC,
+  checkPosts,
   entryOf,
   fetchBoard,
+  keepBest,
+  KEPT_PER_LESSON,
+  nextBoardFile,
+  parseRelay,
+  relayMessage,
+  RELAY,
+  sendPost,
   standings,
-  submitUrl,
-  TITLE_PREFIX,
   type Fetcher,
-  type GitHubIssue,
 } from './board';
-import { checkRun, decodeRun, encodeRun, fingerprint, makeRun, type RunEntry } from './runCode';
+import {
+  checkRun,
+  decodePost,
+  decodeRun,
+  encodePost,
+  encodeRun,
+  fingerprint,
+  makeRun,
+  type BoardPost,
+  type RunEntry,
+} from './runCode';
 
 const LESSON = LEVELS[0];
 
@@ -54,16 +71,33 @@ function sampleRun(overrides: Partial<{ elapsed: number; lost: number; alive: nu
   return run;
 }
 
-async function issue(run: RunEntry, login: string, extra: Partial<GitHubIssue> = {}) {
-  const url = new URL(submitUrl(run, await encodeRun(run)));
-  return {
-    title: url.searchParams.get('title') ?? '',
-    body: url.searchParams.get('body'),
-    html_url: `https://github.com/x/y/issues/${login}`,
-    user: { login },
-    labels: [],
-    ...extra,
-  } satisfies GitHubIssue;
+const ADA = 'a1a1a1a1a1a1a1a1';
+const BO = 'b2b2b2b2b2b2b2b2';
+const CY = 'c3c3c3c3c3c3c3c3';
+
+function post(run: RunEntry, player = ADA, name = 'Ada'): BoardPost {
+  return { v: 1, player, name, run };
+}
+
+/** A relay's poll answer holding these posts, one JSON event per line, with a stray message. */
+async function relayAnswer(posts: BoardPost[]): Promise<string> {
+  const lines = [JSON.stringify({ id: 'x', event: 'open', topic: BOARD_TOPIC })];
+  for (const item of posts) {
+    lines.push(
+      JSON.stringify({
+        id: Math.random().toString(36).slice(2),
+        event: 'message',
+        topic: BOARD_TOPIC,
+        message: relayMessage(await encodePost(item)),
+      }),
+    );
+  }
+  lines.push(JSON.stringify({ id: 'y', event: 'message', topic: BOARD_TOPIC, message: 'hello' }));
+  return `${lines.join('\n')}\n`;
+}
+
+function respond(status: number, body = ''): ReturnType<Fetcher> {
+  return Promise.resolve({ ok: status >= 200 && status < 300, status, text: async () => body });
 }
 
 beforeAll(async () => {
@@ -166,63 +200,116 @@ describe('checkRun', () => {
   });
 });
 
-describe('the board', () => {
-  it('pre-fills an issue a person can submit as it is', async () => {
-    const run = sampleRun();
-    const url = new URL(submitUrl(run, await encodeRun(run)));
-    expect(url.origin + url.pathname).toBe(
-      'https://github.com/appleorch/Dandori-Academy-/issues/new',
+describe('board posts', () => {
+  it('round-trip a post exactly, and refuse an edited one', async () => {
+    const item = post(sampleRun());
+    const code = await encodePost(item);
+    expect(await decodePost(code)).toEqual(item);
+    const [body, signature] = code.split('.');
+    expect(await decodePost(`${body}x.${signature}`)).toBeNull();
+    // A plain run code is not a post.
+    expect(await decodePost(await encodeRun(item.run))).toBeNull();
+  });
+
+  it('only shows names the board allows, and runs that add up', async () => {
+    expect(await entryOf(await encodePost(post(sampleRun())))).toMatchObject({ name: 'Ada' });
+    expect(await entryOf(await encodePost(post(sampleRun(), ADA, '<script>')))).toBeNull();
+    expect(await entryOf(await encodePost(post(sampleRun(), ADA, '  ')))).toBeNull();
+    const bad = { ...sampleRun(), score: 99999 };
+    expect(await entryOf(await encodePost(post(bad)))).toBeNull();
+  });
+
+  it('reads runs from the relay and ignores everything else on the topic', async () => {
+    const codes = parseRelay(await relayAnswer([post(sampleRun()), post(sampleRun(), BO, 'Bo')]));
+    expect(codes).toHaveLength(2);
+    expect(parseRelay('not json\n{"event":"keepalive"}\n')).toEqual([]);
+  });
+
+  it('posts the signed run to the relay topic', async () => {
+    const sent: { url: string; body?: string }[] = [];
+    const fetcher: Fetcher = (url, init) => {
+      sent.push({ url, body: init?.body });
+      return respond(200, '{}');
+    };
+    expect(await sendPost(post(sampleRun()), fetcher)).toBe(true);
+    expect(sent[0].url).toBe(`${RELAY}/${BOARD_TOPIC}`);
+    expect(parseRelay(JSON.stringify({ event: 'message', message: sent[0].body }))).toHaveLength(1);
+    expect(await sendPost(post(sampleRun()), () => respond(429))).toBe(false);
+    expect(await sendPost(post(sampleRun()), () => Promise.reject(new Error('offline')))).toBe(
+      false,
     );
-    expect(url.searchParams.get('title')).toMatch(new RegExp(`^\\${TITLE_PREFIX} ${LESSON.name}`));
-    expect(url.toString().length).toBeLessThan(6000);
-    expect(await entryOf(await issue(run, 'ada'))).toMatchObject({
-      player: 'ada',
-      score: run.score,
-    });
   });
+});
 
-  it('ignores pull requests, struck entries, other issues and edited codes', async () => {
-    const run = sampleRun();
-    expect(await entryOf(await issue(run, 'a', { pull_request: {} }))).toBeNull();
-    expect(await entryOf(await issue(run, 'a', { labels: [{ name: 'Rejected' }] }))).toBeNull();
-    expect(await entryOf(await issue(run, 'a', { title: 'Bug: the Kiln' }))).toBeNull();
-    const posted = await issue(run, 'a');
-    expect(
-      await entryOf({ ...posted, body: posted.body?.replace(/\.[0-9a-f]{8}/, '.00000000') }),
-    ).toBeNull();
-  });
-
-  it('ranks each Warden by their best run, best first', async () => {
+describe('the board', () => {
+  it('ranks each Warden by their best run, and tells Wardens with one name apart', async () => {
     const fastest = sampleRun({ elapsed: LESSON.platinumTime - 6 });
     const fast = sampleRun({ elapsed: LESSON.platinumTime - 5 });
     const slow = sampleRun({ elapsed: LESSON.platinumTime + 4 });
-    const issues = [
-      await issue(slow, 'bo'),
-      await issue(fast, 'bo'),
-      await issue(slow, 'cy'),
-      await issue(fastest, 'ada'),
-    ];
-    const entries = (await Promise.all(issues.map(entryOf))).filter((entry) => entry !== null);
+    const entries = await checkPosts(
+      await Promise.all(
+        [post(slow, BO, 'Bo'), post(fast, BO, 'Bo'), post(slow, CY, 'Ada'), post(fastest)].map(
+          encodePost,
+        ),
+      ),
+    );
     const board = standings(entries, LESSON.id, 'normal');
-    expect(board.map((entry) => entry.player)).toEqual(['ada', 'bo', 'cy']);
+    expect(board.map((entry) => entry.player)).toEqual([ADA, BO, CY]);
     expect(board[1].score).toBe(fast.score);
-    expect(board[2].score).toBe(slow.score);
     expect(standings(entries, LESSON.id, 'hard')).toEqual([]);
   });
 
-  it('reads every page from GitHub and explains a rate limit', async () => {
+  it('keeps at most one run per Warden and a hundred per lesson', async () => {
     const run = sampleRun();
-    const full = await Promise.all(Array.from({ length: 100 }, (_, i) => issue(run, `p${i}`)));
-    const rest = [await issue(run, 'last')];
-    const pages: string[] = [];
-    const fetcher: Fetcher = async (url) => {
-      pages.push(url);
-      return { ok: true, status: 200, json: async () => (url.endsWith('page=1') ? full : rest) };
-    };
-    const entries = await fetchBoard(fetcher);
-    expect(entries).toHaveLength(101);
-    expect(pages).toHaveLength(2);
-    const limited: Fetcher = async () => ({ ok: false, status: 403, json: async () => ({}) });
-    await expect(fetchBoard(limited)).rejects.toThrow(/limiting/);
+    const codes = await Promise.all(
+      Array.from({ length: KEPT_PER_LESSON + 5 }, (_, i) =>
+        encodePost(post(run, i.toString(16).padStart(16, '0'), `W${i}`)),
+      ),
+    );
+    const kept = keepBest(await checkPosts([...codes, ...codes]));
+    expect(kept).toHaveLength(KEPT_PER_LESSON);
+  });
+
+  it('reads the board file and the relay, and copes when either is away', async () => {
+    const file = JSON.stringify({
+      v: 1,
+      updated: '',
+      posts: [await encodePost(post(sampleRun()))],
+    });
+    const relay = await relayAnswer([post(sampleRun({ elapsed: 15 }), BO, 'Bo')]);
+    const both: Fetcher = (url) => respond(200, url === BOARD_FILE_URL ? file : relay);
+    const board = await fetchBoard(both);
+    expect(board.entries.map((entry) => entry.player).sort()).toEqual([ADA, BO]);
+    expect(board).toMatchObject({ file: true, relay: true });
+
+    // Before the first run is collected the file is not there: that is an empty board.
+    const noFile: Fetcher = (url) => (url === BOARD_FILE_URL ? respond(404) : respond(200, relay));
+    expect((await fetchBoard(noFile)).entries).toHaveLength(1);
+
+    const noRelay: Fetcher = (url) => (url === BOARD_FILE_URL ? respond(200, file) : respond(503));
+    expect(await fetchBoard(noRelay)).toMatchObject({ file: true, relay: false });
+
+    await expect(fetchBoard(() => respond(500))).rejects.toThrow(/could not be reached/);
+  });
+
+  it('collects the relay into the next board file, leaving out the banned and the fake', async () => {
+    const kept = [await encodePost(post(sampleRun({ elapsed: 19 })))];
+    const incoming = [
+      await encodePost(post(sampleRun({ elapsed: 16 }))),
+      await encodePost(post(sampleRun(), BO, 'Bo')),
+      await encodePost(post({ ...sampleRun(), score: 1 }, CY, 'Cy')),
+      'not a code',
+    ];
+    const now = new Date('2026-11-19T00:00:00Z');
+    const next = await nextBoardFile(kept, incoming, new Set([BO]), now);
+    expect(next.updated).toBe(now.toISOString());
+    expect(next.posts).toHaveLength(1);
+    const [only] = await checkPosts(next.posts);
+    expect(only.player).toBe(ADA);
+    expect(only.time).toBeCloseTo(16);
+    // Collecting again changes nothing.
+    expect((await nextBoardFile(next.posts, incoming, new Set([BO]), now)).posts).toEqual(
+      next.posts,
+    );
   });
 });

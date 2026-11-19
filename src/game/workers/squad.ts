@@ -45,6 +45,7 @@ export function joinSquad(sim: Simulation, entity: Entity, worker: Worker): void
   // The whistle is what saves a burning or floundering Sproutling.
   if (worker.peril) {
     const at = sim.transforms.require(entity);
+    sim.stats.rescued++;
     sim.emit('rescued', at.x, at.z);
   }
   worker.peril = null;

@@ -56,6 +56,21 @@ export interface SimStats {
   deliveryTimes: number[];
   /** Longest run of deliveries each within CHAIN.window of the last. */
   bestChain: number;
+  /** Optional treasure taken: Glowcaps home, twin pairs paid, Dewglass home whole, and points. */
+  bonus: {
+    glowcaps: number;
+    glowcapPoints: number;
+    twins: number;
+    twinPoints: number;
+    dewglass: number;
+    dewglassPoints: number;
+  };
+  /** Sproutlings the Kiln was given to grow today. */
+  grown: number;
+  /** Sproutlings whistled out of fire or water in time. */
+  rescued: number;
+  /** Sproutlings lost to fire or water. */
+  perilLosses: number;
 }
 
 export interface WorkerCounts {
@@ -192,6 +207,17 @@ export class Simulation {
       bloomsCollected: 0,
       deliveryTimes: [],
       bestChain: 0,
+      bonus: {
+        glowcaps: 0,
+        glowcapPoints: 0,
+        twins: 0,
+        twinPoints: 0,
+        dewglass: 0,
+        dewglassPoints: 0,
+      },
+      grown: 0,
+      rescued: 0,
+      perilLosses: 0,
     };
 
     this.captain = this.ecs.create();

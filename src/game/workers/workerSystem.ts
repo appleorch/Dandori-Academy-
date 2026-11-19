@@ -176,6 +176,7 @@ function sufferPeril(
 ): void {
   worker.perilTime -= dt;
   if (worker.perilTime <= 0) {
+    sim.stats.perilLosses++;
     sim.emit(worker.peril === 'fire' ? 'burned' : 'drowned', transform.x, transform.z);
     killWorker(sim, entity, worker);
     return;

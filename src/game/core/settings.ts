@@ -31,6 +31,33 @@ export interface Settings {
   seenIntro: boolean;
   /** The Warden's outfit (see progression/outfits). */
   outfit: string;
+  /** Post each new personal best to the Academy leaderboard by itself. */
+  postRuns: boolean;
+  /** The name shown on the Academy leaderboard; a generated one is used while empty. */
+  wardenName: string;
+  /** A random id that tells this player's runs apart on the board, made once per browser. */
+  playerId: string;
+}
+
+/** Longest Warden name the board shows. */
+export const WARDEN_NAME_MAX = 20;
+
+/** A name the board will show: letters, digits, spaces and a few marks, trimmed; null if none. */
+export function cleanWardenName(name: string): string | null {
+  const trimmed = name.replace(/\s+/g, ' ').trim().slice(0, WARDEN_NAME_MAX).trim();
+  return /^[\p{L}\p{N}][\p{L}\p{N} _.'-]*$/u.test(trimmed) ? trimmed : null;
+}
+
+/** The board name for a player with no name of their own: "Warden" and four letters of their id. */
+export function defaultWardenName(playerId: string): string {
+  return `Warden ${playerId.slice(0, 4).toUpperCase()}`;
+}
+
+/** A fresh random player id: 16 hex digits. */
+export function newPlayerId(): string {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -47,6 +74,9 @@ export const DEFAULT_SETTINGS: Settings = {
   briefings: true,
   seenIntro: false,
   outfit: 'cadet',
+  postRuns: true,
+  wardenName: '',
+  playerId: '',
 };
 
 export const ZOOM_SPEED_MIN = 0.25;
@@ -74,10 +104,16 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
     'commentary',
     'briefings',
     'seenIntro',
+    'postRuns',
   ] as const) {
     if (typeof raw[key] === 'boolean') settings[key] = raw[key];
   }
   if (typeof raw.outfit === 'string') settings.outfit = raw.outfit;
+  if (typeof raw.wardenName === 'string')
+    settings.wardenName = cleanWardenName(raw.wardenName) ?? '';
+  if (typeof raw.playerId === 'string' && /^[0-9a-f]{16}$/.test(raw.playerId)) {
+    settings.playerId = raw.playerId;
+  }
   if (typeof raw.zoomSpeed === 'number' && Number.isFinite(raw.zoomSpeed)) {
     settings.zoomSpeed = Math.min(ZOOM_SPEED_MAX, Math.max(ZOOM_SPEED_MIN, raw.zoomSpeed));
   }

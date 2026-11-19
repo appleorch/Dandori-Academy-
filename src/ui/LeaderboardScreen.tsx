@@ -1,29 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DIFFICULTIES, type Difficulty } from '../game/core/difficulty';
 import { useGameStore } from '../game/core/gameStore';
-import {
-  BOARD_REPO,
-  fetchBoard,
-  runLink,
-  standings,
-  type BoardEntry,
-} from '../game/leaderboard/board';
+import { cleanWardenName, defaultWardenName, WARDEN_NAME_MAX } from '../game/core/settings';
+import { BOARD_REPO, fetchBoard, standings, type BoardEntry } from '../game/leaderboard/board';
 import { lessonPrint, type RunEntry } from '../game/leaderboard/runCode';
-import { splitKey } from '../game/save/saveManager';
+import { runKey, splitKey, type SaveData } from '../game/save/saveManager';
 import { LEVELS } from '../game/world/level';
 import { MenuNav } from './MenuNav';
 
-/** The shared board is read at most this often; GitHub allows 60 anonymous reads an hour. */
+/** The board is read at most this often while the screen is open. */
 const REFRESH_MS = 2 * 60 * 1000;
 
 type Load =
   | { state: 'idle' }
   | { state: 'loading' }
-  | { state: 'ready'; entries: BoardEntry[]; at: number }
+  | { state: 'ready'; entries: BoardEntry[]; at: number; partial: boolean }
   | { state: 'error'; message: string };
 
-/** Kept between visits to the screen, so flicking tabs does not spend GitHub's rate limit. */
-let cached: { entries: BoardEntry[]; at: number } | null = null;
+/** Kept between visits to the screen, so flicking between tabs does not read it again. */
+let cached: { entries: BoardEntry[]; at: number; partial: boolean } | null = null;
 
 function timeText(run: RunEntry): string {
   const cleared = run.shards === run.shardsTotal;
@@ -35,44 +30,27 @@ function dateText(iso: string): string {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString();
 }
 
-/** A pre-filled, signed link that opens the run as a new GitHub issue. */
-export function PostRunLink({
-  run,
-  label = 'Post to the leaderboard',
-}: {
-  run: RunEntry;
-  label?: string;
-}) {
-  const [href, setHref] = useState<string | null>(null);
-  useEffect(() => {
-    let live = true;
-    runLink(run)
-      .then((link) => {
-        if (live) setHref(link);
-      })
-      .catch(() => {
-        if (live) setHref(null);
-      });
-    return () => {
-      live = false;
-    };
-  }, [run]);
-  if (!href) return null;
-  return (
-    <a className="link-button" href={href} target="_blank" rel="noopener noreferrer">
-      {label}
-    </a>
-  );
+/** Where one of the player's own runs stands with the board. */
+export function runStatus(save: SaveData, run: RunEntry, postRuns: boolean): string {
+  const key = runKey(run);
+  if (save.posted.includes(key)) return 'Posted';
+  if (save.outbox.some((queued) => runKey(queued) === key)) {
+    return postRuns ? 'Posting…' : 'Waiting (posting is off)';
+  }
+  if (run.print !== lessonPrint(run.level, run.difficulty)) return 'Older version';
+  return 'Not posted';
 }
 
 /**
- * The leaderboard: the Academy board, kept as issues on the game's GitHub repository, and
- * the player's own best runs, kept in the save. No server: posting a run opens a pre-filled
- * GitHub issue, and the board reads them back from GitHub's public API.
+ * The leaderboard: the Academy board, which every new personal best is posted to by itself,
+ * and the player's own best runs, kept in the save.
  */
 export function LeaderboardScreen() {
   const save = useGameStore((state) => state.save);
+  const settings = useGameStore((state) => state.settings);
+  const updateSettings = useGameStore((state) => state.updateSettings);
   const lastPlayed = useGameStore((state) => state.levelId);
+  const queueRun = useGameStore((state) => state.queueRun);
   const choices = useMemo(
     () => LEVELS.filter((level) => !level.side || save.discovered.includes(level.id)),
     [save.discovered],
@@ -84,6 +62,7 @@ export function LeaderboardScreen() {
   const [load, setLoad] = useState<Load>(() =>
     cached ? { state: 'ready', ...cached } : { state: 'idle' },
   );
+  const [nameDraft, setNameDraft] = useState(settings.wardenName);
 
   const refresh = useCallback((force: boolean) => {
     if (!force && cached && Date.now() - cached.at < REFRESH_MS) {
@@ -92,8 +71,8 @@ export function LeaderboardScreen() {
     }
     setLoad({ state: 'loading' });
     fetchBoard()
-      .then((entries) => {
-        cached = { entries, at: Date.now() };
+      .then((board) => {
+        cached = { entries: board.entries, at: Date.now(), partial: !board.file || !board.relay };
         setLoad({ state: 'ready', ...cached });
       })
       .catch((error: unknown) => {
@@ -102,7 +81,7 @@ export function LeaderboardScreen() {
           message:
             error instanceof Error && error.message
               ? error.message
-              : 'GitHub could not be reached.',
+              : 'The board could not be read.',
         });
       });
   }, []);
@@ -111,15 +90,64 @@ export function LeaderboardScreen() {
 
   const level = LEVELS.find((candidate) => candidate.id === levelId) ?? LEVELS[0];
   const board = load.state === 'ready' ? standings(load.entries, levelId, difficulty) : [];
-  const print = lessonPrint(levelId, difficulty);
   const mine = save.runs[splitKey(levelId, difficulty)] ?? [];
   const age = load.state === 'ready' ? Math.round((Date.now() - load.at) / 60000) : 0;
+  const shownName = cleanWardenName(settings.wardenName) ?? defaultWardenName(settings.playerId);
+  const nameOk = nameDraft.trim() === '' || cleanWardenName(nameDraft) !== null;
+
+  const saveName = (): void => {
+    const cleaned = cleanWardenName(nameDraft);
+    updateSettings({ wardenName: cleaned ?? '' });
+    setNameDraft(cleaned ?? '');
+  };
 
   return (
     <main className="screen">
       <div className="panel wide">
         <MenuNav />
         <h1>Leaderboard</h1>
+
+        <section className="board-me" aria-label="You on the board">
+          <label className="board-name">
+            Your Warden name
+            <span className="board-name-row">
+              <input
+                type="text"
+                value={nameDraft}
+                maxLength={WARDEN_NAME_MAX}
+                placeholder={defaultWardenName(settings.playerId)}
+                onChange={(event) => setNameDraft(event.target.value)}
+                onBlur={saveName}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') saveName();
+                }}
+                aria-invalid={!nameOk}
+              />
+            </span>
+            {!nameOk && (
+              <small className="note warn">
+                Letters, digits, spaces and . _ &apos; - only, starting with a letter or digit.
+              </small>
+            )}
+          </label>
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={settings.postRuns}
+              onChange={(event) => updateSettings({ postRuns: event.target.checked })}
+            />
+            Post my new personal bests to the Academy board automatically
+          </label>
+          <p className="note">
+            Shown as <strong>{shownName}</strong>.{' '}
+            {save.outbox.length > 0
+              ? settings.postRuns
+                ? `${save.outbox.length} waiting to post (they go as soon as the board can be reached).`
+                : `${save.outbox.length} waiting until posting is turned back on.`
+              : 'Nothing waiting to post.'}
+          </p>
+        </section>
+
         <div className="board-pick">
           <label>
             Lesson
@@ -150,7 +178,7 @@ export function LeaderboardScreen() {
           <h2>
             Academy board <small>{level.name}</small>
           </h2>
-          {load.state === 'loading' && <p className="note">Reading the board from GitHub…</p>}
+          {load.state === 'loading' && <p className="note">Reading the board…</p>}
           {load.state === 'error' && (
             <p className="note warn">
               {load.message} Your own runs below are kept on this device either way.
@@ -158,7 +186,7 @@ export function LeaderboardScreen() {
           )}
           {load.state === 'ready' &&
             (board.length === 0 ? (
-              <p className="note">No runs posted on this lesson yet. Be the first.</p>
+              <p className="note">No runs on this lesson yet. Be the first.</p>
             ) : (
               <table className="board-table">
                 <thead>
@@ -173,12 +201,16 @@ export function LeaderboardScreen() {
                 </thead>
                 <tbody>
                   {board.map((entry, i) => (
-                    <tr key={entry.player}>
+                    <tr
+                      key={`${entry.player}-${entry.at}`}
+                      className={entry.player === settings.playerId ? 'me' : undefined}
+                    >
                       <td>{i + 1}</td>
                       <th scope="row">
-                        <a href={entry.url} target="_blank" rel="noopener noreferrer">
-                          {entry.player}
-                        </a>
+                        {entry.name}{' '}
+                        <small className="board-id" title="Tells Wardens with the same name apart">
+                          #{entry.player.slice(0, 4)}
+                        </small>
                       </th>
                       <td>{entry.score}</td>
                       <td className={`rank-${entry.rank.toLowerCase()}`}>{entry.rank}</td>
@@ -189,6 +221,11 @@ export function LeaderboardScreen() {
                 </tbody>
               </table>
             ))}
+          {load.state === 'ready' && load.partial && (
+            <p className="note">
+              Part of the board could not be read just now; it may be missing the newest runs.
+            </p>
+          )}
           <div className="button-row">
             <button
               type="button"
@@ -217,9 +254,7 @@ export function LeaderboardScreen() {
                   <th scope="col">Rank</th>
                   <th scope="col">Time</th>
                   <th scope="col">Played</th>
-                  <th scope="col">
-                    <span className="sr-only">Post</span>
-                  </th>
+                  <th scope="col">Board</th>
                 </tr>
               </thead>
               <tbody>
@@ -231,10 +266,17 @@ export function LeaderboardScreen() {
                     <td>{timeText(run)}</td>
                     <td>{dateText(run.at)}</td>
                     <td>
-                      {run.print === print ? (
-                        <PostRunLink run={run} label="Post" />
+                      {i === 0 && runStatus(save, run, settings.postRuns) === 'Not posted' ? (
+                        <button
+                          type="button"
+                          className="secondary small inline"
+                          onClick={() => queueRun(run)}
+                          title="Post this best to the board"
+                        >
+                          Post
+                        </button>
                       ) : (
-                        <small title="This lesson has been rebalanced since">Old version</small>
+                        <small>{runStatus(save, run, settings.postRuns)}</small>
                       )}
                     </td>
                   </tr>
@@ -245,10 +287,11 @@ export function LeaderboardScreen() {
         </section>
 
         <p className="note">
-          The Academy board needs no server: posting a run opens a new issue on the game’s GitHub
-          repository ({BOARD_REPO}) with the run filled in, and you submit it with your GitHub
-          account. Each Warden’s best run per lesson counts. Every run is checked against the
-          lesson’s own rules before it is shown, and runs from an older version of a lesson are left
+          The Academy board needs no server of its own. Each new personal best is posted by itself
+          to a public relay (ntfy.sh), with your Warden name and a random player id and nothing
+          else. Every half hour the game&apos;s GitHub repository ({BOARD_REPO}) collects the relay,
+          checks every run against the lesson&apos;s own rules, and keeps the best run per Warden
+          per lesson. New runs show here at once. Runs from an older version of a lesson are left
           off.
         </p>
       </div>

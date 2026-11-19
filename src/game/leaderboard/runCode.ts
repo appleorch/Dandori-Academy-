@@ -227,26 +227,70 @@ function fromBase64Url(text: string): string {
   return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
 }
 
-/** A run as a signed code, ready to paste. */
-export async function encodeRun(run: RunEntry): Promise<string> {
-  const body = toBase64Url(JSON.stringify(run));
+/** Any value as a signed code: base64url JSON, a dot, and its HMAC. */
+async function encodeSigned(value: unknown): Promise<string> {
+  const body = toBase64Url(JSON.stringify(value));
   return `${body}.${await hmac(body)}`;
 }
 
-/** The run in a code, if its signature is good and its shape is a run's; otherwise null. */
-export async function decodeRun(code: string): Promise<RunEntry | null> {
+/** The value in a signed code, or null if the signature does not match. */
+async function decodeSigned(code: string): Promise<unknown> {
   const match = /^([A-Za-z0-9_-]+)\.([0-9a-f]{64})$/.exec(code.trim());
   if (!match) return null;
   const [, body, signature] = match;
   if ((await hmac(body)) !== signature) return null;
   try {
-    const run: unknown = JSON.parse(fromBase64Url(body));
-    if (typeof run !== 'object' || run === null || (run as { v?: unknown }).v !== 1) return null;
-    const entry = run as RunEntry;
-    if (typeof entry.level !== 'string' || typeof entry.at !== 'string') return null;
-    if (entry.difficulty !== 'normal' && entry.difficulty !== 'hard') return null;
-    return entry;
+    return JSON.parse(fromBase64Url(body)) as unknown;
   } catch {
     return null;
   }
+}
+
+function isRun(value: unknown): value is RunEntry {
+  if (typeof value !== 'object' || value === null) return false;
+  const entry = value as Partial<RunEntry>;
+  return (
+    entry.v === 1 &&
+    typeof entry.level === 'string' &&
+    typeof entry.at === 'string' &&
+    (entry.difficulty === 'normal' || entry.difficulty === 'hard')
+  );
+}
+
+/** A run as a signed code. */
+export async function encodeRun(run: RunEntry): Promise<string> {
+  return encodeSigned(run);
+}
+
+/** The run in a code, if its signature is good and its shape is a run's; otherwise null. */
+export async function decodeRun(code: string): Promise<RunEntry | null> {
+  const value = await decodeSigned(code);
+  return isRun(value) ? value : null;
+}
+
+/** A run as posted to the Academy board: who played it, and the run itself. */
+export interface BoardPost {
+  v: 1;
+  /** The player's random id; see `Settings.playerId`. */
+  player: string;
+  /** The Warden name shown beside the run. */
+  name: string;
+  run: RunEntry;
+}
+
+/** A post as a signed code, the form it travels and is stored in. */
+export async function encodePost(post: BoardPost): Promise<string> {
+  return encodeSigned(post);
+}
+
+/** The post in a code, if its signature is good and its shape is a post's; otherwise null. */
+export async function decodePost(code: string): Promise<BoardPost | null> {
+  const value = await decodeSigned(code);
+  if (typeof value !== 'object' || value === null) return null;
+  const post = value as Partial<BoardPost>;
+  if (post.v !== 1 || typeof post.player !== 'string' || !/^[0-9a-f]{16}$/.test(post.player)) {
+    return null;
+  }
+  if (typeof post.name !== 'string' || post.name.length === 0 || post.name.length > 20) return null;
+  return isRun(post.run) ? (post as BoardPost) : null;
 }

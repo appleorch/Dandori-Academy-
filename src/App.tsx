@@ -11,6 +11,7 @@ import { FieldGuide } from './ui/FieldGuide';
 import { Hud } from './ui/Hud';
 import { JournalScreen } from './ui/JournalScreen';
 import { LeaderboardScreen } from './ui/LeaderboardScreen';
+import { useBoardPoster } from './ui/useBoardPoster';
 import { LessonSelect } from './ui/LessonSelect';
 import { PauseMenu } from './ui/PauseMenu';
 import { ResultsScreen } from './ui/ResultsScreen';
@@ -42,6 +43,8 @@ export function App() {
   const { theme } = level;
 
   useEffect(() => audio.setVolumes(sfxVolume, musicVolume), [sfxVolume, musicVolume]);
+  // New personal bests go to the Academy board by themselves.
+  useBoardPoster();
 
   // The soundtrack follows where the player is: the back room, a lesson's setting, or the menus.
   // During a day the game loop moves between the setting's tune and the boss tune by itself.

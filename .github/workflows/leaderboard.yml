@@ -1,0 +1,42 @@
+# Keeps the Academy leaderboard. Every half hour it reads the runs players' games have posted to
+# the relay (ntfy.sh keeps them 12 hours), checks each against the game's own rules, and commits
+# the best run per Warden per lesson to leaderboard/board.json, which the game reads.
+# See src/game/leaderboard/board.ts. Scheduled runs only happen on the default branch.
+name: Leaderboard
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: leaderboard
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run board:collect
+      - name: Commit the board if it changed
+        run: |
+          if git diff --quiet -- leaderboard/board.json && git ls-files --error-unmatch leaderboard/board.json >/dev/null 2>&1; then
+            echo "No new runs."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add leaderboard/board.json
+          git commit -m "Leaderboard: collect new runs"
+          git pull --rebase
+          git push

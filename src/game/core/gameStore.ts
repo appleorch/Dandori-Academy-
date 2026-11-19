@@ -7,6 +7,9 @@ import {
   discover,
   emptySave,
   loadSave,
+  markPosted,
+  queueForBoard,
+  runKey,
   recordDay,
   writeSave,
   type DayRecord,
@@ -15,15 +18,22 @@ import {
 import { damageTaken } from '../enemies/combat';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { DayEnd, Simulation } from '../simulation/Simulation';
-import { LEVELS } from '../world/level';
+import { bonusCount, bonusParts, LEVELS } from '../world/level';
 import type { Line } from '../story/headmaster';
 import type { Haul } from '../simulation/expedition';
 import { makeRun, type RunEntry } from '../leaderboard/runCode';
+import { adviseDay, tallyDay, type Advice, type DayTally } from '../dandori/tally';
 import { GAME_VERSION } from './changelog';
 import type { SproutKind } from '../workers/sprouts';
 import { CHAIN } from './config';
 import { penaltyPerLoss, type Difficulty } from './difficulty';
-import { loadSettings, writeSettings, DEFAULT_SETTINGS, type Settings } from './settings';
+import {
+  loadSettings,
+  newPlayerId,
+  writeSettings,
+  DEFAULT_SETTINGS,
+  type Settings,
+} from './settings';
 
 /** Phones and tablets start at medium graphics; they can raise it in Settings. */
 function deviceDefaults(): Settings {
@@ -50,6 +60,9 @@ export interface HudSnapshot {
   treasureValue: number;
   treasuresCollected: number;
   treasuresTotal: number;
+  /** Optional treasure taken so far, and how much the lesson has: Glowcaps, twin pairs, Dewglass. */
+  bonusGot: number;
+  bonusOf: number;
   captainHp: number;
   boss: BossSnapshot | null;
   /** Seconds ahead (negative) or behind (positive) the best clear at the last delivery, or null. */
@@ -90,6 +103,10 @@ export interface DayResult {
   caveRelics: number;
   /** The day as a leaderboard run, or null when it cannot be posted. */
   run: RunEntry | null;
+  /** The day taken apart: required and optional treasure, and the squad. */
+  tally: DayTally;
+  /** What the next rank would take, and where points were left behind. */
+  advice: Advice;
   enemiesDefeated: number;
   workersAlive: number;
   /** Ids of achievements earned by this day. */
@@ -156,6 +173,10 @@ interface GameStore {
   publish: (sim: Simulation, below?: { name: string; timeLeft: number } | null) => void;
   setSplit: (split: number) => void;
   finishDay: (sim: Simulation, reason: DayEnd, haul?: Haul) => void;
+  /** The relay has taken a run from the outbox. */
+  runPosted: (run: RunEntry) => void;
+  /** Puts one of the player's own runs in the outbox by hand (a best from before posting was on). */
+  queueRun: (run: RunEntry) => void;
 }
 
 function browserStorage(): Storage | null {
@@ -184,6 +205,8 @@ function snapshot(sim: Simulation): HudSnapshot {
     treasureValue: sim.stats.treasureValue,
     treasuresCollected: sim.stats.treasuresCollected.length,
     treasuresTotal: sim.stats.treasuresTotal,
+    bonusGot: sim.stats.bonus.glowcaps + sim.stats.bonus.twins + sim.stats.bonus.dewglass,
+    bonusOf: bonusCount(bonusParts(sim.level)),
     captainHp: sim.captainState.hp,
     boss: bossSnapshot(sim),
     split: null,
@@ -231,7 +254,10 @@ export const useGameStore = create<GameStore>((set, get) => {
   // Grant anything an older save already qualifies for, such as rank milestones.
   const initial = unlockAchievements(storage ? loadSave(storage) : emptySave(), null, new Date());
   if (initial.unlocked.length > 0) persist(initial.save);
-  const settings = storage ? loadSettings(storage, deviceDefaults()) : deviceDefaults();
+  const loaded = storage ? loadSettings(storage, deviceDefaults()) : deviceDefaults();
+  // Every browser gets its own player id for the board, made once and kept with the settings.
+  const settings = loaded.playerId ? loaded : { ...loaded, playerId: newPlayerId() };
+  if (storage && settings !== loaded) writeSettings(storage, settings);
 
   return {
     // A brand new player is told how things stand before seeing the lesson list.
@@ -303,6 +329,29 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ nearDescent: levelId, save });
     },
 
+    queueRun: (run) => {
+      const current = get().save;
+      const key = runKey(run);
+      if (current.outbox.some((queued) => runKey(queued) === key)) return;
+      const save = {
+        ...current,
+        outbox: [
+          ...current.outbox.filter(
+            (queued) => !(queued.level === run.level && queued.difficulty === run.difficulty),
+          ),
+          run,
+        ],
+      };
+      persist(save);
+      set({ save });
+    },
+
+    runPosted: (run) => {
+      const { save } = unlockAchievements(markPosted(get().save, run), null, new Date());
+      persist(save);
+      set({ save });
+    },
+
     setNearAscent: (near) => {
       if (near !== get().nearAscent) set({ nearAscent: near });
     },
@@ -366,6 +415,15 @@ export const useGameStore = create<GameStore>((set, get) => {
         level,
         penaltyPerLoss(level.difficulty),
       );
+      const tally = tallyDay(level, {
+        shardsHome: stats.treasuresCollected.length,
+        treasureValue: stats.treasureValue,
+        bonus: stats.bonus,
+        alive: workersAlive,
+        lost: stats.workersLost,
+        grown: stats.grown,
+        timeLeft: sim.timeLeft,
+      });
       const day: DayRecord = {
         levelId: level.id,
         difficulty: level.difficulty,
@@ -404,7 +462,11 @@ export const useGameStore = create<GameStore>((set, get) => {
           ) ?? undefined,
       };
       const previous = get().save;
-      const { save, unlocked } = unlockAchievements(recordDay(previous, day), day, new Date());
+      const recorded = recordDay(previous, day);
+      // A new personal best goes in the outbox for the Academy board; it is sent while posting
+      // is on, and waits there while it is off.
+      const queued = day.run ? queueForBoard(previous, recorded, day.run) : recorded;
+      const { save, unlocked } = unlockAchievements(queued, day, new Date());
       persist(save);
       set({
         phase: 'results',
@@ -431,6 +493,8 @@ export const useGameStore = create<GameStore>((set, get) => {
           bestChain: stats.bestChain,
           caveRelics: haul?.relics.length ?? 0,
           run: day.run ?? null,
+          tally,
+          advice: adviseDay(level, score, tally, penaltyPerLoss(level.difficulty)),
           enemiesDefeated: stats.enemiesDefeated,
           workersAlive,
           difficulty: level.difficulty,

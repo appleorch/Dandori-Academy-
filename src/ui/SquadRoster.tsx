@@ -1,5 +1,5 @@
 import { startingKinds } from '../game/simulation/Simulation';
-import type { LevelDefinition } from '../game/world/level';
+import { bonusParts, shardCount, type LevelDefinition } from '../game/world/level';
 import { SPROUT_KINDS, SPROUTS, type SproutKind } from '../game/workers/sprouts';
 
 /** Every kind of Sproutling the lesson starts with or can grow from its seed pods. */
@@ -56,5 +56,33 @@ export function SproutlingGuide() {
         ))}
       </ul>
     </section>
+  );
+}
+
+/** The lesson's optional treasure, said plainly: what there is and what it is worth. */
+export function OptionalTreasure({ level }: { level: LevelDefinition }) {
+  const parts = bonusParts(level);
+  const items = [
+    parts.glowcaps > 0
+      ? `${parts.glowcaps} ${parts.glowcaps === 1 ? 'Glowcap' : 'Glowcaps'} (they sprout later in the day and wilt if left)`
+      : null,
+    parts.twins > 0
+      ? `${parts.twins} twin ${parts.twins === 1 ? 'pair' : 'pairs'} (both halves home within 10 seconds)`
+      : null,
+    parts.dewglass > 0 ? `${parts.dewglass} Dewglass (home without cracking)` : null,
+  ].filter((item) => item !== null);
+  const worth = parts.glowcapPoints + parts.twinPoints + parts.dewglassPoints;
+  return (
+    <p className="optional-treasure">
+      <strong>Required:</strong> {shardCount(level)} Sunshards.{' '}
+      {items.length > 0 ? (
+        <>
+          <strong>Optional:</strong> {items.join(', ')}, worth up to {worth} points. The rank
+          targets assume you take them; skip them and you must make the time up.
+        </>
+      ) : (
+        'No optional treasure in this lesson: the rank is all Sunshards, Sproutlings and time.'
+      )}
+    </p>
   );
 }

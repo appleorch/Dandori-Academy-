@@ -107,9 +107,19 @@ export function Hud({
             Below: {hud.below} · Relics {hud.treasuresCollected}/{hud.treasuresTotal}
           </div>
         ) : (
-          <div className="chip">
-            Sunshards {hud.treasuresCollected}/{hud.treasuresTotal} · {hud.treasureValue} pts
-          </div>
+          <>
+            <div className="chip" title="Required: every Sunshard must come home">
+              Sunshards {hud.treasuresCollected}/{hud.treasuresTotal} · {hud.treasureValue} pts
+            </div>
+            {hud.bonusOf > 0 && (
+              <div
+                className="chip bonus-chip"
+                title="Optional: Glowcaps, twin pairs on time and Dewglass kept whole"
+              >
+                Bonus {hud.bonusGot}/{hud.bonusOf}
+              </div>
+            )}
+          </>
         )}
         {hud.split !== null && (
           <div
