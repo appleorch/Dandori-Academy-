@@ -10,7 +10,7 @@ const progress: SaveData = {
   bestRanks: { 'many-hands': 'Gold' },
   bestScores: { 'many-hands': 1500 },
   achievements: { 'first-shard': '2026-11-13T10:00:00.000Z' },
-  totals: { days: 4, treasures: 12, enemies: 1, workersLost: 2 },
+  totals: { ...emptySave().totals, days: 4, treasures: 12, enemies: 1, workersLost: 2 },
 };
 const now = new Date('2026-11-13T12:00:00Z');
 const nonce = (seed: number) => new Uint8Array(16).map((_, i) => (i * 37 + seed) & 0xff);

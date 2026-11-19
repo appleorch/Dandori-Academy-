@@ -195,6 +195,17 @@ music. Before a day, Proctor Ashwick gives a briefing; passing a lesson at Silve
 an entry to the Journal tab, and finishing a term adds a note from Tindle, the squad's first
 Emberling. The text lives in `src/game/story/story.ts`.
 
+**Required and optional treasure.** Sunshards are required: every one must come home to clear a
+lesson, and leftover time only scores once they are all home. Bonus treasure is optional:
+Glowcaps (they sprout partway through the day and wilt if left), twin pairs delivered within 10
+seconds of each other, and Dewglass brought home without cracking. The briefing lists both, the
+HUD counts them separately (Sunshards x/y, Bonus x/y), and the results tally shows Sunshards x of
+y, bonus treasure x of y (by kind), the time bonus, and the Sproutlings the day ended with, lost,
+and the most the lesson could end with. Under the tally, _Next_ names the next rank, how many
+points short the day was, and every place it left points behind (Sunshards, each kind of bonus,
+Sproutlings lost), biggest first, with time last; when nothing else was missed it says plainly
+that only time stands in the way (`src/game/dandori/tally.ts`).
+
 Each day is ranked **Copper, Bronze, Silver, Gold, Platinum or Diamond** against the lesson's
 par score (`src/game/dandori/scoring.ts`). Silver or better unlocks the next lesson. Best rank and
 best score per lesson are saved in the browser. Each lesson sets a Platinum time
@@ -229,23 +240,37 @@ person would try again.
 
 ## Leaderboard
 
-The Leaderboard tab needs no server of its own (`src/game/leaderboard/`):
+The Leaderboard tab needs no server of its own, and posting is automatic
+(`src/game/leaderboard/`):
 
-- **Your best runs**: the ten best days per lesson and difficulty are kept in the save.
-- **The Academy board** lives on this repository's GitHub issues. The results screen (and each
-  of your kept runs) has a _Post to the leaderboard_ link that opens a new GitHub issue with the
-  run already filled in; submitting it with a GitHub account posts the run. The game reads the
-  board back through GitHub's public API, which browsers can call directly, and shows each
-  account's best run per lesson.
-- Every posted run carries a signed run code. Before an entry is shown, the game checks the
-  signature, recomputes every part of the score from the lesson's own rules, checks the rank
-  against the score and the clock against the day, rejects impossibly fast clears, and checks
-  a fingerprint of the lesson, so runs on a lesson that has since been rebalanced are left off.
-  The signing key ships with the game, so like the save file this stops casual editing, not a
-  determined cheat; the repository owner can strike any entry off by labelling its issue
-  `rejected`.
-- GitHub allows 60 anonymous reads an hour per network, so the board is read at most once every
-  two minutes and kept between visits to the tab.
+- **Your best runs**: the ten best days per lesson and difficulty are kept in the save, each
+  marked Posted, Posting or Not posted.
+- **Posting**: when a day ends with a new personal best on a lesson, the game posts it by itself
+  to a topic on [ntfy.sh](https://ntfy.sh), a free public message relay that browsers can post to
+  and read from with no account. A post carries the run, your Warden name and a random player id
+  made once per browser, and nothing else. If the relay cannot be reached the run waits in the
+  save and is tried again later (after a minute, then longer, up to half an hour). The Warden
+  name, and a switch to turn posting off, are on the Leaderboard tab.
+- **Collecting**: the relay keeps messages for 12 hours. Every half hour a scheduled GitHub
+  Action in this repository (`.github/workflows/leaderboard.yml`, which runs
+  `npm run board:collect`) reads the topic, checks every run, and commits the best run per
+  Warden per lesson to `leaderboard/board.json`.
+- **Reading**: the board reads `leaderboard/board.json` from GitHub and whatever reached the relay
+  in the last 12 hours, so a new run shows up at once and stays once collected.
+- Every run is signed, and wherever it is read (in the game and in the Action) the signature is
+  checked, every part of the score is recomputed from the lesson's own rules, the rank is checked
+  against the score and the clock against the day, impossibly fast clears are refused, and a
+  fingerprint of the lesson is compared, so runs on a lesson that has since been rebalanced are
+  left off. The signing key ships with the game, so this stops casual editing, not a determined
+  cheat. Names are not verified. To strike a player off, add their player id (16 hex digits,
+  the first four are shown as `#abcd` beside their name) to `leaderboard/banned.json`.
+- Scheduled workflows only run on the default branch, so collecting starts once this is merged
+  to `main`; until then (and if the Action is ever paused) runs still show from the relay for 12
+  hours. GitHub pauses scheduled workflows in a repository with no activity for 60 days; re-enable
+  it from the Actions tab if that happens.
+- ntfy.sh limits how many messages one network can send a day. A player posts only personal
+  bests, so this is far more than a player needs, but a run from a crowded shared network may
+  wait until the next day.
 
 ## Settings, save files and achievements
 
@@ -262,7 +287,9 @@ The Leaderboard tab needs no server of its own (`src/game/leaderboard/`):
   editing, not someone reading the source. Progress kept in the browser is still plain JSON.
 - **Version and revision history**: shown on Settings & save, from `src/game/core/changelog.ts`.
   A test keeps its newest entry equal to the version in `package.json`.
-- **Achievements**: 27 on the list, from First Delivery to Dandori Master (Platinum in every
+- **Achievements**: 66 on the list, covering ranks, optional treasure, every kind's special
+  jobs, caves, skill (flawless boss fights, photo finishes, chains, pacifist days) and the long
+  totals, from First Delivery to Dandori Master (Platinum in every
   lesson), and a few that stay off the list until they are earned. Counter achievements show progress bars. New ones are announced on the results
   screen, and an older save is granted anything it already qualifies for when it loads.
 

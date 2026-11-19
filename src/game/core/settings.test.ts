@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, loadSettings, parseSettings, writeSettings } from './settings';
+import {
+  cleanWardenName,
+  defaultWardenName,
+  DEFAULT_SETTINGS,
+  loadSettings,
+  newPlayerId,
+  parseSettings,
+  WARDEN_NAME_MAX,
+  writeSettings,
+} from './settings';
 
 describe('settings', () => {
   it('defaults every missing or invalid field', () => {
@@ -46,5 +55,37 @@ describe('settings', () => {
     expect(loadSettings(storage)).toEqual(custom);
     stored = '{broken';
     expect(loadSettings(storage)).toEqual(DEFAULT_SETTINGS);
+  });
+});
+
+describe('Warden names for the board', () => {
+  it('keeps ordinary names and tidies their spacing', () => {
+    expect(cleanWardenName('  Ada  Lovelace ')).toBe('Ada Lovelace');
+    expect(cleanWardenName("O'Brien-2")).toBe("O'Brien-2");
+    expect(cleanWardenName('Zoë')).toBe('Zoë');
+  });
+
+  it('refuses markup, empty names and leading marks, and cuts long ones', () => {
+    expect(cleanWardenName('<b>hi</b>')).toBeNull();
+    expect(cleanWardenName('   ')).toBeNull();
+    expect(cleanWardenName('-dash')).toBeNull();
+    expect(cleanWardenName('a'.repeat(40))).toHaveLength(WARDEN_NAME_MAX);
+  });
+
+  it('gives every browser its own player id and a name to go with it', () => {
+    const id = newPlayerId();
+    expect(id).toMatch(/^[0-9a-f]{16}$/);
+    expect(newPlayerId()).not.toBe(id);
+    expect(defaultWardenName('ab12cd34ef567890')).toBe('Warden AB12');
+    expect(parseSettings({ playerId: id, wardenName: 'Ada', postRuns: false })).toMatchObject({
+      playerId: id,
+      wardenName: 'Ada',
+      postRuns: false,
+    });
+    expect(parseSettings({ playerId: 'nope', wardenName: '<x>' })).toMatchObject({
+      playerId: '',
+      wardenName: '',
+      postRuns: true,
+    });
   });
 });

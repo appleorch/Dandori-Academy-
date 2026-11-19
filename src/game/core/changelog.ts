@@ -8,6 +8,17 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.17.0',
+    date: '2026-11-19',
+    changes: [
+      'The leaderboard is automatic: every new personal best is posted to the Academy board by itself, with your Warden name, and shows up at once. Set your name, or turn posting off, on the Leaderboard tab. There is still no server: runs travel through a free public relay and a scheduled GitHub Action keeps the board in the game\u2019s own repository.',
+      'A clearer score. The results tally now separates required treasure (Sunshards, x of y) from optional bonus treasure (Glowcaps, twin pairs on time, Dewglass kept whole, x of y), and shows the Sproutlings you ended with, lost, and the most the lesson could end with.',
+      'Under the tally, Next shows how far the next rank is and exactly where the day left points behind, biggest first: Sunshards left out, each kind of bonus missed, Sproutlings lost, then time. When nothing else was missed it says plainly that only time stands in the way.',
+      'The HUD counts Sunshards and bonus treasure separately, and every briefing lists what is required and what is optional, and what the optional treasure is worth.',
+      '39 new achievements, 66 in all: rank milestones up to twenty Diamonds, Full Basket and the other bonus feats, a feat for each kind\u2019s special job, rescues, growing, caves, flawless boss fights, photo finishes, chains, pacifist days, Hard feats, and the leaderboard.',
+    ],
+  },
+  {
     version: '0.16.0',
     date: '2026-11-18',
     changes: [

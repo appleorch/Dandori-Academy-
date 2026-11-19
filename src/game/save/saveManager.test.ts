@@ -5,11 +5,15 @@ import {
   hardUnlocked,
   emptySave,
   loadSave,
+  markPosted,
+  queueForBoard,
   recordDay,
+  runKey,
   writeSave,
   type SaveData,
   type SaveStorage,
 } from './saveManager';
+import type { RunEntry } from '../leaderboard/runCode';
 
 function memoryStorage(initial?: string): SaveStorage & { value: string | null } {
   return {
@@ -75,7 +79,15 @@ describe('save manager', () => {
 
   it('adds every day to the running totals', () => {
     const two = recordDay(recordDay(emptySave(), day), day);
-    expect(two.totals).toEqual({ days: 2, treasures: 4, enemies: 2, workersLost: 2 });
+    expect(two.totals).toEqual({
+      ...emptySave().totals,
+      days: 2,
+      treasures: 4,
+      enemies: 2,
+      workersLost: 2,
+    });
+    const busy = recordDay(two, { ...day, feats: { grown: 6, rescued: 2, glowcaps: 1, caves: 1 } });
+    expect(busy.totals).toMatchObject({ days: 3, grown: 6, rescued: 2, glowcaps: 1, caveTrips: 1 });
   });
 
   it('keeps the best results across days', () => {
@@ -132,5 +144,56 @@ describe('save manager', () => {
     expect(silver.stage).toBe(2);
     expect(recordDay(silver, { ...day, rank: 'Bronze' }).stage).toBe(2);
     expect(recordDay(silver, { ...day, levelId: 'lesson-2', stage: 2 }).stage).toBe(3);
+  });
+});
+
+describe('the board outbox', () => {
+  const run = (score: number, at: string): RunEntry => ({
+    v: 1,
+    game: 'test',
+    level: 'lesson-1',
+    difficulty: 'normal',
+    print: '0000000000000000',
+    score,
+    treasure: 0,
+    timeBonus: 0,
+    workerBonus: 0,
+    lossPenalty: 0,
+    rank: 'Copper',
+    shards: 0,
+    shardsTotal: 5,
+    time: 10,
+    timeLeft: 110,
+    alive: 10,
+    lost: 0,
+    at,
+  });
+  const play = (save: SaveData, entry: RunEntry): SaveData =>
+    queueForBoard(save, recordDay(save, { ...day, score: entry.score, run: entry }), entry);
+
+  it('queues a new personal best, and only a new one', () => {
+    const first = play(emptySave(), run(100, '2026-11-19T01:00:00Z'));
+    expect(first.outbox.map((entry) => entry.score)).toEqual([100]);
+    const worse = play(first, run(90, '2026-11-19T02:00:00Z'));
+    expect(worse.outbox.map((entry) => entry.score)).toEqual([100]);
+    const better = play(worse, run(120, '2026-11-19T03:00:00Z'));
+    // The better run replaces the waiting one: the board keeps one run per lesson anyway.
+    expect(better.outbox.map((entry) => entry.score)).toEqual([120]);
+  });
+
+  it('clears a run from the outbox once it is posted, and remembers it', () => {
+    const queued = play(emptySave(), run(100, '2026-11-19T01:00:00Z'));
+    const posted = markPosted(queued, queued.outbox[0]);
+    expect(posted.outbox).toEqual([]);
+    expect(posted.posted).toEqual([runKey(queued.outbox[0])]);
+  });
+
+  it('keeps the outbox through a save and a load', () => {
+    const queued = play(emptySave(), run(100, '2026-11-19T01:00:00Z'));
+    const storage = memoryStorage();
+    writeSave(storage, queued);
+    const loaded = loadSave(storage);
+    expect(loaded.outbox).toEqual(queued.outbox);
+    expect(loaded.posted).toEqual([]);
   });
 });

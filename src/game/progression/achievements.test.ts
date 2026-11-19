@@ -69,7 +69,7 @@ describe('achievements', () => {
     const hunter = findAchievement('mossback-hunter');
     const save: SaveData = {
       ...emptySave(),
-      totals: { days: 3, treasures: 0, enemies: 24, workersLost: 0 },
+      totals: { ...emptySave().totals, days: 3, enemies: 24 },
     };
     expect(hunter?.progress?.(save)).toEqual([24, 25]);
     const more = { ...save, totals: { ...save.totals, enemies: 30 } };
@@ -116,6 +116,88 @@ describe('achievements', () => {
       'first-ember',
       'restorer',
       'dandori-master',
+      'gold-standard',
+      'platinum-ten',
+      'well-travelled',
     ]);
+  });
+});
+
+describe('the new feats', () => {
+  const clearDay: DayRecord = {
+    ...day,
+    treasureIds: ['shard-1', 'shard-2', 'shard-3', 'shard-4'],
+    timeLeft: 40,
+  };
+  const earns = (record: DayRecord, id: string) => {
+    const achievement = findAchievement(id);
+    if (!achievement) throw new Error(id);
+    return achievement.earned(recordDay(emptySave(), record), record);
+  };
+
+  it.each([
+    ['full-basket', { glowcaps: 1, glowcapsTotal: 1, twins: 1, twinsTotal: 1 }],
+    ['twin-flame', { twins: 1 }],
+    ['steady-hands', { dewglass: 1 }],
+    ['deep-water', { sunkHome: 1 }],
+    ['trial-by-fire', { ventHome: 1 }],
+    ['live-wire', { coilHome: 1 }],
+    ['crystal-breaker', { crystalBroken: 1 }],
+    ['glasscutter', { crystalBroken: 3 }],
+    ['lifeguard', { rescued: 3 }],
+    ['full-spectrum', { kindsAlive: 4 }],
+    ['round-trip', { caves: 1 }],
+    ['cleared-out', { cavesEmptied: 1 }],
+    ['chain-gang', { bestChain: 5 }],
+    ['chain-reaction', { bestChain: 10 }],
+    ['pacifist', { beasts: 2 }],
+  ] as const)('%s is earned by a day that does it, and not by one that does not', (id, feats) => {
+    expect(earns({ ...clearDay, feats }, id)).toBe(true);
+    expect(earns(clearDay, id)).toBe(false);
+  });
+
+  it('keeps Full Basket for lessons with something to take, all of it', () => {
+    expect(earns({ ...clearDay, feats: { glowcaps: 0, glowcapsTotal: 0 } }, 'full-basket')).toBe(
+      false,
+    );
+    expect(earns({ ...clearDay, feats: { glowcaps: 1, glowcapsTotal: 2 } }, 'full-basket')).toBe(
+      false,
+    );
+  });
+
+  it('marks the skill feats on the right days', () => {
+    const boss: DayRecord = { ...clearDay, bossesDefeated: ['gravelmaw'], workersLost: 0 };
+    expect(earns(boss, 'flawless')).toBe(true);
+    expect(earns({ ...boss, workersLost: 1 }, 'flawless')).toBe(false);
+    expect(earns({ ...clearDay, timeLeft: 3 }, 'photo-finish')).toBe(true);
+    expect(earns({ ...clearDay, timeLeft: 95 }, 'blitz')).toBe(true);
+    expect(earns({ ...clearDay, timeLeft: 80 }, 'blitz')).toBe(false);
+    const hard: DayRecord = { ...clearDay, difficulty: 'hard', captainHits: 0, workersLost: 0 };
+    expect(earns(hard, 'iron-warden')).toBe(true);
+    expect(earns(hard, 'hard-and-whole')).toBe(true);
+    expect(earns({ ...hard, difficulty: 'normal' }, 'iron-warden')).toBe(false);
+    expect(earns({ ...clearDay, workersAlive: 80 }, 'grand-army')).toBe(true);
+  });
+
+  it('counts posts to the board, relics from below and the long totals', () => {
+    const save: SaveData = {
+      ...emptySave(),
+      posted: ['a', 'b'],
+      treasuresCollected: ['the-cistern:shard-1', 'many-hands:shard-1'],
+      totals: { ...emptySave().totals, grown: 150, rescued: 25, glowcaps: 3, caveTrips: 10 },
+    };
+    const progress = (id: string) => findAchievement(id)?.progress?.(save);
+    expect(progress('on-the-board')).toEqual([1, 1]);
+    expect(progress('board-regular')).toEqual([2, 20]);
+    expect(progress('below-stairs')).toEqual([1, 10]);
+    expect(progress('green-thumb')).toEqual([100, 100]);
+    expect(progress('firefighter')).toEqual([25, 25]);
+    expect(progress('regular-diver')).toEqual([10, 10]);
+  });
+
+  it('has a good many to earn', () => {
+    expect(ACHIEVEMENTS.filter((achievement) => !achievement.secret).length).toBeGreaterThanOrEqual(
+      60,
+    );
   });
 });

@@ -14,6 +14,42 @@ export interface SaveTotals {
   treasures: number;
   enemies: number;
   workersLost: number;
+  /** Sproutlings the Kiln has grown, over every day. */
+  grown: number;
+  /** Sproutlings whistled out of fire or water in time. */
+  rescued: number;
+  /** Glowcaps brought home before they wilted. */
+  glowcaps: number;
+  /** Times the Warden has gone down a way down and come back up. */
+  caveTrips: number;
+}
+
+/** What a day did that the achievements look for, beyond its score. Every field may be missing. */
+export interface DayFeats {
+  /** Optional treasure taken, and how much there was. */
+  glowcaps: number;
+  glowcapsTotal: number;
+  twins: number;
+  twinsTotal: number;
+  dewglass: number;
+  dewglassTotal: number;
+  /** Sunshards brought home from water, from beside a flame vent and from under a spark coil. */
+  sunkHome: number;
+  ventHome: number;
+  coilHome: number;
+  /** Crystal gates broken. */
+  crystalBroken: number;
+  rescued: number;
+  grown: number;
+  /** How many of the four kinds were alive at the end. */
+  kindsAlive: number;
+  /** Caves gone down into and come back up from, and caves emptied of every relic. */
+  caves: number;
+  cavesEmptied: number;
+  /** Beasts placed in the lesson (not counting mounds). */
+  beasts: number;
+  /** Longest chain of deliveries. */
+  bestChain: number;
 }
 
 /**
@@ -118,6 +154,8 @@ export interface DayRecord {
   extraTreasures?: readonly string[];
   /** The day written down for the leaderboard. */
   run?: RunEntry;
+  /** What else the day did, for the achievements. */
+  feats?: Partial<DayFeats>;
 }
 
 /** The subset of the Web Storage API the save manager needs. */
@@ -135,7 +173,16 @@ export function emptySave(): SaveData {
     bestRanksHard: {},
     bestScoresHard: {},
     achievements: {},
-    totals: { days: 0, treasures: 0, enemies: 0, workersLost: 0 },
+    totals: {
+      days: 0,
+      treasures: 0,
+      enemies: 0,
+      workersLost: 0,
+      grown: 0,
+      rescued: 0,
+      glowcaps: 0,
+      caveTrips: 0,
+    },
     discovered: [],
     bestSplits: {},
     runs: {},
@@ -366,6 +413,10 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
       treasures: save.totals.treasures + day.treasureIds.length,
       enemies: save.totals.enemies + day.enemiesDefeated,
       workersLost: save.totals.workersLost + day.workersLost,
+      grown: save.totals.grown + (day.feats?.grown ?? 0),
+      rescued: save.totals.rescued + (day.feats?.rescued ?? 0),
+      glowcaps: save.totals.glowcaps + (day.feats?.glowcaps ?? 0),
+      caveTrips: save.totals.caveTrips + (day.feats?.caves ?? 0),
     },
   };
 }

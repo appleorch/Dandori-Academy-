@@ -23,6 +23,7 @@ import type { Line } from '../story/headmaster';
 import type { Haul } from '../simulation/expedition';
 import { makeRun, type RunEntry } from '../leaderboard/runCode';
 import { adviseDay, tallyDay, type Advice, type DayTally } from '../dandori/tally';
+import { dayFeats } from '../progression/feats';
 import { GAME_VERSION } from './changelog';
 import type { SproutKind } from '../workers/sprouts';
 import { CHAIN } from './config';
@@ -444,6 +445,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         bloomsCollected: stats.bloomsCollected,
         splits: cleared ? stats.deliveryTimes : undefined,
         extraTreasures: haul?.relics ?? [],
+        feats: dayFeats(sim, tally, haul),
         run:
           makeRun(
             {
