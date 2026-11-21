@@ -8,6 +8,7 @@ import {
   type Rank,
 } from '../dandori/scoring';
 import {
+  bonusParts,
   forDifficulty,
   LEVELS,
   shardCount,
@@ -34,8 +35,11 @@ export interface RunEntry {
   timeBonus: number;
   workerBonus: number;
   lossPenalty: number;
-  /** Glowcap points within `treasure` and `score`: they never count towards the rank. */
-  glowcaps: number;
+  /**
+   * Glowcap points within `treasure` and `score`: they never count towards the rank. Missing on
+   * runs from 0.17.0, which were ranked with Glowcaps in (see `checkRun`).
+   */
+  glowcaps?: number;
   rank: Rank;
   shards: number;
   shardsTotal: number;
@@ -51,7 +55,48 @@ export interface RunEntry {
 
 /** Two FNV-1a hashes with different offsets: 16 hex digits, plenty to tell lessons apart. */
 export function fingerprint(level: LevelDefinition): string {
-  const text = JSON.stringify(level);
+  return hash(JSON.stringify(level));
+}
+
+/**
+ * Fingerprint of what a lesson plays like: everything but its words and its rank thresholds.
+ * Runs are compared by score, which those never change, so rewording a briefing or moving a
+ * rank target leaves the board as it is; moving a wall or a shard starts it afresh.
+ */
+export function playPrint(level: LevelDefinition): string {
+  const skip = new Set<string>(NOT_PLAY);
+  // Only the lesson's own fields are skipped, never a nested one that shares a name.
+  return hash(
+    JSON.stringify(level, function (this: unknown, key: string, value: unknown) {
+      return this === level && skip.has(key) ? undefined : value;
+    }),
+  );
+}
+
+/** What a lesson says and what its ranks ask for: none of it changes how it plays. */
+const NOT_PLAY = [
+  'name',
+  'brief',
+  'platinumTime',
+  'parScore',
+  'diamondTime',
+  'diamondScore',
+] as const satisfies readonly (keyof LevelDefinition)[];
+
+/**
+ * The par a lesson had in 0.17.0, when Glowcaps still counted towards the rank: the same as now
+ * with every Glowcap's points added. Runs posted then are checked against it.
+ */
+function legacyPar(level: LevelDefinition): LevelDefinition {
+  const glowcaps = bonusParts(level).glowcapPoints;
+  return {
+    ...level,
+    parScore: level.parScore + glowcaps,
+    diamondScore: level.diamondScore + glowcaps,
+  };
+}
+
+function hash(text: string): string {
   let a = 0x811c9dc5;
   let b = 0x01000193 ^ 0x5bd1e995;
   for (let i = 0; i < text.length; i++) {
@@ -77,9 +122,22 @@ export function lessonPrint(levelId: string, difficulty: Difficulty): string | n
   if (known) return known;
   const level = lessonOf(levelId, difficulty);
   if (!level) return null;
-  const print = fingerprint(level);
+  const print = playPrint(level);
   prints.set(key, print);
   return print;
+}
+
+/** Fingerprint a lesson had in 0.17.0 (its whole definition, with that version's par). */
+export function legacyPrint(levelId: string, difficulty: Difficulty): string | null {
+  const level = lessonOf(levelId, difficulty);
+  return level ? fingerprint(legacyPar(level)) : null;
+}
+
+/** Whether a run was played on the lesson as it is now (or as it was in 0.17.0, for its runs). */
+export function playedOnThisLesson(run: RunEntry): boolean {
+  return run.glowcaps === undefined
+    ? run.print === legacyPrint(run.level, run.difficulty)
+    : run.print === lessonPrint(run.level, run.difficulty);
 }
 
 /** What a finished day needs to say about itself to become a run. */
@@ -150,15 +208,18 @@ const isCount = (value: unknown): value is number =>
 export function checkRun(run: RunEntry): string | null {
   const level = lessonOf(run.level, run.difficulty);
   if (!level) return 'unknown lesson';
-  if (run.print !== lessonPrint(run.level, run.difficulty))
-    return 'played on another version of this lesson';
+  if (!playedOnThisLesson(run)) return 'played on another version of this lesson';
+  // A run from 0.17.0 has no Glowcap count: it was ranked on its whole score, against that
+  // version's par, which counted every Glowcap.
+  const legacy = run.glowcaps === undefined;
+  const glowcaps = run.glowcaps ?? 0;
   const counts = [
     run.score,
     run.treasure,
     run.timeBonus,
     run.workerBonus,
     run.lossPenalty,
-    run.glowcaps,
+    glowcaps,
     run.shards,
     run.shardsTotal,
     run.timeLeft,
@@ -182,12 +243,13 @@ export function checkRun(run: RunEntry): string | null {
   const total = Math.max(0, run.treasure + run.timeBonus + run.workerBonus - run.lossPenalty);
   if (run.score !== total) return 'score does not add up';
   const blooms = (level.blooms ?? []).reduce((sum, bloom) => sum + bloom.weight, 0);
-  if (run.glowcaps > run.treasure || run.glowcaps > blooms * BLOOM_VALUE_PER_WEIGHT) {
+  if (glowcaps > run.treasure || glowcaps > blooms * BLOOM_VALUE_PER_WEIGHT) {
     return 'more Glowcaps than the lesson grows';
   }
-  if (run.rank !== rankFor(run.score - run.glowcaps, cleared, level)) {
-    return 'wrong rank for the score';
-  }
+  const rank = legacy
+    ? rankFor(run.score, cleared, legacyPar(level))
+    : rankFor(run.score - glowcaps, cleared, level);
+  if (run.rank !== rank) return 'wrong rank for the score';
   // Diamond is already well ahead of the test bot; half of it is out of anyone's reach.
   if (cleared && run.time < level.diamondTime * 0.5) return 'faster than possible';
   return null;

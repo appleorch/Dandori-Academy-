@@ -14,6 +14,7 @@ export const CHANGELOG: readonly Release[] = [
       'Fix: Diamond was impossible on some lessons (The Guard among them) because Glowcaps counted towards the rank but sprout after the Diamond time. Glowcaps now add to your score but never to your rank, so Diamond never waits for one. Twin pairs and Dewglass, which are there from the start, still count.',
       'The results tally shows the ranked score, then the Glowcaps on top, then the total; the HUD and the briefing list Glowcaps as extras, apart from the bonus that counts.',
       'A test now checks that every lesson can reach Diamond at its Diamond time without a single Glowcap.',
+      'Runs already on the Academy board from 0.17.0 stay there, checked against the rules they were played under. The board now only resets a lesson when its layout changes, never for new wording or rank targets.',
     ],
   },
   {

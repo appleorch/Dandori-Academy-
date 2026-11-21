@@ -266,8 +266,10 @@ The Leaderboard tab needs no server of its own, and posting is automatic
 - Every run is signed, and wherever it is read (in the game and in the Action) the signature is
   checked, every part of the score is recomputed from the lesson's own rules, the rank is checked
   against the score and the clock against the day, impossibly fast clears are refused, and a
-  fingerprint of the lesson is compared, so runs on a lesson that has since been rebalanced are
-  left off. The signing key ships with the game, so this stops casual editing, not a determined
+  fingerprint of how the lesson plays is compared, so runs on a lesson whose layout has since
+  changed are left off. The fingerprint leaves out the lesson's words and rank targets, so
+  rewording a briefing or moving a rank never clears the board; runs from 0.17.0 are checked
+  against that version's own fingerprint and rank rules, and stay. The signing key ships with the game, so this stops casual editing, not a determined
   cheat. Names are not verified. To strike a player off, add their player id (16 hex digits,
   the first four are shown as `#abcd` beside their name) to `leaderboard/banned.json`.
 - Scheduled workflows only run on the default branch, so collecting starts once this is merged

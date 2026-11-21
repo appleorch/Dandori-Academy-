@@ -3,7 +3,7 @@ import { DIFFICULTIES, type Difficulty } from '../game/core/difficulty';
 import { useGameStore } from '../game/core/gameStore';
 import { cleanWardenName, defaultWardenName, WARDEN_NAME_MAX } from '../game/core/settings';
 import { BOARD_REPO, fetchBoard, standings, type BoardEntry } from '../game/leaderboard/board';
-import { lessonPrint, type RunEntry } from '../game/leaderboard/runCode';
+import { playedOnThisLesson, type RunEntry } from '../game/leaderboard/runCode';
 import { runKey, splitKey, type SaveData } from '../game/save/saveManager';
 import { LEVELS } from '../game/world/level';
 import { MenuNav } from './MenuNav';
@@ -37,7 +37,7 @@ export function runStatus(save: SaveData, run: RunEntry, postRuns: boolean): str
   if (save.outbox.some((queued) => runKey(queued) === key)) {
     return postRuns ? 'Posting…' : 'Waiting (posting is off)';
   }
-  if (run.print !== lessonPrint(run.level, run.difficulty)) return 'Older version';
+  if (!playedOnThisLesson(run)) return 'Older version';
   return 'Not posted';
 }
 

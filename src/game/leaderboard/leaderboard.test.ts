@@ -14,6 +14,7 @@ import {
   keepBest,
   KEPT_PER_LESSON,
   nextBoardFile,
+  parseBoardFile,
   parseRelay,
   relayMessage,
   RELAY,
@@ -21,6 +22,7 @@ import {
   standings,
   type Fetcher,
 } from './board';
+import oldBoard from './fixtures/board-0.17.0.json';
 import {
   checkRun,
   decodePost,
@@ -29,6 +31,8 @@ import {
   encodeRun,
   fingerprint,
   makeRun,
+  playedOnThisLesson,
+  playPrint,
   type BoardPost,
   type RunEntry,
 } from './runCode';
@@ -316,5 +320,65 @@ describe('the board', () => {
     expect((await nextBoardFile(next.posts, incoming, new Set([BO]), now)).posts).toEqual(
       next.posts,
     );
+  });
+});
+
+describe('runs from 0.17.0', () => {
+  // The board as it stood when Glowcaps stopped counting towards the rank: real runs, kept.
+  const OLD_BOARD = parseBoardFile(JSON.stringify(oldBoard));
+
+  it('are all still accepted, with the ranks they were given', async () => {
+    expect(OLD_BOARD.length).toBe(13);
+    const entries = await checkPosts(OLD_BOARD);
+    expect(entries).toHaveLength(OLD_BOARD.length);
+    for (const entry of entries) {
+      expect(entry.glowcaps).toBeUndefined();
+      expect(playedOnThisLesson(entry)).toBe(true);
+    }
+    expect(entries.filter((entry) => entry.rank === 'Diamond').length).toBe(10);
+  });
+
+  it('are still refused if edited', async () => {
+    const [first] = await checkPosts(OLD_BOARD);
+    // The run itself, as the player's game posted it: checkRun looks at nothing else.
+    const run = first;
+    expect(checkRun(run)).toBeNull();
+    expect(checkRun({ ...run, score: run.score + 500 })).toMatch(/score/);
+    expect(checkRun({ ...run, rank: 'Copper' })).toMatch(/rank/);
+    expect(checkRun({ ...run, print: '0000000000000000' })).toMatch(/version/);
+  });
+});
+
+describe('lesson fingerprints', () => {
+  it('ignore a lesson\u2019s words and rank targets, and see any change to how it plays', () => {
+    const base = playPrint(LESSON);
+    expect(playPrint({ ...LESSON, brief: 'New words', name: 'New name' })).toBe(base);
+    expect(playPrint({ ...LESSON, platinumTime: 99, parScore: 1, diamondScore: 2 })).toBe(base);
+    const moved = LESSON.treasures.map((shard, i) =>
+      i === 0 ? { ...shard, x: shard.x + 1 } : shard,
+    );
+    expect(playPrint({ ...LESSON, treasures: moved })).not.toBe(base);
+    expect(playPrint({ ...LESSON, dayLength: LESSON.dayLength + 1 })).not.toBe(base);
+  });
+
+  it('tell every lesson and difficulty apart', () => {
+    const prints = new Set(
+      LEVELS.flatMap((level) => [playPrint(level), playPrint(forDifficulty(level, 'hard'))]),
+    );
+    expect(prints.size).toBe(LEVELS.length * 2);
+  });
+
+  it('rank new runs without their Glowcaps', () => {
+    const run = sampleRun();
+    expect(run.glowcaps).toBe(0);
+    // Claiming Glowcaps the lesson never grew is refused.
+    expect(
+      checkRun({
+        ...run,
+        glowcaps: 10000,
+        treasure: run.treasure + 10000,
+        score: run.score + 10000,
+      }),
+    ).toMatch(/Glowcaps|treasure/);
   });
 });
