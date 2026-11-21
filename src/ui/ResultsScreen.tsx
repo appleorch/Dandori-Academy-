@@ -68,11 +68,10 @@ function TallyRow({
   );
 }
 
-/** The optional treasure a lesson has, as "Glowcaps 1/2 · Twin pairs 0/1", or null if none. */
+/** The ranked bonus a lesson has, as "Twin pairs 0/1 · Dewglass whole 1/1", or null if none. */
 function optionalNote(tally: DayTally): string | null {
-  const { glowcaps, twins, dewglass } = tally.optional;
+  const { twins, dewglass } = tally.optional;
   const parts = [
-    glowcaps.of > 0 ? `Glowcaps ${glowcaps.got}/${glowcaps.of}` : null,
     twins.of > 0 ? `Twin pairs ${twins.got}/${twins.of}` : null,
     dewglass.of > 0 ? `Dewglass whole ${dewglass.got}/${dewglass.of}` : null,
   ].filter((part) => part !== null);
@@ -163,8 +162,9 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
   const { score, tally } = result;
   const bonusNote = optionalNote(tally);
   const { glowcaps, twins, dewglass } = tally.optional;
-  const bonusGot = glowcaps.got + twins.got + dewglass.got;
-  const bonusOf = glowcaps.of + twins.of + dewglass.of;
+  const bonusGot = twins.got + dewglass.got;
+  const bonusOf = twins.of + dewglass.of;
+  const bonusPoints = twins.points + dewglass.points;
   const hard = level.difficulty === 'hard';
   const next = level.side
     ? undefined
@@ -208,7 +208,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
                     : 'Bonus treasure: none in this lesson'
                 }
                 note={bonusNote ? `Optional: ${bonusNote}` : undefined}
-                value={tally.optional.points}
+                value={bonusPoints}
                 delay={0.3}
               />
               <TallyRow
@@ -229,7 +229,26 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
                 delay={0.9}
                 negative
               />
-              <TallyRow label="Total" value={score.total} delay={1.1} total />
+              {glowcaps.of > 0 ? (
+                <>
+                  <TallyRow
+                    label="Ranked score"
+                    note="What your rank is judged on"
+                    value={score.ranked}
+                    delay={1.1}
+                    total
+                  />
+                  <TallyRow
+                    label={`Glowcaps ${glowcaps.got} of ${glowcaps.of}`}
+                    note="Extra: they add to your score, never to your rank"
+                    value={score.glowcaps}
+                    delay={1.3}
+                  />
+                  <TallyRow label="Total" value={score.total} delay={1.5} total />
+                </>
+              ) : (
+                <TallyRow label="Total" value={score.total} delay={1.1} total />
+              )}
             </tbody>
           </table>
           <NextRank advice={result.advice} />

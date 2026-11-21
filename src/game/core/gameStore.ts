@@ -18,7 +18,7 @@ import {
 import { damageTaken } from '../enemies/combat';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { DayEnd, Simulation } from '../simulation/Simulation';
-import { bonusCount, bonusParts, LEVELS } from '../world/level';
+import { bonusParts, LEVELS } from '../world/level';
 import type { Line } from '../story/headmaster';
 import type { Haul } from '../simulation/expedition';
 import { makeRun, type RunEntry } from '../leaderboard/runCode';
@@ -61,9 +61,12 @@ export interface HudSnapshot {
   treasureValue: number;
   treasuresCollected: number;
   treasuresTotal: number;
-  /** Optional treasure taken so far, and how much the lesson has: Glowcaps, twin pairs, Dewglass. */
+  /** Ranked bonus taken so far, and how much the lesson has: twin pairs on time, Dewglass whole. */
   bonusGot: number;
   bonusOf: number;
+  /** Glowcaps brought home so far, and how many the lesson grows: extra, never ranked. */
+  glowcapsGot: number;
+  glowcapsOf: number;
   captainHp: number;
   boss: BossSnapshot | null;
   /** Seconds ahead (negative) or behind (positive) the best clear at the last delivery, or null. */
@@ -206,8 +209,10 @@ function snapshot(sim: Simulation): HudSnapshot {
     treasureValue: sim.stats.treasureValue,
     treasuresCollected: sim.stats.treasuresCollected.length,
     treasuresTotal: sim.stats.treasuresTotal,
-    bonusGot: sim.stats.bonus.glowcaps + sim.stats.bonus.twins + sim.stats.bonus.dewglass,
-    bonusOf: bonusCount(bonusParts(sim.level)),
+    bonusGot: sim.stats.bonus.twins + sim.stats.bonus.dewglass,
+    bonusOf: bonusParts(sim.level).twins + bonusParts(sim.level).dewglass,
+    glowcapsGot: sim.stats.bonus.glowcaps,
+    glowcapsOf: bonusParts(sim.level).glowcaps,
     captainHp: sim.captainState.hp,
     boss: bossSnapshot(sim),
     split: null,
@@ -412,6 +417,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           timeLeft: sim.timeLeft,
           workersAlive,
           workersLost: stats.workersLost,
+          glowcapPoints: stats.bonus.glowcapPoints,
         },
         level,
         penaltyPerLoss(level.difficulty),

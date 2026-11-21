@@ -59,29 +59,35 @@ export function SproutlingGuide() {
   );
 }
 
-/** The lesson's optional treasure, said plainly: what there is and what it is worth. */
+/** The lesson's treasure, said plainly: what is required, what counts as bonus, what is extra. */
 export function OptionalTreasure({ level }: { level: LevelDefinition }) {
   const parts = bonusParts(level);
-  const items = [
-    parts.glowcaps > 0
-      ? `${parts.glowcaps} ${parts.glowcaps === 1 ? 'Glowcap' : 'Glowcaps'} (they sprout later in the day and wilt if left)`
-      : null,
+  const bonus = [
     parts.twins > 0
       ? `${parts.twins} twin ${parts.twins === 1 ? 'pair' : 'pairs'} (both halves home within 10 seconds)`
       : null,
     parts.dewglass > 0 ? `${parts.dewglass} Dewglass (home without cracking)` : null,
   ].filter((item) => item !== null);
-  const worth = parts.glowcapPoints + parts.twinPoints + parts.dewglassPoints;
+  const bonusWorth = parts.twinPoints + parts.dewglassPoints;
   return (
     <p className="optional-treasure">
       <strong>Required:</strong> {shardCount(level)} Sunshards.{' '}
-      {items.length > 0 ? (
+      {bonus.length > 0 && (
         <>
-          <strong>Optional:</strong> {items.join(', ')}, worth up to {worth} points. The rank
-          targets assume you take them; skip them and you must make the time up.
+          <strong>Bonus:</strong> {bonus.join(', ')}, worth up to {bonusWorth} points; the rank
+          targets assume you take them.{' '}
         </>
-      ) : (
-        'No optional treasure in this lesson: the rank is all Sunshards, Sproutlings and time.'
+      )}
+      {parts.glowcaps > 0 && (
+        <>
+          <strong>Extra:</strong> {parts.glowcaps}{' '}
+          {parts.glowcaps === 1 ? 'Glowcap sprouts' : 'Glowcaps sprout'} later in the day (worth up
+          to {parts.glowcapPoints} points). Glowcaps add to your score but never to your rank, so
+          Diamond never waits for one.
+        </>
+      )}
+      {bonus.length === 0 && parts.glowcaps === 0 && (
+        <>No bonus treasure here: the rank is all Sunshards, Sproutlings and time.</>
       )}
     </p>
   );

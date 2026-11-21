@@ -49,6 +49,7 @@ function sampleRun(overrides: Partial<{ elapsed: number; lost: number; alive: nu
       timeLeft,
       workersAlive: alive,
       workersLost: lost,
+      glowcapPoints: 0,
     },
     LESSON,
   );
@@ -148,6 +149,7 @@ describe('checkRun', () => {
           timeLeft: sim.timeLeft,
           workersAlive: sim.workers.size,
           workersLost: sim.stats.workersLost,
+          glowcapPoints: sim.stats.bonus.glowcapPoints,
         },
         level,
         penaltyPerLoss(difficulty),
@@ -186,6 +188,9 @@ describe('checkRun', () => {
     expect(checkRun({ ...run, print: '0000000000000000' })).toMatch(/version/);
     expect(checkRun({ ...run, level: 'nowhere' })).toMatch(/unknown/);
     expect(checkRun({ ...run, score: -5 })).toMatch(/malformed/);
+    expect(checkRun({ ...run, glowcaps: 99999, treasure: 99999 + run.treasure })).toMatch(
+      /Glowcaps|treasure/,
+    );
   });
 
   it('rejects a clear faster than anyone could manage', () => {

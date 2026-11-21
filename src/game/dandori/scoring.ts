@@ -27,14 +27,25 @@ export interface DayStats {
   timeLeft: number;
   workersAlive: number;
   workersLost: number;
+  /**
+   * Points from Glowcaps, already part of `treasureValue`. They add to the score but never
+   * to the rank: a Glowcap may sprout too late in the day to be taken at Diamond pace.
+   */
+  glowcapPoints: number;
 }
 
 export interface ScoreBreakdown {
+  /** Everything brought home, Glowcaps included. */
   treasure: number;
   timeBonus: number;
   workerBonus: number;
   lossPenalty: number;
+  /** The score, Glowcaps included: what the board and best scores show. */
   total: number;
+  /** Glowcap points within the total: extra, never ranked. */
+  glowcaps: number;
+  /** The total without Glowcaps: what the rank is judged on. */
+  ranked: number;
   rank: Rank;
 }
 
@@ -57,7 +68,7 @@ export function rankValue(rank: Rank): number {
 /**
  * Scores a finished day. Leftover time only counts when every treasure is home, and
  * Platinum and Diamond need every treasure home, so finishing the whole job quickly is
- * what earns the top ranks.
+ * what earns the top ranks. Glowcaps add to the score but are left out of the rank.
  */
 export function evaluateDay(
   stats: DayStats,
@@ -71,13 +82,17 @@ export function evaluateDay(
   const workerBonus = stats.workersAlive * POINTS_PER_WORKER;
   const lossPenalty = stats.workersLost * lossPenaltyEach;
   const total = Math.max(0, treasure + timeBonus + workerBonus - lossPenalty);
+  const glowcaps = Math.max(0, Math.min(stats.glowcapPoints, treasure));
+  const ranked = Math.max(0, total - glowcaps);
   return {
     treasure,
     timeBonus,
     workerBonus,
     lossPenalty,
     total,
-    rank: rankFor(total, cleared, par),
+    glowcaps,
+    ranked,
+    rank: rankFor(ranked, cleared, par),
   };
 }
 

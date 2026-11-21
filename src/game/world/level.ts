@@ -83,15 +83,20 @@ export function bonusParts(level: Pick<LevelDefinition, 'treasures' | 'blooms'>)
   return parts;
 }
 
-/** Number of optional treasures in a lesson: Glowcaps, twin pairs and Dewglass. */
-export function bonusCount(parts: BonusParts): number {
-  return parts.glowcaps + parts.twins + parts.dewglass;
-}
-
-/** Most bonus score a lesson offers on top of its Sunshards' value. */
+/** Most bonus score a lesson offers on top of its Sunshards' value, Glowcaps included. */
 export function bonusTotal(level: Pick<LevelDefinition, 'treasures' | 'blooms'>): number {
   const parts = bonusParts(level);
   return parts.glowcapPoints + parts.twinPoints + parts.dewglassPoints;
+}
+
+/**
+ * The bonus that counts towards the rank: twin pairs on time and Dewglass kept whole. Both are
+ * ordinary shards there from the start, so they can always be taken at Diamond pace. Glowcaps
+ * are left out: they sprout partway through the day, sometimes after the Diamond time.
+ */
+export function rankedBonusTotal(level: Pick<LevelDefinition, 'treasures' | 'blooms'>): number {
+  const parts = bonusParts(level);
+  return parts.twinPoints + parts.dewglassPoints;
 }
 
 /**
@@ -125,13 +130,15 @@ export function shardCount(
 export const DIAMOND_SHARE = 0.85;
 
 /**
- * Par is exactly the score of a Platinum-pace day: every Sunshard home at `platinumTime`
- * with every bonus taken (Glowcaps, twins on time, Dewglass whole), the starting squad alive
- * and nobody lost. Diamond is the same day with every Sunshard home by `diamondTime`. The
- * bonuses are in par so that taking them never stands in for pace.
+ * Par is exactly the ranked score of a Platinum-pace day: every Sunshard home at
+ * `platinumTime` with every twin pair on time and every Dewglass whole, the starting squad alive
+ * and nobody lost. Diamond is the same day with every Sunshard home by `diamondTime`. Those
+ * bonuses are in par so that they never stand in for pace. Glowcaps are not: they never decide a
+ * rank (see `evaluateDay`).
  */
 function withPar(spec: LevelSpec, difficulty: Difficulty = 'normal'): LevelDefinition {
-  const base = treasureTotal(spec) + bonusTotal(spec) + spec.startingWorkers * POINTS_PER_WORKER;
+  const base =
+    treasureTotal(spec) + rankedBonusTotal(spec) + spec.startingWorkers * POINTS_PER_WORKER;
   const diamondTime = Math.floor(spec.platinumTime * DIAMOND_SHARE);
   return {
     ...spec,

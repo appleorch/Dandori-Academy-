@@ -123,9 +123,12 @@ export function nextRank(rank: Rank): Rank | null {
   return index < RANKS.length - 1 ? RANKS[index + 1] : null;
 }
 
-/** One place the day could have scored more. */
+/**
+ * One place the day could have ranked higher. Glowcaps are never one: they add to the score
+ * but not to the rank.
+ */
 export interface Lever {
-  kind: 'required' | 'glowcaps' | 'twins' | 'dewglass' | 'losses' | 'time';
+  kind: 'required' | 'twins' | 'dewglass' | 'losses' | 'time';
   text: string;
   /** Points it would have added; for time, points per second sooner. */
   points: number;
@@ -157,7 +160,8 @@ export function adviseDay(
   lossPenaltyEach: number,
 ): Advice {
   const target = nextRank(score.rank);
-  const short = target ? Math.max(0, rankScore(target, level) - score.total) : 0;
+  // The rank is judged on the score without Glowcaps, so the gap is measured the same way.
+  const short = target ? Math.max(0, rankScore(target, level) - score.ranked) : 0;
   const levers: Lever[] = [];
   const { required, optional, sproutlings } = tally;
   if (required.got < required.of) {
@@ -171,11 +175,6 @@ export function adviseDay(
   const optionalLever = (kind: Lever['kind'], count: Count, text: string) => {
     if (count.got < count.of) levers.push({ kind, text, points: count.possible - count.points });
   };
-  optionalLever(
-    'glowcaps',
-    optional.glowcaps,
-    `Glowcaps: ${optional.glowcaps.got} of ${optional.glowcaps.of} brought home before they wilted.`,
-  );
   optionalLever(
     'twins',
     optional.twins,

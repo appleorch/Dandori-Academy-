@@ -54,6 +54,7 @@ function score(level: LevelDefinition, facts: DayFacts) {
       timeLeft: facts.timeLeft,
       workersAlive: facts.alive,
       workersLost: facts.lost,
+      glowcapPoints: facts.bonus.glowcapPoints,
     },
     level,
   );
@@ -110,6 +111,21 @@ describe('the day tally', () => {
   });
 });
 
+describe('Diamond', () => {
+  it.each(LEVELS.map((level) => [level.name, level] as const))(
+    'is reachable in %s at the Diamond time without a single Glowcap',
+    (_name, level) => {
+      const facts = perfect(level, level.dayLength - level.diamondTime);
+      facts.treasureValue -= facts.bonus.glowcapPoints;
+      facts.bonus = { ...facts.bonus, glowcaps: 0, glowcapPoints: 0 };
+      expect(score(level, facts).rank).toBe('Diamond');
+      // And a second slower is not.
+      const slower = { ...facts, timeLeft: facts.timeLeft - 1 };
+      expect(score(level, slower).rank).toBe('Platinum');
+    },
+  );
+});
+
 describe('advice on the next rank', () => {
   it('says plainly when only time is missing', () => {
     // Every bonus taken, nobody lost, but a little slower than Diamond.
@@ -118,25 +134,25 @@ describe('advice on the next rank', () => {
     expect(day.rank).toBe('Platinum');
     const advice = adviseDay(MIXED, day, tallyDay(MIXED, facts), NORMAL_PENALTY_PER_LOSS);
     expect(advice.target).toBe('Diamond');
-    expect(advice.short).toBe(rankScore('Diamond', MIXED) - day.total);
+    expect(advice.short).toBe(rankScore('Diamond', MIXED) - day.ranked);
     expect(advice.levers.map((lever) => lever.kind)).toEqual(['time']);
     expect(advice.summary).toMatch(/Only time/);
   });
 
   it('lists the bonuses left behind and the Sproutlings lost, biggest first', () => {
     const facts = perfect(MIXED, MIXED.dayLength - MIXED.platinumTime);
-    facts.treasureValue -= facts.bonus.glowcapPoints;
-    facts.bonus = { ...facts.bonus, glowcaps: 0, glowcapPoints: 0 };
+    facts.treasureValue -= facts.bonus.twinPoints;
+    facts.bonus = { ...facts.bonus, twins: 0, twinPoints: 0 };
     facts.lost = 2;
     facts.alive -= 2;
     const day = score(MIXED, facts);
     const advice = adviseDay(MIXED, day, tallyDay(MIXED, facts), NORMAL_PENALTY_PER_LOSS);
     const kinds = advice.levers.map((lever) => lever.kind);
-    expect(kinds).toContain('glowcaps');
+    expect(kinds).toContain('twins');
     expect(kinds).toContain('losses');
     expect(kinds[kinds.length - 1]).toBe('time');
-    const glowcaps = advice.levers.find((lever) => lever.kind === 'glowcaps');
-    expect(glowcaps?.points).toBe(bonusParts(MIXED).glowcapPoints);
+    const twins = advice.levers.find((lever) => lever.kind === 'twins');
+    expect(twins?.points).toBe(bonusParts(MIXED).twinPoints);
     const losses = advice.levers.find((lever) => lever.kind === 'losses');
     expect(losses?.points).toBe(2 * 15);
     for (let i = 1; i < advice.levers.length - 1; i++) {
@@ -144,6 +160,19 @@ describe('advice on the next rank', () => {
     }
   });
 
+  it('never counts Glowcaps towards a rank, or offers them as a way up', () => {
+    const facts = perfect(MIXED, MIXED.dayLength - MIXED.platinumTime);
+    const without = { ...facts, treasureValue: facts.treasureValue - facts.bonus.glowcapPoints };
+    without.bonus = { ...facts.bonus, glowcaps: 0, glowcapPoints: 0 };
+    const withGlowcaps = score(MIXED, facts);
+    const withoutGlowcaps = score(MIXED, without);
+    // Glowcaps add to the score, and to nothing else.
+    expect(withGlowcaps.total - withoutGlowcaps.total).toBe(bonusParts(MIXED).glowcapPoints);
+    expect(withGlowcaps.ranked).toBe(withoutGlowcaps.ranked);
+    expect(withGlowcaps.rank).toBe(withoutGlowcaps.rank);
+    const advice = adviseDay(MIXED, withoutGlowcaps, tallyDay(MIXED, without), 10);
+    expect(advice.levers.map((lever) => lever.kind)).toEqual(['time']);
+  });
   it('names the blocker when a Sunshard stayed out', () => {
     const facts = perfect(MIXED, 0);
     facts.shardsHome -= 1;

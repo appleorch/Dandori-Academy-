@@ -8,6 +8,15 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.17.1',
+    date: '2026-11-21',
+    changes: [
+      'Fix: Diamond was impossible on some lessons (The Guard among them) because Glowcaps counted towards the rank but sprout after the Diamond time. Glowcaps now add to your score but never to your rank, so Diamond never waits for one. Twin pairs and Dewglass, which are there from the start, still count.',
+      'The results tally shows the ranked score, then the Glowcaps on top, then the total; the HUD and the briefing list Glowcaps as extras, apart from the bonus that counts.',
+      'A test now checks that every lesson can reach Diamond at its Diamond time without a single Glowcap.',
+    ],
+  },
+  {
     version: '0.17.0',
     date: '2026-11-19',
     changes: [

@@ -34,6 +34,8 @@ export interface RunEntry {
   timeBonus: number;
   workerBonus: number;
   lossPenalty: number;
+  /** Glowcap points within `treasure` and `score`: they never count towards the rank. */
+  glowcaps: number;
   rank: Rank;
   shards: number;
   shardsTotal: number;
@@ -90,6 +92,7 @@ export interface FinishedDay {
     timeBonus: number;
     workerBonus: number;
     lossPenalty: number;
+    glowcaps: number;
     rank: Rank;
   };
   shards: number;
@@ -115,6 +118,7 @@ export function makeRun(day: FinishedDay, game: string, at: Date): RunEntry | nu
     timeBonus: day.score.timeBonus,
     workerBonus: day.score.workerBonus,
     lossPenalty: day.score.lossPenalty,
+    glowcaps: day.score.glowcaps,
     rank: day.score.rank,
     shards: day.shards,
     shardsTotal: day.shardsTotal,
@@ -154,6 +158,7 @@ export function checkRun(run: RunEntry): string | null {
     run.timeBonus,
     run.workerBonus,
     run.lossPenalty,
+    run.glowcaps,
     run.shards,
     run.shardsTotal,
     run.timeLeft,
@@ -176,7 +181,13 @@ export function checkRun(run: RunEntry): string | null {
   if (run.lossPenalty !== run.lost * penaltyPerLoss(run.difficulty)) return 'wrong loss penalty';
   const total = Math.max(0, run.treasure + run.timeBonus + run.workerBonus - run.lossPenalty);
   if (run.score !== total) return 'score does not add up';
-  if (run.rank !== rankFor(run.score, cleared, level)) return 'wrong rank for the score';
+  const blooms = (level.blooms ?? []).reduce((sum, bloom) => sum + bloom.weight, 0);
+  if (run.glowcaps > run.treasure || run.glowcaps > blooms * BLOOM_VALUE_PER_WEIGHT) {
+    return 'more Glowcaps than the lesson grows';
+  }
+  if (run.rank !== rankFor(run.score - run.glowcaps, cleared, level)) {
+    return 'wrong rank for the score';
+  }
   // Diamond is already well ahead of the test bot; half of it is out of anyone's reach.
   if (cleared && run.time < level.diamondTime * 0.5) return 'faster than possible';
   return null;

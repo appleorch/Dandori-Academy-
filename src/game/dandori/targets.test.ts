@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bonusTotal, LEVELS, shardCount, treasureTotal } from '../world/level';
+import { bonusParts, bonusTotal, LEVELS, shardCount, treasureTotal } from '../world/level';
 import { evaluateDay } from './scoring';
 import { rankTargets } from './targets';
 
@@ -43,12 +43,13 @@ describe.each(LEVELS)('$name rank targets', (level) => {
             timeLeft,
             workersAlive: level.startingWorkers,
             workersLost: 0,
+            glowcapPoints: bonusParts(level).glowcapPoints,
           },
           level,
         );
-      expect(day(target.timeLeft).total).toBeGreaterThanOrEqual(target.score);
+      expect(day(target.timeLeft).ranked).toBeGreaterThanOrEqual(target.score);
       expect(day(target.timeLeft).rank).toBe(target.rank);
-      expect(day(target.timeLeft - 1).total).toBeLessThan(target.score);
+      expect(day(target.timeLeft - 1).ranked).toBeLessThan(target.score);
     }
   });
 });

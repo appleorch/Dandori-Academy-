@@ -8,6 +8,7 @@ const base: DayStats = {
   timeLeft: 59.2,
   workersAlive: 20,
   workersLost: 0,
+  glowcapPoints: 0,
 };
 const PAR: Par = { parScore: 3000, diamondScore: 3200 };
 

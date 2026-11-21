@@ -25,6 +25,7 @@ function play(base: (typeof LEVELS)[number], difficulty: Difficulty, style = BOT
       timeLeft: sim.timeLeft,
       workersAlive: sim.workers.size,
       workersLost: sim.stats.workersLost,
+      glowcapPoints: sim.stats.bonus.glowcapPoints,
     },
     level,
     penaltyPerLoss(difficulty),

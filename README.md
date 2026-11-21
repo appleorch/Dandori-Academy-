@@ -89,7 +89,8 @@ On a phone or tablet the game shows touch controls instead:
   - Every carcass hauled home becomes new Sproutlings (4, 7 and 3).
 - **Bramble gates** block a path until enough Sproutlings break them; hauls behind a gate
   wait until it falls. **Dew drips** fall on the dark wet patches and knock carriers (but not Dewlings) off their
-  haul. **Glowcaps** sprout partway through some days and wilt if left: bonus score.
+  haul. **Glowcaps** sprout partway through some days and wilt if left: extra score that never
+  affects the rank.
 - **Bosses** have a health bar across the top that says when they can be hurt. The Gravelmaw's
   plates take a quarter damage except while it lies winded after a slam; the Lanternroot is
   shielded while any root-knot glows; the Bellwether is armoured except after charging into
@@ -195,24 +196,29 @@ music. Before a day, Proctor Ashwick gives a briefing; passing a lesson at Silve
 an entry to the Journal tab, and finishing a term adds a note from Tindle, the squad's first
 Emberling. The text lives in `src/game/story/story.ts`.
 
-**Required and optional treasure.** Sunshards are required: every one must come home to clear a
-lesson, and leftover time only scores once they are all home. Bonus treasure is optional:
-Glowcaps (they sprout partway through the day and wilt if left), twin pairs delivered within 10
-seconds of each other, and Dewglass brought home without cracking. The briefing lists both, the
-HUD counts them separately (Sunshards x/y, Bonus x/y), and the results tally shows Sunshards x of
-y, bonus treasure x of y (by kind), the time bonus, and the Sproutlings the day ended with, lost,
-and the most the lesson could end with. Under the tally, _Next_ names the next rank, how many
-points short the day was, and every place it left points behind (Sunshards, each kind of bonus,
+**Required treasure, bonus and extras.** Sunshards are required: every one must come home to
+clear a lesson, and leftover time only scores once they are all home. Bonus treasure counts
+towards the rank: twin pairs delivered within 10 seconds of each other, and Dewglass brought home
+without cracking. Both are ordinary shards there from the start, so they can always be taken at
+Diamond pace. Glowcaps are extras: they sprout partway through the day (sometimes after the
+Diamond time) and wilt if left, and they add to the score but never to the rank. The briefing
+lists all three, the HUD counts them separately (Sunshards x/y, Bonus x/y, Glowcaps x/y), and the
+results tally shows Sunshards x of y, bonus treasure x of y, the time bonus, the Sproutlings the
+day ended with, lost, and the most the lesson could end with, then the ranked score, the Glowcaps
+on top, and the total. Under the tally, _Next_ names the next rank, how many points short the
+ranked score was, and every place it left points behind (Sunshards, each kind of bonus,
 Sproutlings lost), biggest first, with time last; when nothing else was missed it says plainly
-that only time stands in the way (`src/game/dandori/tally.ts`).
+that only time stands in the way (`src/game/dandori/tally.ts`). A test checks that every lesson
+can reach Diamond at its Diamond time without a single Glowcap.
 
 Each day is ranked **Copper, Bronze, Silver, Gold, Platinum or Diamond** against the lesson's
 par score (`src/game/dandori/scoring.ts`). Silver or better unlocks the next lesson. Best rank and
 best score per lesson are saved in the browser. Each lesson sets a Platinum time
 (`platinumTime` in `src/game/world/levels/`): bring every Sunshard home by then without losing a
 Sproutling and the day is Platinum. The par score is derived from that time; Bronze, Silver and
-Gold need 35%, 55% and 75% of par. Par counts every bonus the lesson offers (Glowcaps, twins
-delivered on time, Dewglass kept whole), so bonuses never stand in for pace. Diamond needs the same day finished in 85% of the Platinum
+Gold need 35%, 55% and 75% of par. Par counts the bonus (twins delivered on time,
+Dewglass kept whole), so it never stands in for pace; Glowcaps are left out of par and out of the
+ranked score. Diamond needs the same day finished in 85% of the Platinum
 time. Platinum and Diamond also need every Sunshard home, whatever the score. The lesson list,
 the briefing, the pause menu and the results screen show every rank's score and the clock time it
 needs.

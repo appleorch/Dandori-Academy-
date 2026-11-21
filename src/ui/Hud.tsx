@@ -114,9 +114,17 @@ export function Hud({
             {hud.bonusOf > 0 && (
               <div
                 className="chip bonus-chip"
-                title="Optional: Glowcaps, twin pairs on time and Dewglass kept whole"
+                title="Bonus: twin pairs on time and Dewglass kept whole. Counts towards your rank."
               >
                 Bonus {hud.bonusGot}/{hud.bonusOf}
+              </div>
+            )}
+            {hud.glowcapsOf > 0 && (
+              <div
+                className="chip bonus-chip"
+                title="Extra: Glowcaps add to your score, never to your rank"
+              >
+                Glowcaps {hud.glowcapsGot}/{hud.glowcapsOf}
               </div>
             )}
           </>

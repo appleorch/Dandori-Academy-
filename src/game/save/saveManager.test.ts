@@ -159,6 +159,7 @@ describe('the board outbox', () => {
     timeBonus: 0,
     workerBonus: 0,
     lossPenalty: 0,
+    glowcaps: 0,
     rank: 'Copper',
     shards: 0,
     shardsTotal: 5,

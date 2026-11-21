@@ -83,6 +83,7 @@ describe('Hard mode', () => {
       timeLeft: 10,
       workersAlive: 8,
       workersLost: 4,
+      glowcapPoints: 0,
     };
     const normal = evaluateDay(
       stats,
