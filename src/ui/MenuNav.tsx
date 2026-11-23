@@ -4,7 +4,10 @@ import { useGameStore, type MenuScreen } from '../game/core/gameStore';
 import { ACHIEVEMENTS } from '../game/progression/achievements';
 
 const TABS: readonly (readonly [MenuScreen, string])[] = [
-  ['menu', 'Lessons'],
+  ['menu', 'Main menu'],
+  ['map', 'Story'],
+  ['challenges', 'Challenges'],
+  ['battles', 'Battles'],
   ['journal', 'Journal'],
   ['guide', 'Field Guide'],
   ['leaderboard', 'Leaderboard'],

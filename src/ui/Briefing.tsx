@@ -2,7 +2,8 @@ import { useGameStore } from '../game/core/gameStore';
 import { chapterOf, LESSON_STORY } from '../game/story/story';
 import type { LevelDefinition } from '../game/world/level';
 import { AshwickPortrait } from './Portrait';
-import { RankTargets } from './RankTargets';
+import { MODES } from '../game/modes/modes';
+import { ModeTargets } from './ModeTargets';
 import { OptionalTreasure, SquadRoster } from './SquadRoster';
 
 /**
@@ -11,15 +12,18 @@ import { OptionalTreasure, SquadRoster } from './SquadRoster';
  */
 export function Briefing({ level }: { level: LevelDefinition }) {
   const beginDay = useGameStore((state) => state.beginDay);
-  const showScreen = useGameStore((state) => state.showScreen);
+  const leaveDay = useGameStore((state) => state.leaveDay);
+  const mode = useGameStore((state) => state.playMode);
+  const rival = useGameStore((state) => state.rival);
   const chapter = chapterOf(level.stage);
-  const story = LESSON_STORY[level.id];
+  // Ashwick's word on the lesson belongs to the story; the other modes open on their rules.
+  const story = mode === 'story' ? LESSON_STORY[level.id] : undefined;
 
   return (
     <div className="screen overlay briefing">
       <div className="panel">
         <p className="eyebrow">
-          {chapter.label} · {chapter.title}
+          {mode === 'story' ? `${chapter.label} · ${chapter.title}` : MODES[mode].name}
           {level.difficulty === 'hard' ? ' · Hard' : ''}
         </p>
         <h1>
@@ -37,12 +41,12 @@ export function Briefing({ level }: { level: LevelDefinition }) {
         <p className="brief">{level.brief}</p>
         <OptionalTreasure level={level} />
         <SquadRoster level={level} />
-        <RankTargets level={level} />
+        <ModeTargets level={level} mode={mode} rival={rival} />
         <button type="button" onClick={beginDay} autoFocus>
           Begin the day <kbd>Enter</kbd>
         </button>
-        <button type="button" className="secondary" onClick={() => showScreen('menu')}>
-          Back to lessons
+        <button type="button" className="secondary" onClick={leaveDay}>
+          Back
         </button>
       </div>
     </div>

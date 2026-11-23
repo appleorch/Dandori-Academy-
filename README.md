@@ -3,8 +3,9 @@
 _The Grand Botanical & Clockwork Academy._
 
 A browser RTS about dandori: planning work so that nobody stands idle. You lead a squad of
-small workers, throw them at jobs, and move on while they finish on their own. The day is
-scored on how much you brought home and how quickly.
+small workers, throw them at jobs, and move on while they finish on their own. The story asks
+you to bring every Sunshard home; the challenges score the same fields several ways; battles race
+a rival Warden.
 
 This repository implements the MVP defined in the project handoff document (one worker type,
 one captain, one home base, one enemy type, one treasure type, throwing, whistling, carrying,
@@ -139,6 +140,64 @@ On a phone or tablet the game shows touch controls instead:
 - The day ends when every Sunshard is home, time runs out, the Warden is down, or no
   Sproutlings remain. Leftover time only scores if everything was collected.
 
+## Ways to play
+
+The main menu offers three: **Story**, **Challenges** and **Battles**
+(`src/game/modes/modes.ts`). Each runs the same lesson fields under its own rules.
+
+**Story.** The lessons in order, chosen on an illustrated map of the Academy grounds
+(`src/ui/StoryMap.tsx`, `src/ui/academyMap.ts`): one region a term round the Academy, the trail
+winding through the lessons, the Undercroft beneath the Academy, and caves appearing beside the
+lessons that lead down to them once found. The story keeps no score. Bring every Sunshard home to
+clear a lesson and open the next; the story counts its days, and the results show what the day
+did (Sunshards, optional treasure, Sproutlings grown and lost, new relics) and the clear time
+against your fastest. Hard is a story setting and opens on a lesson once it is cleared on Normal.
+
+**Challenges.** Every lesson the story has opened can be played as a challenge, for a medal
+(Bronze, Silver, Gold, Platinum, Diamond) and a place on its own Academy board. Each challenge
+always runs on the Normal day, and its day can be ended early from the pause menu.
+
+| Challenge         | Ends                      | Score                                                                                                                         |
+| ----------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Growing Season    | At sunset                 | 1 per Sproutling alive at the end                                                                                             |
+| Treasure Hunt     | When every Sunshard is in | Treasure + 10 per Sproutling alive + 1 per 2 seconds left; a Perfect Bloom for bringing every Sunshard home and losing nobody |
+| Mission           | When everything is in     | Treasure + 50 per point of carcass weight; 10 per second left only on a 100% clear (every shard, every beast)                 |
+| Dandori Challenge | When everything is in     | 10 per point of weight home; 1 per second left once everything is collected                                                   |
+| Lean Squad Trial  | When everything is in     | As the Dandori Challenge, but the Kiln grows nothing: the starting squad is all you get                                       |
+
+Platinum is a perfect day at a measured pace and Diamond the same day in 85% of that time; Bronze,
+Silver and Gold are 35%, 55% and 75% of Platinum. The paces for the challenges that end when
+everything is collected are the test player's measured times for collecting everything
+(`src/game/modes/paceTimes.ts`); the Treasure Hunt uses the lesson's Platinum time. In the Mission,
+the Dandori Challenge and the Trial, Platinum and Diamond also need everything collected.
+Glowcaps add to a score on a line of their own but never count for a medal, so a medal never
+waits for one and never comes from one. The Lean Squad Trial is only offered on the sixteen
+lessons the test player can finish with the starting squad. Tests check that every challenge on
+every lesson can reach Diamond, that the test player hits each measured time within a second and
+never earns Diamond, and that Glowcaps cannot change a medal (`src/game/modes/modes.test.ts`).
+
+**Battles.** Race a CPU rival who works their own copy of the same field at the same time; the
+rival's field shows on a second map in the top left, and a race panel shows both tallies
+(`src/game/modes/battle.ts`). Battle days are shorter (1.2 times the Platinum time at most).
+
+- **Marble Race**: the four Sunshards farthest from the Kiln are marbles, ringed in gold. The
+  first to bring all four home wins; at sunset, the most marbles home.
+- **Bingo Race**: each side has its own 3 by 3 or 4 by 4 card of things to bring home
+  (particular relics, any seed pod, any Glowcap, a beast of a kind). The first full row, column
+  or diagonal wins; at sunset, the most squares.
+- **Dandori Duel**: 10 points per point of weight home; the higher total wins at sunset, or as
+  soon as either side has collected everything.
+
+The rival is the test player, slowed to seven tenths of your pace (Cadet Pell), a little under
+it (Warden Quill), or at full pace (Proctor Ashwick). Losing the Warden or the whole squad loses
+the battle, and conceding from the pause menu counts as a loss. Wins, losses and draws are kept
+per race.
+
+**Twin pairs** are told apart at a glance: each pair in a lesson has its own colour, marker
+shape and letter (A hexagon, B triangle, C square...), on the field, on the minimap and in the
+briefing (`src/game/world/twins.ts`). Once the first half of a pair is home, the HUD counts down
+the seconds left to bring the other half for the bonus.
+
 ## Lessons and progression
 
 | #   | Lesson               | Teaches                                                    |
@@ -187,43 +246,27 @@ up the same stair (`src/game/simulation/expedition.ts`). Everyone below comes ba
 Sproutlings grown down there; losses below count against the day, and if the Warden falls below
 the day is over. Relics brought up go to the Field Guide but do not count towards the day's
 score, so a cave is a detour for the collection, not a shortcut to a rank. A cave can be
-revisited until it is emptied, and can also be played on its own from the lesson list.
+revisited until it is emptied, and can also be played on its own from the story map.
 
 The lessons are told as a story in four terms and an ending: Kindling (1 to 5, spring meadow),
 Field Work (6 to 10, autumn), The Wild Marches (11 to 16, marsh), The Long Road (17 to 21,
 dusk) and The Undercroft (22, a cave). Each setting has its own ground, trees, sky, weather and
-music. Before a day, Proctor Ashwick gives a briefing; passing a lesson at Silver or better adds
+music. Before a day, Proctor Ashwick gives a briefing; clearing a lesson in the story adds
 an entry to the Journal tab, and finishing a term adds a note from Tindle, the squad's first
 Emberling. The text lives in `src/game/story/story.ts`.
 
-**Required treasure, bonus and extras.** Sunshards are required: every one must come home to
-clear a lesson, and leftover time only scores once they are all home. Bonus treasure counts
-towards the rank: twin pairs delivered within 10 seconds of each other, and Dewglass brought home
-without cracking. Both are ordinary shards there from the start, so they can always be taken at
-Diamond pace. Glowcaps are extras: they sprout partway through the day (sometimes after the
-Diamond time) and wilt if left, and they add to the score but never to the rank. The briefing
-lists all three, the HUD counts them separately (Sunshards x/y, Bonus x/y, Glowcaps x/y), and the
-results tally shows Sunshards x of y, bonus treasure x of y, the time bonus, the Sproutlings the
-day ended with, lost, and the most the lesson could end with, then the ranked score, the Glowcaps
-on top, and the total. Under the tally, _Next_ names the next rank, how many points short the
-ranked score was, and every place it left points behind (Sunshards, each kind of bonus,
-Sproutlings lost), biggest first, with time last; when nothing else was missed it says plainly
-that only time stands in the way (`src/game/dandori/tally.ts`). A test checks that every lesson
-can reach Diamond at its Diamond time without a single Glowcap.
+**Required treasure and optional treasure.** Sunshards are required: every one must come home to
+clear a lesson. Twin pairs (both halves home within 10 seconds of each other), Dewglass brought
+home without cracking, and Glowcaps (which sprout partway through the day and wilt if left) are
+optional. In the challenges they add to the treasure score; Glowcaps never count for a medal.
+The briefing lists all of them, and the HUD counts Sunshards, bonus treasure and Glowcaps
+separately.
 
-Each day is ranked **Copper, Bronze, Silver, Gold, Platinum or Diamond** against the lesson's
-par score (`src/game/dandori/scoring.ts`). Silver or better unlocks the next lesson. Best rank and
-best score per lesson are saved in the browser. Each lesson sets a Platinum time
-(`platinumTime` in `src/game/world/levels/`): bring every Sunshard home by then without losing a
-Sproutling and the day is Platinum. The par score is derived from that time; Bronze, Silver and
-Gold need 35%, 55% and 75% of par. Par counts the bonus (twins delivered on time,
-Dewglass kept whole), so it never stands in for pace; Glowcaps are left out of par and out of the
-ranked score. Diamond needs the same day finished in 85% of the Platinum
-time. Platinum and Diamond also need every Sunshard home, whatever the score. The lesson list,
-the briefing, the pause menu and the results screen show every rank's score and the clock time it
-needs.
+Before 0.18.0 the story itself was scored and ranked; those ranks are kept in old saves, count as
+medals for the achievements, open Hard where they reached Gold, and mark lessons passed at Silver
+or better as cleared. Their runs stay on the leaderboard's **Classic** board.
 
-Platinum times are set at the clear time of the greedy test player in
+Each lesson's Platinum time (the Treasure Hunt's pace, and what sets a battle's day) is the clear time of the greedy test player in
 `src/game/world/testBot.ts`, rounded up to the next second. That player knows every map perfectly,
 throws the right kind at every job, and still loses Sproutlings and misses bonuses on the way,
 so it ends about half the lessons on Gold and the rest on Platinum: Platinum means keeping its
@@ -235,8 +278,8 @@ is how the targets are checked whenever a lesson or a rule changes.
 
 ## Hard mode
 
-The lesson list has a Normal / Hard switch. A lesson's Hard mode opens after earning Gold on it
-on Normal, and keeps its own best rank and score. On Hard (`src/game/core/difficulty.ts`):
+The story map has a Normal / Hard switch. A lesson's Hard mode opens once it is cleared on
+Normal in the story, and keeps its own clears. On Hard (`src/game/core/difficulty.ts`):
 enemies have 25% more health and wind up 15% faster, the Warden has two hearts, drips kill up
 to three Sproutlings, each lost Sproutling costs 20 points instead of 10, and the day is 10%
 shorter while the Platinum finish time stays the same. On Hard the greedy bot is only required
@@ -249,7 +292,10 @@ person would try again.
 The Leaderboard tab needs no server of its own, and posting is automatic
 (`src/game/leaderboard/`):
 
-- **Your best runs**: the ten best days per lesson and difficulty are kept in the save, each
+- **Boards**: each challenge has its own board per lesson. **Classic** keeps the runs from before
+  0.18.0, when story days were scored, and takes no new ones. Story days and battles are not
+  posted.
+- **Your best runs**: the ten best days per challenge and lesson are kept in the save, each
   marked Posted, Posting or Not posted.
 - **Posting**: when a day ends with a new personal best on a lesson, the game posts it by itself
   to a topic on [ntfy.sh](https://ntfy.sh), a free public message relay that browsers can post to
@@ -295,9 +341,10 @@ The Leaderboard tab needs no server of its own, and posting is automatic
   editing, not someone reading the source. Progress kept in the browser is still plain JSON.
 - **Version and revision history**: shown on Settings & save, from `src/game/core/changelog.ts`.
   A test keeps its newest entry equal to the version in `package.json`.
-- **Achievements**: 66 on the list, covering ranks, optional treasure, every kind's special
+- **Achievements**: 79, 76 of them on the list, covering story clears, challenge medals, Perfect
+  Bloom, battle wins (one for beating Proctor Ashwick), optional treasure, every kind's special
   jobs, caves, skill (flawless boss fights, photo finishes, chains, pacifist days) and the long
-  totals, from First Delivery to Dandori Master (Platinum in every
+  totals, from First Delivery to Dandori Master (Platinum in a challenge on every
   lesson), and a few that stay off the list until they are earned. Counter achievements show progress bars. New ones are announced on the results
   screen, and an older save is granted anything it already qualifies for when it loads.
 

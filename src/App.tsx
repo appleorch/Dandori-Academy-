@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { audio } from './game/audio/audioManager';
 import { InputController } from './game/commands/input';
 import { useGameStore } from './game/core/gameStore';
+import { levelForMode } from './game/modes/battle';
 import { GameCanvas } from './game/rendering/GameCanvas';
 import { forDifficulty, LEVELS } from './game/world/level';
 import { PokerRoom } from './poker/PokerRoom';
@@ -11,8 +12,11 @@ import { FieldGuide } from './ui/FieldGuide';
 import { Hud } from './ui/Hud';
 import { JournalScreen } from './ui/JournalScreen';
 import { LeaderboardScreen } from './ui/LeaderboardScreen';
+import { BattleSelect } from './ui/BattleSelect';
+import { ChallengeSelect } from './ui/ChallengeSelect';
+import { MainMenu } from './ui/MainMenu';
+import { StoryMap } from './ui/StoryMap';
 import { useBoardPoster } from './ui/useBoardPoster';
-import { LessonSelect } from './ui/LessonSelect';
 import { PauseMenu } from './ui/PauseMenu';
 import { ResultsScreen } from './ui/ResultsScreen';
 import { SettingsScreen } from './ui/SettingsScreen';
@@ -31,9 +35,18 @@ export function App() {
   const runId = useGameStore((state) => state.runId);
   const levelId = useGameStore((state) => state.levelId);
   const playDifficulty = useGameStore((state) => state.playDifficulty);
-  const level = forDifficulty(
-    LEVELS.find((candidate) => candidate.id === levelId) ?? LEVELS[0],
-    playDifficulty,
+  const playMode = useGameStore((state) => state.playMode);
+  // Kept while the day lasts: a new object here would start the day over.
+  const level = useMemo(
+    () =>
+      levelForMode(
+        forDifficulty(
+          LEVELS.find((candidate) => candidate.id === levelId) ?? LEVELS[0],
+          playDifficulty,
+        ),
+        playMode,
+      ),
+    [levelId, playDifficulty, playMode],
   );
   const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
   const musicVolume = useGameStore((state) => state.settings.musicVolume);
@@ -92,7 +105,10 @@ export function App() {
 
   return (
     <>
-      {phase === 'menu' && <LessonSelect />}
+      {phase === 'menu' && <MainMenu />}
+      {phase === 'map' && <StoryMap />}
+      {phase === 'challenges' && <ChallengeSelect />}
+      {phase === 'battles' && <BattleSelect />}
       {phase === 'achievements' && <AchievementsScreen />}
       {phase === 'settings' && <SettingsScreen />}
       {phase === 'journal' && <JournalScreen />}

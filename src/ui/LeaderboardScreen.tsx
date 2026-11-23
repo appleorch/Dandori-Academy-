@@ -2,9 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DIFFICULTIES, type Difficulty } from '../game/core/difficulty';
 import { useGameStore } from '../game/core/gameStore';
 import { cleanWardenName, defaultWardenName, WARDEN_NAME_MAX } from '../game/core/settings';
-import { BOARD_REPO, fetchBoard, standings, type BoardEntry } from '../game/leaderboard/board';
+import {
+  BOARD_REPO,
+  fetchBoard,
+  standings,
+  type BoardEntry,
+  type BoardMode,
+} from '../game/leaderboard/board';
+import { CHALLENGE_IDS, challengeOpen, isChallenge, MODES } from '../game/modes/modes';
 import { playedOnThisLesson, type RunEntry } from '../game/leaderboard/runCode';
-import { runKey, splitKey, type SaveData } from '../game/save/saveManager';
+import { runKey, runsKey, type SaveData } from '../game/save/saveManager';
 import { LEVELS } from '../game/world/level';
 import { MenuNav } from './MenuNav';
 
@@ -21,8 +28,20 @@ type Load =
 let cached: { entries: BoardEntry[]; at: number; partial: boolean } | null = null;
 
 function timeText(run: RunEntry): string {
+  if (run.mode === 'growing') return `${run.alive} at sunset`;
+  if (run.mode === 'mission' || run.mode === 'dandori' || run.mode === 'trial') {
+    return run.everything
+      ? `${run.time.toFixed(1)}s, all`
+      : `${run.shards}/${run.shardsTotal} shards`;
+  }
   const cleared = run.shards === run.shardsTotal;
   return cleared ? `${run.time.toFixed(1)}s` : `${run.shards}/${run.shardsTotal} shards`;
+}
+
+const BOARD_MODES: readonly BoardMode[] = [...CHALLENGE_IDS, 'classic'];
+
+function boardName(mode: BoardMode): string {
+  return mode === 'classic' ? 'Classic' : MODES[mode].name;
 }
 
 function dateText(iso: string): string {
@@ -58,6 +77,8 @@ export function LeaderboardScreen() {
   const [levelId, setLevelId] = useState(
     () => (choices.find((level) => level.id === lastPlayed) ?? choices[0]).id,
   );
+  const lastMode = useGameStore((state) => state.playMode);
+  const [mode, setMode] = useState<BoardMode>(() => (isChallenge(lastMode) ? lastMode : 'hunt'));
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [load, setLoad] = useState<Load>(() =>
     cached ? { state: 'ready', ...cached } : { state: 'idle' },
@@ -89,8 +110,19 @@ export function LeaderboardScreen() {
   useEffect(() => refresh(false), [refresh]);
 
   const level = LEVELS.find((candidate) => candidate.id === levelId) ?? LEVELS[0];
-  const board = load.state === 'ready' ? standings(load.entries, levelId, difficulty) : [];
-  const mine = save.runs[splitKey(levelId, difficulty)] ?? [];
+  // Challenges are played on the Normal day; only the Classic board has Hard runs.
+  const shownDifficulty: Difficulty = mode === 'classic' ? difficulty : 'normal';
+  const board =
+    load.state === 'ready' ? standings(load.entries, levelId, shownDifficulty, mode) : [];
+  const mine =
+    save.runs[
+      runsKey({
+        mode: mode === 'classic' ? undefined : mode,
+        level: levelId,
+        difficulty: shownDifficulty,
+      })
+    ] ?? [];
+  const offered = mode === 'classic' || challengeOpen(mode, level);
   const age = load.state === 'ready' ? Math.round((Date.now() - load.at) / 60000) : 0;
   const shownName = cleanWardenName(settings.wardenName) ?? defaultWardenName(settings.playerId);
   const nameOk = nameDraft.trim() === '' || cleanWardenName(nameDraft) !== null;
@@ -148,6 +180,25 @@ export function LeaderboardScreen() {
           </p>
         </section>
 
+        <nav className="tabs mode-tabs" aria-label="Board">
+          {BOARD_MODES.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={option === mode ? 'tab active' : 'tab'}
+              aria-pressed={option === mode}
+              onClick={() => setMode(option)}
+            >
+              {boardName(option)}
+            </button>
+          ))}
+        </nav>
+        {mode === 'classic' && (
+          <p className="note">
+            Classic keeps the runs from before the challenges, when story days were scored. It is
+            closed to new runs.
+          </p>
+        )}
         <div className="board-pick">
           <label>
             Lesson
@@ -159,24 +210,26 @@ export function LeaderboardScreen() {
               ))}
             </select>
           </label>
-          <div className="board-difficulty" role="group" aria-label="Difficulty">
-            {DIFFICULTIES.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={option === difficulty ? 'tab active' : 'tab'}
-                aria-pressed={option === difficulty}
-                onClick={() => setDifficulty(option)}
-              >
-                {option === 'hard' ? 'Hard' : 'Normal'}
-              </button>
-            ))}
-          </div>
+          {mode === 'classic' && (
+            <div className="board-difficulty" role="group" aria-label="Difficulty">
+              {DIFFICULTIES.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={option === difficulty ? 'tab active' : 'tab'}
+                  aria-pressed={option === difficulty}
+                  onClick={() => setDifficulty(option)}
+                >
+                  {option === 'hard' ? 'Hard' : 'Normal'}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <section className="board">
           <h2>
-            Academy board <small>{level.name}</small>
+            {boardName(mode)} board <small>{level.name}</small>
           </h2>
           {load.state === 'loading' && <p className="note">Reading the board…</p>}
           {load.state === 'error' && (
@@ -186,7 +239,11 @@ export function LeaderboardScreen() {
           )}
           {load.state === 'ready' &&
             (board.length === 0 ? (
-              <p className="note">No runs on this lesson yet. Be the first.</p>
+              <p className="note">
+                {offered
+                  ? 'No runs on this lesson yet. Be the first.'
+                  : `${boardName(mode)} is not offered on this lesson.`}
+              </p>
             ) : (
               <table className="board-table">
                 <thead>
@@ -244,7 +301,11 @@ export function LeaderboardScreen() {
         <section className="board">
           <h2>Your best runs</h2>
           {mine.length === 0 ? (
-            <p className="note">Finish a day on this lesson and it is kept here.</p>
+            <p className="note">
+              {mode === 'classic'
+                ? 'No runs from before the challenges on this lesson.'
+                : `Play ${boardName(mode)} on this lesson and your runs are kept here.`}
+            </p>
           ) : (
             <table className="board-table">
               <thead>
@@ -287,12 +348,12 @@ export function LeaderboardScreen() {
         </section>
 
         <p className="note">
-          The Academy board needs no server of its own. Each new personal best is posted by itself
-          to a public relay (ntfy.sh), with your Warden name and a random player id and nothing
-          else. Every half hour the game&apos;s GitHub repository ({BOARD_REPO}) collects the relay,
-          checks every run against the lesson&apos;s own rules, and keeps the best run per Warden
-          per lesson. New runs show here at once. Runs from an older version of a lesson are left
-          off.
+          The Academy board needs no server of its own. Each challenge keeps its own board, and each
+          new personal best in a challenge is posted by itself to a public relay (ntfy.sh), with
+          your Warden name and a random player id and nothing else. Every half hour the game&apos;s
+          GitHub repository ({BOARD_REPO}) collects the relay, checks every run against the
+          lesson&apos;s own rules, and keeps the best run per Warden per lesson. New runs show here
+          at once. Runs from an older version of a lesson are left off.
         </p>
       </div>
     </main>

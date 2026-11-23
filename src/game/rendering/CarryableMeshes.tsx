@@ -6,18 +6,10 @@ import { useGameStore } from '../core/gameStore';
 import type { Carryable } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
+import { twinStyle } from '../world/twins';
 import { relicFor, type Relic } from '../story/relics';
 import { RelicModel } from './models/RelicModel';
 import { TextSprite } from './TextSprite';
-
-const RUNES = ['#7fe3ff', '#ff8af0', '#b6ff6a', '#ffd257'];
-
-/** A stable colour for a twin rune, so both halves of a pair match. */
-function runeColor(rune: string): string {
-  let hash = 0;
-  for (const char of rune) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return RUNES[hash % RUNES.length];
-}
 
 /** The haul itself, by kind: shard, Dewglass, Lodestone, Glowcap, pod, Sapdrop, Span-log or carcass. */
 function HaulBody({ carryable, relic }: { carryable: Carryable; relic: Relic }) {
@@ -201,6 +193,13 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
     () => relicFor(sim.level.id, carryable.id, carryable.variant),
     [sim, carryable],
   );
+  const twin = useMemo(
+    () => (carryable.twin ? twinStyle(sim.level, carryable.twin) : null),
+    [sim, carryable],
+  );
+  const marble = useGameStore(
+    (state) => state.race?.mode === 'marble' && state.race.marbles.includes(carryable.id),
+  );
 
   useFrame(({ clock }) => {
     const node = group.current;
@@ -225,16 +224,35 @@ function CarryableMesh({ sim, entity, carryable }: CarryableMeshProps) {
 
   return (
     <group ref={group}>
-      {carryable.twin && (
-        <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[radius + 0.35, radius + 0.55, 6]} />
-          <meshBasicMaterial
-            color={runeColor(carryable.twin)}
-            transparent
-            opacity={0.8}
-            toneMapped={false}
+      {twin && (
+        // Each pair has its own colour, marker shape and letter; both halves share them.
+        <>
+          <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 2]}>
+            <ringGeometry args={[radius + 0.35, radius + 0.65, twin.sides]} />
+            <meshBasicMaterial color={twin.colour} transparent opacity={0.9} toneMapped={false} />
+          </mesh>
+          <TextSprite
+            y={radius * 2 + (showCount ? 2.3 : 1.3)}
+            color={twin.colour}
+            getText={() => twin.letter}
           />
-        </mesh>
+        </>
+      )}
+      {marble && (
+        // A marble in a Marble Race: a gold beacon ring, and a light above it.
+        <>
+          <mesh position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[radius + 0.5, radius + 0.9, 32]} />
+            <meshBasicMaterial color="#ffd257" transparent opacity={0.95} toneMapped={false} />
+          </mesh>
+          {!twin && (
+            <TextSprite
+              y={radius * 2 + (showCount ? 2.3 : 1.3)}
+              color="#ffd257"
+              getText={() => 'M'}
+            />
+          )}
+        </>
       )}
       <group ref={body}>
         <HaulBody carryable={carryable} relic={relic} />

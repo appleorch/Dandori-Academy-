@@ -1,6 +1,14 @@
 import type { Difficulty } from '../core/difficulty';
 import { rankValue, type Rank } from '../dandori/scoring';
-import { bestRank, type DayFeats, type DayRecord, type SaveData } from '../save/saveManager';
+import { BATTLE_IDS, CHALLENGE_IDS } from '../modes/modes';
+import {
+  bestRank,
+  modeRank,
+  storyCleared,
+  type DayFeats,
+  type DayRecord,
+  type SaveData,
+} from '../save/saveManager';
 import { recoveredRelics, RELICS } from '../story/relics';
 import { LEVELS, MAIN_LEVELS } from '../world/level';
 
@@ -23,11 +31,36 @@ function cleared(day: DayRecord): boolean {
   return day.treasureIds.length === day.treasuresTotal;
 }
 
+/** Lessons with a medal of at least `rank` in any challenge (or the rank the story once gave). */
 function lessonsAtLeast(save: SaveData, rank: Rank, difficulty: Difficulty = 'normal'): number {
   return LEVELS.filter((level) => {
     const earned = bestRank(save, level.id, difficulty);
     return earned !== null && rankValue(earned) >= rankValue(rank);
   }).length;
+}
+
+/** Lessons cleared in the story on Hard. */
+function hardClears(save: SaveData): number {
+  return LEVELS.filter((level) => storyCleared(save, level.id, 'hard')).length;
+}
+
+/** Whether a lesson has been cleared in the story, on either difficulty. */
+function storyDone(save: SaveData, levelId: string): boolean {
+  return storyCleared(save, levelId, 'normal') || storyCleared(save, levelId, 'hard');
+}
+
+/** Lessons with a medal of at least `rank` in one challenge. */
+function medalsIn(save: SaveData, mode: string, rank: Rank): number {
+  return LEVELS.filter((level) => {
+    const earned = modeRank(save, mode, level.id);
+    return earned !== null && rankValue(earned) >= rankValue(rank);
+  }).length;
+}
+
+function battlesWon(save: SaveData, mode?: string): number {
+  return Object.entries(save.battles)
+    .filter(([id]) => mode === undefined || id === mode)
+    .reduce((sum, [, record]) => sum + record.won, 0);
 }
 
 function counter(
@@ -111,18 +144,22 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     'End a day with 40 or more Sproutlings.',
     (day) => day.workersAlive >= 40,
   ),
-  counter('platinum-student', 'Platinum Student', 'Earn Platinum in any lesson.', 1, (s) =>
+  counter('platinum-student', 'Platinum Student', 'Earn Platinum in any challenge.', 1, (s) =>
     lessonsAtLeast(s, 'Platinum'),
   ),
   counter(
     'diamond-cut',
     'Diamond Cut',
-    'Earn Diamond in any lesson: beat the Platinum time by a sixth.',
+    'Earn Diamond in any challenge: beat the Platinum pace by a sixth.',
     1,
     (s) => lessonsAtLeast(s, 'Diamond'),
   ),
-  counter('honor-roll', 'Honor Roll', 'Earn Gold or better in five lessons.', 5, (s) =>
-    lessonsAtLeast(s, 'Gold'),
+  counter(
+    'honor-roll',
+    'Honor Roll',
+    'Earn Gold or better in challenges on five lessons.',
+    5,
+    (s) => lessonsAtLeast(s, 'Gold'),
   ),
   counter('hauler', 'Hauler', 'Bring 50 Sunshards home in total.', 50, (s) => s.totals.treasures),
   counter(
@@ -151,11 +188,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   {
     id: 'graduate',
     name: 'Graduate',
-    description: `Earn Silver or better in ${FINAL.name}.`,
-    earned: (save) => {
-      const rank = bestRank(save, FINAL.id);
-      return rank !== null && rankValue(rank) >= rankValue('Silver');
-    },
+    description: `Clear ${FINAL.name} in the story.`,
+    earned: (save) => storyDone(save, FINAL.id),
   },
   feat('lights-on', 'Lights On', 'Defeat the Snuffer.', (day) =>
     day.bossesDefeated.includes('snuffer'),
@@ -163,20 +197,14 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   {
     id: 'first-ember',
     name: 'The First Ember',
-    description: 'Earn Silver or better in The Undercroft.',
-    earned: (save) => {
-      const rank = bestRank(save, 'the-undercroft');
-      return rank !== null && rankValue(rank) >= rankValue('Silver');
-    },
+    description: 'Clear The Undercroft in the story.',
+    earned: (save) => storyDone(save, 'the-undercroft'),
   },
   {
     id: 'restorer',
     name: 'Restorer',
-    description: 'Earn Silver or better on Restoration Day, the last of the Grand Curriculum.',
-    earned: (save) => {
-      const rank = bestRank(save, 'restoration-day');
-      return rank !== null && rankValue(rank) >= rankValue('Silver');
-    },
+    description: 'Clear Restoration Day, the last of the Grand Curriculum, in the story.',
+    earned: (save) => storyDone(save, 'restoration-day'),
   },
   counter(
     'curator',
@@ -185,22 +213,27 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     RELICS.length,
     (s) => recoveredRelics(s.treasuresCollected).size,
   ),
-  counter('hardened', 'Hardened', 'Earn Silver or better on Hard in any lesson.', 1, (s) =>
-    lessonsAtLeast(s, 'Silver', 'hard'),
+  counter('hardened', 'Hardened', 'Clear any lesson on Hard in the story.', 1, (s) =>
+    hardClears(s),
   ),
   {
     id: 'hard-as-stone',
     name: 'Hard as Stone',
-    description: 'Earn Platinum on Hard against the Bellwether.',
-    earned: (save) => {
-      const rank = bestRank(save, 'the-bellwether', 'hard');
-      return rank !== null && rankValue(rank) >= rankValue('Platinum');
-    },
+    description: 'Clear The Bellwether on Hard without losing a Sproutling.',
+    earned: (save, day) =>
+      // Earned by a Platinum here back when the story was scored, too.
+      rankValue(bestRank(save, 'the-bellwether', 'hard') ?? 'Copper') >= rankValue('Platinum') ||
+      (day !== null &&
+        (day.mode ?? 'story') === 'story' &&
+        day.levelId === 'the-bellwether' &&
+        day.difficulty === 'hard' &&
+        cleared(day) &&
+        day.workersLost === 0),
   },
   counter(
     'dandori-master',
     'Dandori Master',
-    'Earn Platinum in every lesson.',
+    'Earn Platinum in a challenge on every lesson.',
     LEVELS.length,
     (s) => lessonsAtLeast(s, 'Platinum'),
   ),
@@ -215,31 +248,105 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   counter(
     'gold-standard',
     'Gold Standard',
-    'Earn Gold or better in every lesson.',
+    'Earn Gold or better in a challenge on every lesson.',
     LEVELS.length,
     (s) => lessonsAtLeast(s, 'Gold'),
   ),
-  counter('platinum-ten', 'Platinum Record', 'Earn Platinum or better in ten lessons.', 10, (s) =>
-    lessonsAtLeast(s, 'Platinum'),
+  counter(
+    'platinum-ten',
+    'Platinum Record',
+    'Earn Platinum or better in challenges on ten lessons.',
+    10,
+    (s) => lessonsAtLeast(s, 'Platinum'),
   ),
-  counter('diamond-five', 'Diamonds Are Forever', 'Earn Diamond in five lessons.', 5, (s) =>
-    lessonsAtLeast(s, 'Diamond'),
+  counter(
+    'diamond-five',
+    'Diamonds Are Forever',
+    'Earn Diamond in challenges on five lessons.',
+    5,
+    (s) => lessonsAtLeast(s, 'Diamond'),
   ),
-  counter('diamond-twenty', 'Diamond Mine', 'Earn Diamond in twenty lessons.', 20, (s) =>
-    lessonsAtLeast(s, 'Diamond'),
+  counter(
+    'diamond-twenty',
+    'Diamond Mine',
+    'Earn Diamond in challenges on twenty lessons.',
+    20,
+    (s) => lessonsAtLeast(s, 'Diamond'),
   ),
-  counter('hard-ten', 'Hardy Perennial', 'Earn Gold or better on Hard in ten lessons.', 10, (s) =>
-    lessonsAtLeast(s, 'Gold', 'hard'),
+  counter('hard-ten', 'Hardy Perennial', 'Clear ten lessons on Hard in the story.', 10, (s) =>
+    hardClears(s),
   ),
-  counter('hard-diamond', 'Unbreakable', 'Earn Diamond on Hard in any lesson.', 1, (s) =>
-    lessonsAtLeast(s, 'Diamond', 'hard'),
-  ),
+  {
+    id: 'hard-diamond',
+    name: 'Unbreakable',
+    description: 'Clear a lesson on Hard without losing a Sproutling or the Warden being hit.',
+    earned: (save, day) =>
+      lessonsAtLeast(save, 'Diamond', 'hard') > 0 ||
+      (day !== null &&
+        day.difficulty === 'hard' &&
+        cleared(day) &&
+        day.workersLost === 0 &&
+        day.captainHits === 0),
+  },
   counter(
     'well-travelled',
     'Well Travelled',
-    'Finish every numbered lesson at least once.',
+    'Clear every numbered lesson in the story.',
     MAIN_LEVELS.length,
-    (s) => MAIN_LEVELS.filter((level) => bestRank(s, level.id) !== null).length,
+    (s) => MAIN_LEVELS.filter((level) => storyDone(s, level.id)).length,
+  ),
+  // The challenges and battles.
+  feat(
+    'perfect-bloom',
+    'Perfect Bloom',
+    'Bring every Sunshard home in a Treasure Hunt without losing a single Sproutling.',
+    (day) => day.perfectBloom === true,
+  ),
+  counter('bumper-crop', 'Bumper Crop', 'Earn Gold or better in a Growing Season.', 1, (s) =>
+    medalsIn(s, 'growing', 'Gold'),
+  ),
+  counter(
+    'mission-complete',
+    'Mission Complete',
+    'Earn Platinum in a Mission: a 100% clear at pace.',
+    1,
+    (s) => medalsIn(s, 'mission', 'Platinum'),
+  ),
+  counter(
+    'weight-of-the-world',
+    'Weight of the World',
+    'Earn Diamond in a Dandori Challenge.',
+    1,
+    (s) => medalsIn(s, 'dandori', 'Diamond'),
+  ),
+  counter(
+    'lean-and-green',
+    'Lean and Green',
+    'Earn Gold or better in a Lean Squad Trial.',
+    1,
+    (s) => medalsIn(s, 'trial', 'Gold'),
+  ),
+  counter(
+    'all-rounder',
+    'All-Rounder',
+    'Earn a Bronze or better in every kind of challenge.',
+    CHALLENGE_IDS.length,
+    (s) => CHALLENGE_IDS.filter((mode) => medalsIn(s, mode, 'Bronze') > 0).length,
+  ),
+  counter('first-blood', 'Friendly Rivalry', 'Win a battle.', 1, (s) => battlesWon(s)),
+  counter(
+    'every-race',
+    'Triple Crown',
+    'Win a Marble Race, a Bingo Race and a Dandori Duel.',
+    BATTLE_IDS.length,
+    (s) => BATTLE_IDS.filter((mode) => battlesWon(s, mode) > 0).length,
+  ),
+  counter('champion', 'Champion', 'Win 25 battles.', 25, (s) => battlesWon(s)),
+  feat(
+    'proctor-beaten',
+    'Top of the Class',
+    'Win a battle against Proctor Ashwick, the hardest rival.',
+    (day) => day.battle === 'won' && day.rival === 'hard',
   ),
   // Optional treasure.
   feat(

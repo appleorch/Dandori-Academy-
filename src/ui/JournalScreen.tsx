@@ -1,17 +1,13 @@
 import { useGameStore } from '../game/core/gameStore';
-import { rankValue } from '../game/dandori/scoring';
-import { bestRank, UNLOCK_RANK, type SaveData } from '../game/save/saveManager';
+import { storyCleared, type SaveData } from '../game/save/saveManager';
 import { CHAPTERS, LESSON_STORY } from '../game/story/story';
 import { LEVELS } from '../game/world/level';
 import { MenuNav } from './MenuNav';
 import { TindlePortrait } from './Portrait';
 
-/** A lesson is written up once it has been passed on either difficulty. */
+/** A lesson is written up once it has been cleared in the story, on either difficulty. */
 function passed(save: SaveData, levelId: string): boolean {
-  return (['normal', 'hard'] as const).some((difficulty) => {
-    const rank = bestRank(save, levelId, difficulty);
-    return rank !== null && rankValue(rank) >= rankValue(UNLOCK_RANK);
-  });
+  return storyCleared(save, levelId, 'normal') || storyCleared(save, levelId, 'hard');
 }
 
 /** The cadet's journal: the story so far, one entry per lesson passed, with Tindle's notes in the margin. */
@@ -28,7 +24,7 @@ export function JournalScreen() {
         <h1>Journal</h1>
         <p>
           {written} of {LEVELS.length} entries written. An entry is added each time a lesson is
-          passed at {UNLOCK_RANK} or better.
+          cleared in the story.
         </p>
         <div className="button-row">
           <button type="button" className="secondary small" onClick={() => showStory('prologue')}>

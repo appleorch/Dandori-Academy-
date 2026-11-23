@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   bestRank,
-  bestScore,
   hardUnlocked,
+  modeBest,
+  modeRank,
+  storyCleared,
   emptySave,
   loadSave,
   markPosted,
@@ -61,7 +63,10 @@ describe('save manager', () => {
   });
 
   it('loads saves written before bestScores, achievements and totals existed', () => {
-    const legacy: Partial<SaveData> = recordDay(emptySave(), day);
+    const legacy: Partial<SaveData> = {
+      ...recordDay(emptySave(), day),
+      bestRanks: { 'lesson-1': 'Gold' },
+    };
     delete legacy.bestScores;
     delete legacy.achievements;
     delete legacy.totals;
@@ -90,60 +95,105 @@ describe('save manager', () => {
     expect(busy.totals).toMatchObject({ days: 3, grown: 6, rescued: 2, glowcaps: 1, caveTrips: 1 });
   });
 
-  it('keeps the best results across days', () => {
+  it('keeps every relic ever brought home, and the biggest squad', () => {
     const first = recordDay(emptySave(), day);
-    const worse = recordDay(first, {
+    const second = recordDay(first, {
       ...day,
-      score: 900,
-      rank: 'Bronze',
       workersAlive: 4,
       treasureIds: ['shard-2', 'shard-3'],
     });
-    expect(worse.score).toBe(2500);
-    expect(bestRank(worse, 'lesson-1')).toBe('Gold');
-    expect(worse.workerCounts.ember).toBe(18);
-    expect(worse.treasuresCollected).toEqual([
+    expect(second.workerCounts.ember).toBe(18);
+    expect(second.treasuresCollected).toEqual([
       'lesson-1:shard-1',
       'lesson-1:shard-2',
       'lesson-1:shard-3',
     ]);
-    const better = recordDay(worse, { ...day, rank: 'Platinum', score: 3100 });
-    expect(bestRank(better, 'lesson-1')).toBe('Platinum');
-    expect(better.score).toBe(3100);
+  });
+});
+
+describe('the story', () => {
+  const clear = { ...day, rank: null, score: 0, treasureIds: ['a', 'b', 'c', 'd', 'e'] } as const;
+
+  it('counts its days, and opens the next lesson only when every Sunshard comes home', () => {
+    const short = recordDay(emptySave(), { ...day, rank: null, score: 0 });
+    expect(short.stage).toBe(1);
+    expect(short.story.day).toBe(1);
+    expect(storyCleared(short, 'lesson-1')).toBe(false);
+    const cleared = recordDay(short, clear);
+    expect(cleared.stage).toBe(2);
+    expect(cleared.story.day).toBe(2);
+    expect(storyCleared(cleared, 'lesson-1')).toBe(true);
+    // Clearing it again changes nothing but the day count.
+    const again = recordDay(cleared, clear);
+    expect(again.stage).toBe(2);
+    expect(again.story.cleared).toEqual(cleared.story.cleared);
   });
 
-  it('totals the best score of every lesson', () => {
-    const one = recordDay(emptySave(), day);
-    const two = recordDay(one, { ...day, levelId: 'lesson-2', stage: 2, score: 1000 });
-    expect(two.bestScores).toEqual({ 'lesson-1': 2500, 'lesson-2': 1000 });
-    expect(two.score).toBe(3500);
-  });
-
-  it('keeps Hard bests apart, counts them in the total and opens Hard at Gold', () => {
+  it('opens Hard on a lesson once it is cleared on Normal, and Hard clears open nothing new', () => {
     expect(hardUnlocked(emptySave(), 'lesson-1')).toBe(false);
-    const silver = recordDay(emptySave(), { ...day, rank: 'Silver' });
-    expect(hardUnlocked(silver, 'lesson-1')).toBe(false);
-    const gold = recordDay(silver, day);
-    expect(hardUnlocked(gold, 'lesson-1')).toBe(true);
-    const hard = recordDay(gold, { ...day, difficulty: 'hard', rank: 'Bronze', score: 700 });
-    expect(bestRank(hard, 'lesson-1')).toBe('Gold');
-    expect(bestRank(hard, 'lesson-1', 'hard')).toBe('Bronze');
-    expect(bestScore(hard, 'lesson-1', 'hard')).toBe(700);
-    expect(hard.score).toBe(2500 + 700);
-    expect(hard.stage).toBe(gold.stage);
-    const legacy: Partial<SaveData> = { ...gold };
-    delete legacy.bestRanksHard;
-    delete legacy.bestScoresHard;
-    expect(loadSave(memoryStorage(JSON.stringify(legacy))).bestRanksHard).toEqual({});
+    const cleared = recordDay(emptySave(), clear);
+    expect(hardUnlocked(cleared, 'lesson-1')).toBe(true);
+    const hard = recordDay(cleared, {
+      ...clear,
+      levelId: 'lesson-2',
+      stage: 2,
+      difficulty: 'hard',
+    });
+    expect(hard.stage).toBe(2);
+    expect(storyCleared(hard, 'lesson-2', 'hard')).toBe(true);
+    expect(storyCleared(hard, 'lesson-2')).toBe(false);
   });
 
-  it('unlocks the next lesson at Silver or better, never below', () => {
-    expect(bestRank(emptySave(), 'lesson-1')).toBeNull();
-    expect(recordDay(emptySave(), { ...day, rank: 'Bronze' }).stage).toBe(1);
-    const silver = recordDay(emptySave(), { ...day, rank: 'Silver' });
-    expect(silver.stage).toBe(2);
-    expect(recordDay(silver, { ...day, rank: 'Bronze' }).stage).toBe(2);
-    expect(recordDay(silver, { ...day, levelId: 'lesson-2', stage: 2 }).stage).toBe(3);
+  it('carries an old save over: its days, and the lessons it passed or cleared', () => {
+    const old: Partial<SaveData> = {
+      ...emptySave(),
+      stage: 3,
+      bestRanks: { 'lesson-1': 'Gold', 'lesson-2': 'Bronze' },
+      bestRanksHard: { 'lesson-1': 'Silver' },
+      bestSplits: { 'lesson-3': [10, 20] },
+      totals: { ...emptySave().totals, days: 7 },
+    };
+    delete old.story;
+    const loaded = loadSave(memoryStorage(JSON.stringify(old)));
+    expect(loaded.story.day).toBe(7);
+    expect(storyCleared(loaded, 'lesson-1')).toBe(true);
+    expect(storyCleared(loaded, 'lesson-1', 'hard')).toBe(true);
+    expect(storyCleared(loaded, 'lesson-2')).toBe(false);
+    expect(storyCleared(loaded, 'lesson-3')).toBe(true);
+    // A Gold from the scored story still opens Hard.
+    expect(hardUnlocked({ ...emptySave(), bestRanks: { 'lesson-9': 'Gold' } }, 'lesson-9')).toBe(
+      true,
+    );
+  });
+});
+
+describe('challenges and battles', () => {
+  const challenge = { ...day, mode: 'hunt', score: 400, rank: 'Silver' } as const;
+
+  it('keep the best medal and the best score per challenge, apart from each other', () => {
+    const one = recordDay(emptySave(), challenge);
+    const worse = recordDay(one, { ...challenge, score: 300, rank: 'Bronze' });
+    expect(modeRank(worse, 'hunt', 'lesson-1')).toBe('Silver');
+    expect(modeBest(worse, 'hunt', 'lesson-1')).toBe(400);
+    const better = recordDay(worse, { ...challenge, score: 900, rank: 'Platinum' });
+    expect(modeRank(better, 'hunt', 'lesson-1')).toBe('Platinum');
+    expect(modeBest(better, 'hunt', 'lesson-1')).toBe(900);
+    expect(modeRank(better, 'mission', 'lesson-1')).toBeNull();
+    expect(bestRank(better, 'lesson-1')).toBe('Platinum');
+  });
+
+  it('never move the story along', () => {
+    const done = recordDay(emptySave(), { ...challenge, treasureIds: ['a', 'b', 'c', 'd', 'e'] });
+    expect(done.stage).toBe(1);
+    expect(done.story.day).toBe(0);
+    expect(storyCleared(done, 'lesson-1')).toBe(false);
+  });
+
+  it('keep a battle record per race', () => {
+    const won = recordDay(emptySave(), { ...day, mode: 'marble', rank: null, battle: 'won' });
+    const lost = recordDay(won, { ...day, mode: 'marble', rank: null, battle: 'lost' });
+    expect(lost.battles.marble).toEqual({ won: 1, lost: 1, drawn: 0 });
+    expect(lost.medals).toEqual({});
   });
 });
 

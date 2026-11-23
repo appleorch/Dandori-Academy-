@@ -5,8 +5,9 @@ import { formatTime } from './format';
 import type { InputController } from '../game/commands/input';
 import { SPROUT_KINDS, SPROUTS } from '../game/workers/sprouts';
 import { SprocketPortrait } from './Portrait';
-import { rankTargets } from '../game/dandori/targets';
+import { isChallenge, medalTargets, MODES } from '../game/modes/modes';
 import { LEVELS, type LevelDefinition } from '../game/world/level';
+import { RacePanel } from './RacePanel';
 
 /** How long a remark of the Headmaster's stays up: it fades out over the end of this. */
 const SPROCKET_SECONDS = 5.6;
@@ -30,6 +31,8 @@ export function Hud({
   input?: InputController;
 }) {
   const hud = useGameStore((state) => state.hud);
+  const mode = useGameStore((state) => state.playMode);
+  const race = useGameStore((state) => state.race);
   const phase = useGameStore((state) => state.phase);
   const pause = useGameStore((state) => state.pause);
   const hint = useGameStore((state) => state.hint);
@@ -53,6 +56,13 @@ export function Hud({
   }, [remark]);
   if (!hud) return null;
   const elapsed = 1 - hud.timeLeft / level.dayLength;
+  // The day bar marks the pace Platinum and Diamond need, in challenges that time the day.
+  const marks = isChallenge(mode)
+    ? medalTargets(mode, level).flatMap((target) =>
+        target.finishBy === null ? [] : [{ rank: target.rank, at: target.finishBy }],
+      )
+    : [];
+  const live = hud.challenge;
   // Where the workforce is: along the bottom on a desktop; on touch, up top, clear of the controls.
   const counts = (
     <div className={touch ? 'hud-row counts' : 'hud-row bottom'}>
@@ -86,7 +96,9 @@ export function Hud({
     <div className={touch ? 'hud touch' : 'hud'}>
       <div className="hud-row">
         <div className="chip hud-level">
-          {level.stage}. {level.name}
+          {mode === 'story'
+            ? `${level.stage}. ${level.name}`
+            : `${MODES[mode].name} · ${level.name}`}
         </div>
         {level.difficulty === 'hard' && <div className="chip hard-chip">Hard</div>}
         <div
@@ -108,13 +120,36 @@ export function Hud({
           </div>
         ) : (
           <>
-            <div className="chip" title="Required: every Sunshard must come home">
-              Sunshards {hud.treasuresCollected}/{hud.treasuresTotal} · {hud.treasureValue} pts
+            <div
+              className="chip"
+              title={
+                mode === 'story'
+                  ? 'Bring every Sunshard home to clear the lesson'
+                  : 'Sunshards home'
+              }
+            >
+              Sunshards {hud.treasuresCollected}/{hud.treasuresTotal}
             </div>
+            {live && (
+              <div
+                className="chip score-chip"
+                title="Points banked so far; any time bonus is added when the day ends"
+              >
+                Score <strong>{live.total}</strong>
+                {live.next ? (
+                  <small className={`rank-${live.next.rank.toLowerCase()}`}>
+                    {' '}
+                    · {live.next.rank} at {live.next.score}
+                  </small>
+                ) : (
+                  <small className="rank-diamond"> · Diamond pace</small>
+                )}
+              </div>
+            )}
             {hud.bonusOf > 0 && (
               <div
                 className="chip bonus-chip"
-                title="Bonus: twin pairs on time and Dewglass kept whole. Counts towards your rank."
+                title="Bonus treasure: twin pairs home on time and Dewglass kept whole"
               >
                 Bonus {hud.bonusGot}/{hud.bonusOf}
               </div>
@@ -122,7 +157,7 @@ export function Hud({
             {hud.glowcapsOf > 0 && (
               <div
                 className="chip bonus-chip"
-                title="Extra: Glowcaps add to your score, never to your rank"
+                title="Glowcaps: extra points in challenges, never needed for a medal"
               >
                 Glowcaps {hud.glowcapsGot}/{hud.glowcapsOf}
               </div>
@@ -168,6 +203,21 @@ export function Hud({
           </span>
         </div>
       )}
+      {hud.twins.length > 0 && (
+        <div className="twin-timers" role="status">
+          {hud.twins.map((twin) => (
+            <div
+              key={`twin-${twin.letter}`}
+              className="chip twin-timer"
+              style={{ borderColor: twin.colour, color: twin.colour }}
+            >
+              Twin {twin.letter} ({twin.shape}): bring its other half home in{' '}
+              <strong>{Math.ceil(twin.left)}s</strong>
+            </div>
+          ))}
+        </div>
+      )}
+      {race && phase === 'playing' && <RacePanel race={race} />}
       {!hud.below && (
         <div
           className="daybar"
@@ -175,19 +225,16 @@ export function Hud({
           aria-label={`Day ${Math.round(elapsed * 100)} percent over`}
         >
           <div className="daybar-fill" style={{ width: `${elapsed * 100}%` }} />
-          {rankTargets(level).map(
-            (target) =>
-              target.timeLeft !== null && (
-                <span
-                  key={target.rank}
-                  className={`daybar-mark rank-${target.rank.toLowerCase()}`}
-                  style={{ left: `${(1 - target.timeLeft / level.dayLength) * 100}%` }}
-                  title={`${target.rank} deadline`}
-                >
-                  {target.rank[0]}
-                </span>
-              ),
-          )}
+          {marks.map((mark) => (
+            <span
+              key={mark.rank}
+              className={`daybar-mark rank-${mark.rank.toLowerCase()}`}
+              style={{ left: `${(mark.at / level.dayLength) * 100}%` }}
+              title={`${mark.rank} pace: everything done by here`}
+            >
+              {mark.rank[0]}
+            </span>
+          ))}
           <span className="daybar-sun" style={{ left: `${elapsed * 100}%` }} />
         </div>
       )}

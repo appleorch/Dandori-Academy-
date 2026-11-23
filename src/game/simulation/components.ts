@@ -93,6 +93,8 @@ export interface Carryable {
   dest: number;
   /** Seed pods: the kind of Sproutling it grows into; null for hauls that grow the crew's own kind. */
   seed: SproutKind | null;
+  /** Carcasses: the beast it was. */
+  from: EnemyKind | null;
 }
 
 export type EnemyState = 'roam' | 'windup' | 'charge' | 'recover';

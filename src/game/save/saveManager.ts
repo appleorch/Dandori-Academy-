@@ -1,12 +1,10 @@
 import type { Difficulty } from '../core/difficulty';
 import { rankValue, RANKS, type Rank } from '../dandori/scoring';
 import { compareRuns, type RunEntry } from '../leaderboard/runCode';
+import type { ModeId } from '../modes/modes';
 
 export const SAVE_VERSION = '1';
 const STORAGE_KEY = 'dandori-academy-save';
-
-/** Lowest rank that unlocks the next lesson. */
-export const UNLOCK_RANK: Rank = 'Silver';
 
 /** Running totals across every day ever played. */
 export interface SaveTotals {
@@ -90,6 +88,39 @@ export interface SaveData {
   outbox: RunEntry[];
   /** Runs already on their way to the board, by `runKey`, most recent last. */
   posted: string[];
+  /**
+   * The story: how many days have been spent on it, and the lessons passed (every Sunshard
+   * home), by split key. The ranks and scores above are from before the story kept no score.
+   */
+  story: StoryProgress;
+  /** Best medal and best score in each challenge, keyed by `modeKey`. */
+  medals: Record<string, string>;
+  bests: Record<string, number>;
+  /** Battles won, lost and drawn, per battle. */
+  battles: Record<string, BattleRecord>;
+}
+
+export interface StoryProgress {
+  day: number;
+  cleared: string[];
+}
+
+export interface BattleRecord {
+  won: number;
+  lost: number;
+  drawn: number;
+}
+
+/** Where a challenge's medal and best score on a lesson and difficulty are kept. */
+export function modeKey(mode: string, levelId: string, difficulty: Difficulty): string {
+  return `${mode}|${splitKey(levelId, difficulty)}`;
+}
+
+/** Where a player's own runs are kept: by challenge, or (for runs from before) by lesson alone. */
+export function runsKey(run: Pick<RunEntry, 'mode' | 'level' | 'difficulty'>): string {
+  return run.mode
+    ? modeKey(run.mode, run.level, run.difficulty)
+    : splitKey(run.level, run.difficulty);
 }
 
 /** Most posted-run keys a save remembers. */
@@ -105,14 +136,12 @@ export function runKey(run: RunEntry): string {
  * difficulty. Only bests are posted: the board keeps one run per player anyway.
  */
 export function queueForBoard(previous: SaveData, save: SaveData, run: RunEntry): SaveData {
-  const key = splitKey(run.level, run.difficulty);
+  const key = runsKey(run);
   const before = previous.runs[key]?.[0];
   const best = save.runs[key]?.[0];
   if (!best || runKey(best) !== runKey(run)) return save;
   if (before && compareRuns(run, before) >= 0) return save;
-  const outbox = save.outbox.filter(
-    (queued) => !(queued.level === run.level && queued.difficulty === run.difficulty),
-  );
+  const outbox = save.outbox.filter((queued) => runsKey(queued) !== key);
   return { ...save, outbox: [...outbox, run] };
 }
 
@@ -132,9 +161,18 @@ export const RUNS_KEPT = 10;
 export interface DayRecord {
   levelId: string;
   difficulty: Difficulty;
+  /** How the day was played; a day from before modes existed was the story. */
+  mode?: ModeId;
   stage: number;
+  /** The challenge's score, or 0 for the story and battles. */
   score: number;
-  rank: Rank;
+  /** The challenge's medal, or null for the story and battles. */
+  rank: Rank | null;
+  /** A battle's outcome, and the rival it was against. */
+  battle?: 'won' | 'lost' | 'drawn';
+  rival?: 'easy' | 'normal' | 'hard';
+  /** A Treasure Hunt with nobody lost. */
+  perfectBloom?: boolean;
   workersAlive: number;
   workersLost: number;
   treasureIds: readonly string[];
@@ -188,6 +226,10 @@ export function emptySave(): SaveData {
     runs: {},
     outbox: [],
     posted: [],
+    story: { day: 0, cleared: [] },
+    medals: {},
+    bests: {},
+    battles: {},
   };
 }
 
@@ -317,7 +359,57 @@ export function parseSave(value: unknown): SaveData | null {
     posted: Array.isArray(value.posted)
       ? value.posted.filter((key): key is string => typeof key === 'string').slice(-POSTED_KEPT)
       : [],
+    story: parseStory(value.story, value),
+    medals: isStringRecord(value.medals) ? value.medals : {},
+    bests: isNumberRecord(value.bests) ? value.bests : {},
+    battles: parseBattles(value.battles),
   };
+}
+
+/**
+ * Story progress, or for a save from before the story kept its own: the days played so far,
+ * and every lesson with a full clear on record (a full clear is what keeps best splits).
+ */
+function parseStory(value: unknown, save: Record<string, unknown>): StoryProgress {
+  if (isRecord(value) && typeof value.day === 'number' && Array.isArray(value.cleared)) {
+    return {
+      day: Math.max(0, Math.floor(value.day)),
+      cleared: value.cleared.filter((key): key is string => typeof key === 'string'),
+    };
+  }
+  // A save from before the story stopped keeping score: a lesson counts as cleared if a full
+  // clear is on record, or if it earned the rank that used to pass it.
+  const cleared = new Set(Object.keys(parseSplits(save.bestSplits)));
+  const passed = (ranks: unknown, difficulty: Difficulty): void => {
+    if (!isRecord(ranks)) return;
+    for (const [levelId, stored] of Object.entries(ranks)) {
+      const rank = RANKS.find((candidate) => candidate === stored);
+      if (rank && rankValue(rank) >= rankValue(LEGACY_PASS_RANK)) {
+        cleared.add(splitKey(levelId, difficulty));
+      }
+    }
+  };
+  passed(save.bestRanks, 'normal');
+  passed(save.bestRanksHard, 'hard');
+  return { day: parseTotals(save.totals).days, cleared: [...cleared] };
+}
+
+/** The rank that passed a lesson when the story was scored. */
+const LEGACY_PASS_RANK: Rank = 'Silver';
+
+function parseBattles(value: unknown): Record<string, BattleRecord> {
+  if (!isRecord(value)) return {};
+  const battles: Record<string, BattleRecord> = {};
+  for (const [mode, record] of Object.entries(value)) {
+    if (!isRecord(record)) continue;
+    const count = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : 0);
+    battles[mode] = {
+      won: count(record.won),
+      lost: count(record.lost),
+      drawn: count(record.drawn),
+    };
+  }
+  return battles;
 }
 
 /** Reads the save, falling back to a fresh one if it is missing, corrupt or from another version. */
@@ -341,73 +433,136 @@ export function writeSave(storage: SaveStorage, data: SaveData): boolean {
   }
 }
 
-/** Lowest Normal rank that opens a lesson's Hard mode. */
-export const HARD_UNLOCK_RANK: Rank = 'Gold';
+/** Whether a lesson has been passed in the story (every Sunshard home) on a difficulty. */
+export function storyCleared(
+  save: SaveData,
+  levelId: string,
+  difficulty: Difficulty = 'normal',
+): boolean {
+  return save.story.cleared.includes(splitKey(levelId, difficulty));
+}
 
-/** Best rank earned on a level, or null if it has never been finished on that difficulty. */
+/** Legacy ranks (from when the story was scored) open Hard from this rank up. */
+const LEGACY_HARD_RANK: Rank = 'Gold';
+
+/**
+ * Best medal earned on a lesson and difficulty in any challenge, counting the ranks the story
+ * gave before it stopped keeping score; null if there is none.
+ */
 export function bestRank(
   save: SaveData,
   levelId: string,
   difficulty: Difficulty = 'normal',
 ): Rank | null {
-  const stored = (difficulty === 'hard' ? save.bestRanksHard : save.bestRanks)[levelId];
+  const key = `|${splitKey(levelId, difficulty)}`;
+  const found: string[] = Object.entries(save.medals)
+    .filter(
+      ([medalKey]) =>
+        medalKey.endsWith(key) && medalKey.indexOf('|') === medalKey.length - key.length,
+    )
+    .map(([, rank]) => rank);
+  const legacy = (difficulty === 'hard' ? save.bestRanksHard : save.bestRanks)[levelId];
+  if (legacy) found.push(legacy);
+  let best: Rank | null = null;
+  for (const stored of found) {
+    const rank = RANKS.find((candidate) => candidate === stored);
+    if (rank && (best === null || rankValue(rank) > rankValue(best))) best = rank;
+  }
+  return best;
+}
+
+/** Best medal in one challenge on a lesson and difficulty, or null. */
+export function modeRank(
+  save: SaveData,
+  mode: string,
+  levelId: string,
+  difficulty: Difficulty = 'normal',
+): Rank | null {
+  const stored = save.medals[modeKey(mode, levelId, difficulty)];
   return RANKS.find((rank) => rank === stored) ?? null;
 }
 
-export function bestScore(
+/** Best score in one challenge on a lesson and difficulty, or 0. */
+export function modeBest(
   save: SaveData,
+  mode: string,
   levelId: string,
   difficulty: Difficulty = 'normal',
 ): number {
-  return (difficulty === 'hard' ? save.bestScoresHard : save.bestScores)[levelId] ?? 0;
+  return save.bests[modeKey(mode, levelId, difficulty)] ?? 0;
 }
 
-/** Whether a lesson's Hard mode is open: Gold or better on Normal. */
+/** Whether a lesson's Hard mode is open: the lesson passed on Normal in the story. */
 export function hardUnlocked(save: SaveData, levelId: string): boolean {
-  const rank = bestRank(save, levelId);
-  return rank !== null && rankValue(rank) >= rankValue(HARD_UNLOCK_RANK);
+  if (storyCleared(save, levelId)) return true;
+  const legacy = save.bestRanks[levelId];
+  const rank = RANKS.find((candidate) => candidate === legacy);
+  return rank !== undefined && rankValue(rank) >= rankValue(LEGACY_HARD_RANK);
 }
 
 /**
- * Returns a new save with a finished day merged in. Bests only ever improve, and
- * a rank of UNLOCK_RANK or better opens the next lesson.
+ * Returns a new save with a finished day merged in. A story day counts towards the story's
+ * days, and passing a lesson (every Sunshard home) on Normal opens the next. A challenge keeps
+ * its best medal and score per lesson; a battle adds to its record.
  */
 export function recordDay(save: SaveData, day: DayRecord): SaveData {
+  const mode = day.mode ?? 'story';
   const hard = day.difficulty === 'hard';
-  const previous = bestRank(save, day.levelId, day.difficulty);
-  const improved = previous === null || rankValue(day.rank) > rankValue(previous);
-  const unlocksNext = !hard && rankValue(day.rank) >= rankValue(UNLOCK_RANK);
+  const cleared = day.treasureIds.length === day.treasuresTotal;
+  const story = mode === 'story';
+  const key = splitKey(day.levelId, day.difficulty);
   const ids = [
     ...day.treasureIds.map((id) => `${day.levelId}:${id}`),
     ...(day.extraTreasures ?? []),
   ];
-  const scores = hard ? save.bestScoresHard : save.bestScores;
-  const ranks = hard ? save.bestRanksHard : save.bestRanks;
-  const nextScores = { ...scores, [day.levelId]: Math.max(scores[day.levelId] ?? 0, day.score) };
-  const nextRanks = { ...ranks, [day.levelId]: improved ? day.rank : previous };
-  const bestScores = hard ? save.bestScores : nextScores;
-  const bestScoresHard = hard ? nextScores : save.bestScoresHard;
+  let medals = save.medals;
+  let bests = save.bests;
+  if (day.rank !== null && !story && day.battle === undefined) {
+    const medalKey = modeKey(mode, day.levelId, day.difficulty);
+    const held = RANKS.find((rank) => rank === medals[medalKey]);
+    if (!held || rankValue(day.rank) > rankValue(held))
+      medals = { ...medals, [medalKey]: day.rank };
+    if (day.score > (bests[medalKey] ?? 0)) bests = { ...bests, [medalKey]: day.score };
+  }
+  const battles = { ...save.battles };
+  if (day.battle) {
+    const record = battles[mode] ?? { won: 0, lost: 0, drawn: 0 };
+    battles[mode] = { ...record, [day.battle]: record[day.battle] + 1 };
+  }
   const sum = (record: Record<string, number>): number =>
     Object.values(record).reduce((total, score) => total + score, 0);
+  const unlocksNext = story && !hard && cleared && day.stage > 0;
   return {
     version: SAVE_VERSION,
     stage: Math.max(save.stage, unlocksNext ? day.stage + 1 : day.stage),
-    score: sum(bestScores) + sum(bestScoresHard),
+    score: sum(bests) + sum(save.bestScores) + sum(save.bestScoresHard),
     workerCounts: {
       ...save.workerCounts,
       ember: Math.max(save.workerCounts.ember ?? 0, day.workersAlive),
     },
     treasuresCollected: [...new Set([...save.treasuresCollected, ...ids])],
-    bestRanks: hard ? save.bestRanks : nextRanks,
-    bestScores,
-    bestRanksHard: hard ? nextRanks : save.bestRanksHard,
-    bestScoresHard,
+    bestRanks: save.bestRanks,
+    bestScores: save.bestScores,
+    bestRanksHard: save.bestRanksHard,
+    bestScoresHard: save.bestScoresHard,
     achievements: save.achievements,
     discovered: save.discovered,
-    bestSplits: fasterSplits(save.bestSplits, splitKey(day.levelId, day.difficulty), day.splits),
-    runs: keepRun(save.runs, splitKey(day.levelId, day.difficulty), day.run),
+    bestSplits: story ? fasterSplits(save.bestSplits, key, day.splits) : save.bestSplits,
+    runs: keepRun(save.runs, day.run ? runsKey(day.run) : key, day.run),
     outbox: save.outbox,
     posted: save.posted,
+    story: story
+      ? {
+          day: save.story.day + 1,
+          cleared:
+            cleared && !save.story.cleared.includes(key)
+              ? [...save.story.cleared, key]
+              : save.story.cleared,
+        }
+      : save.story,
+    medals,
+    bests,
+    battles,
     totals: {
       days: save.totals.days + 1,
       treasures: save.totals.treasures + day.treasureIds.length,

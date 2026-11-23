@@ -29,7 +29,17 @@ import {
   spawnTreasure,
   spawnWorker,
 } from '../world/spawn';
-import type { Captain, Carryable, Enemy, Hazard, Kiln, Transform, Worker } from './components';
+import type {
+  Captain,
+  Carryable,
+  CarryKind,
+  Enemy,
+  Hazard,
+  Kiln,
+  Transform,
+  Worker,
+} from './components';
+import type { EnemyKind } from '../enemies/enemyKinds';
 import { SPROUT_KINDS, type SproutKind } from '../workers/sprouts';
 import type { SimEvent, SimEventType } from './events';
 import { PhysicsWorld } from './physics';
@@ -42,7 +52,38 @@ export function startingKinds(level: LevelDefinition): SproutKind[] {
   );
 }
 
-export type DayEnd = 'timeUp' | 'allCollected' | 'captainDown' | 'wipedOut';
+/**
+ * How a day ended. `allCollected`: the mode's goal is met (every Sunshard home, or everything
+ * collected). `endedEarly`: the player called the day from the pause menu. `decided`: a battle
+ * was won or lost before the clock ran out.
+ */
+export type DayEnd =
+  'timeUp' | 'allCollected' | 'captainDown' | 'wipedOut' | 'endedEarly' | 'decided';
+
+/**
+ * When a day ends on its own, besides the clock and disasters: once every Sunshard is home
+ * (the story), once everything is collected (every Sunshard home, every beast defeated and its
+ * carcass home), or only when the clock runs out.
+ */
+export type EndsWhen = 'shards' | 'everything' | 'clock';
+
+/** One haul delivered: what it was, for the modes that score or tick off particular things. */
+export interface Delivery {
+  kind: CarryKind;
+  /** Treasure id, or the carcass's beast. */
+  id: string;
+  from: EnemyKind | null;
+  weight: number;
+  time: number;
+}
+
+export interface SimOptions {
+  /** A cave entered from the surface; see `Simulation.visit`. */
+  visit?: boolean;
+  endsWhen?: EndsWhen;
+  /** Whether the Kiln grows new Sproutlings. Off for a fixed-squad trial. */
+  growth?: boolean;
+}
 
 export interface SimStats {
   treasureValue: number;
@@ -71,6 +112,10 @@ export interface SimStats {
   rescued: number;
   /** Sproutlings lost to fire or water. */
   perilLosses: number;
+  /** Every haul delivered, in order. */
+  deliveries: Delivery[];
+  /** Total weight of treasure, carcasses and Glowcaps delivered (not pods, Sap or logs). */
+  weightDelivered: number;
 }
 
 export interface WorkerCounts {
@@ -164,12 +209,17 @@ export class Simulation {
    * while the Warden is below), and it has a way back up where the Warden arrives.
    */
   readonly visit: boolean;
+  readonly endsWhen: EndsWhen;
+  /** Whether the Kiln grows new Sproutlings from pods and carcasses. */
+  readonly growth: boolean;
 
   constructor(
     readonly level: LevelDefinition,
-    options: { visit?: boolean } = {},
+    options: SimOptions = {},
   ) {
     this.visit = options.visit ?? false;
+    this.endsWhen = options.endsWhen ?? 'shards';
+    this.growth = options.growth ?? true;
     this.hard = level.difficulty === 'hard';
     this.captainMaxHp = this.hard ? HARD.captainHp : CAPTAIN.maxHp;
     this.captainState.hp = this.captainMaxHp;
@@ -218,6 +268,8 @@ export class Simulation {
       grown: 0,
       rescued: 0,
       perilLosses: 0,
+      deliveries: [],
+      weightDelivered: 0,
     };
 
     this.captain = this.ecs.create();
@@ -320,13 +372,49 @@ export class Simulation {
 
     if (!this.visit) this.timeLeft = Math.max(0, this.timeLeft - dt);
     if (this.ended) return;
-    if (this.stats.treasuresCollected.length === this.stats.treasuresTotal) {
+    if (this.goalMet()) {
       this.ended = 'allCollected';
     } else if (this.workers.size === 0 && this.kiln.queue.length === 0) {
       this.ended = 'wipedOut';
     } else if (this.timeLeft === 0) {
       this.ended = 'timeUp';
     }
+  }
+
+  /** Whether every Sunshard is home. */
+  get cleared(): boolean {
+    return this.stats.treasuresCollected.length === this.stats.treasuresTotal;
+  }
+
+  /** Beasts still standing: not mounds, gates or root-knots (the Lanternroot itself counts). */
+  beastsLeft(): number {
+    let left = 0;
+    for (const [, enemy] of this.enemies.entries()) {
+      if (enemy.hp <= 0 || enemy.shape) continue;
+      if (enemy.kind === 'mound' || enemy.kind === 'rootknot' || enemy.kind === 'gate') continue;
+      left++;
+    }
+    return left;
+  }
+
+  /** Whether everything is collected: every Sunshard home, every beast down, every carcass home. */
+  everythingCollected(): boolean {
+    if (!this.cleared || this.beastsLeft() > 0) return false;
+    for (const [, carryable] of this.carryables.entries()) {
+      if (carryable.kind === 'carcass') return false;
+    }
+    return true;
+  }
+
+  /** Whether the day's own goal is met, by the mode's rule. */
+  private goalMet(): boolean {
+    if (this.endsWhen === 'clock') return false;
+    return this.endsWhen === 'everything' ? this.everythingCollected() : this.cleared;
+  }
+
+  /** Ends the day now, from the pause menu: whatever is home counts, and the clock stops here. */
+  endNow(): void {
+    if (!this.ended) this.ended = 'endedEarly';
   }
 
   /** True on open water: a river, or a bridge site not yet built. */

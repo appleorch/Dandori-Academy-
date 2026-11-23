@@ -1,5 +1,7 @@
 import { startingKinds } from '../game/simulation/Simulation';
+import { TWIN } from '../game/core/config';
 import { bonusParts, shardCount, type LevelDefinition } from '../game/world/level';
+import { twinRunes, twinStyle } from '../game/world/twins';
 import { SPROUT_KINDS, SPROUTS, type SproutKind } from '../game/workers/sprouts';
 
 /** Every kind of Sproutling the lesson starts with or can grow from its seed pods. */
@@ -59,36 +61,45 @@ export function SproutlingGuide() {
   );
 }
 
-/** The lesson's treasure, said plainly: what is required, what counts as bonus, what is extra. */
+/**
+ * What a lesson holds besides its Sunshards, in plain words: twin pairs, each pair marked by
+ * its own colour, shape and letter; Dewglass that cracks if dropped; Glowcaps that sprout late.
+ */
 export function OptionalTreasure({ level }: { level: LevelDefinition }) {
   const parts = bonusParts(level);
-  const bonus = [
-    parts.twins > 0
-      ? `${parts.twins} twin ${parts.twins === 1 ? 'pair' : 'pairs'} (both halves home within 10 seconds)`
-      : null,
-    parts.dewglass > 0 ? `${parts.dewglass} Dewglass (home without cracking)` : null,
-  ].filter((item) => item !== null);
-  const bonusWorth = parts.twinPoints + parts.dewglassPoints;
+  const pairs = twinRunes(level).map((rune) => twinStyle(level, rune));
   return (
-    <p className="optional-treasure">
-      <strong>Required:</strong> {shardCount(level)} Sunshards.{' '}
-      {bonus.length > 0 && (
-        <>
-          <strong>Bonus:</strong> {bonus.join(', ')}, worth up to {bonusWorth} points; the rank
-          targets assume you take them.{' '}
-        </>
+    <div className="optional-treasure">
+      <p>
+        <strong>Required:</strong> {shardCount(level)} Sunshards, every one home to clear the
+        lesson.
+      </p>
+      {pairs.length > 0 && (
+        <p>
+          <strong>Twin pairs:</strong> {pairs.length === 1 ? 'one pair' : `${pairs.length} pairs`}{' '}
+          of Sunshards, each pair marked by its own colour, shape and letter:{' '}
+          {pairs.map((pair, i) => (
+            <span key={pair.letter} className="twin-tag" style={{ color: pair.colour }}>
+              {pair.letter} ({pair.shape}){i < pairs.length - 1 ? ', ' : ''}
+            </span>
+          ))}
+          . Bring the second half of a pair home within {TWIN.window} seconds of the first for a
+          bonus; a countdown shows once the first is in.
+        </p>
+      )}
+      {parts.dewglass > 0 && (
+        <p>
+          <strong>Dewglass:</strong> {parts.dewglass} fragile{' '}
+          {parts.dewglass === 1 ? 'relic' : 'relics'}, worth more if home without a crack.
+        </p>
       )}
       {parts.glowcaps > 0 && (
-        <>
-          <strong>Extra:</strong> {parts.glowcaps}{' '}
-          {parts.glowcaps === 1 ? 'Glowcap sprouts' : 'Glowcaps sprout'} later in the day (worth up
-          to {parts.glowcapPoints} points). Glowcaps add to your score but never to your rank, so
-          Diamond never waits for one.
-        </>
+        <p>
+          <strong>Glowcaps:</strong> {parts.glowcaps} {parts.glowcaps === 1 ? 'sprouts' : 'sprout'}{' '}
+          later in the day and wilt if left. Extra points in the challenges, never needed for a
+          medal.
+        </p>
       )}
-      {bonus.length === 0 && parts.glowcaps === 0 && (
-        <>No bonus treasure here: the rank is all Sunshards, Sproutlings and time.</>
-      )}
-    </p>
+    </div>
   );
 }

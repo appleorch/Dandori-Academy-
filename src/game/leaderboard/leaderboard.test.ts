@@ -23,6 +23,8 @@ import {
   type Fetcher,
 } from './board';
 import oldBoard from './fixtures/board-0.17.0.json';
+import { challengeFacts } from '../modes/facts';
+import { MODES, scoreChallenge } from '../modes/modes';
 import {
   checkRun,
   decodePost,
@@ -30,6 +32,7 @@ import {
   encodePost,
   encodeRun,
   fingerprint,
+  makeChallengeRun,
   makeRun,
   playedOnThisLesson,
   playPrint,
@@ -247,6 +250,50 @@ describe('board posts', () => {
     expect(await sendPost(post(sampleRun()), () => Promise.reject(new Error('offline')))).toBe(
       false,
     );
+  });
+});
+
+describe('challenge runs', () => {
+  /** A Treasure Hunt on the first lesson, played by the test player, written as the game does. */
+  function huntRun(): RunEntry {
+    const sim = new Simulation(LESSON, { endsWhen: MODES.hunt.endsWhen, growth: true });
+    playGreedy(sim);
+    const facts = challengeFacts(sim);
+    const score = scoreChallenge('hunt', LESSON, facts);
+    const run = makeChallengeRun(
+      {
+        levelId: LESSON.id,
+        difficulty: 'normal',
+        mode: 'hunt',
+        facts,
+        score,
+        elapsed: sim.elapsed,
+      },
+      '0.18.0',
+      new Date('2026-11-23T12:00:00Z'),
+    );
+    sim.dispose();
+    if (!run) throw new Error('no run');
+    return run;
+  }
+
+  it('checks out when honest, and not when its score or medal is touched', () => {
+    const run = huntRun();
+    expect(checkRun(run)).toBeNull();
+    expect(checkRun({ ...run, score: run.score + 1 })).not.toBeNull();
+    expect(checkRun({ ...run, rank: 'Diamond' })).not.toBeNull();
+    expect(checkRun({ ...run, glowcaps: run.treasure + 1 })).not.toBeNull();
+  });
+
+  it('goes on its own challenge board, apart from the Classic board and the other challenges', async () => {
+    const hunt = huntRun();
+    const classic = sampleRun();
+    const entries = await checkPosts(
+      await Promise.all([post(hunt), post(classic)].map(encodePost)),
+    );
+    expect(standings(entries, LESSON.id, 'normal', 'hunt').map((e) => e.mode)).toEqual(['hunt']);
+    expect(standings(entries, LESSON.id, 'normal').map((e) => e.mode)).toEqual([undefined]);
+    expect(standings(entries, LESSON.id, 'normal', 'mission')).toEqual([]);
   });
 });
 

@@ -9,6 +9,7 @@ import { SIM_DT } from '../core/config';
 import { useGameStore } from '../core/gameStore';
 import { splitKey } from '../save/saveManager';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
+import type { Battle, BattleOutcome } from '../modes/battle';
 import type { Expedition } from '../simulation/expedition';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
@@ -32,6 +33,8 @@ const probe = new Vector3();
 
 interface GameLoopProps {
   expedition: Expedition;
+  /** The rival's day, run alongside, in a battle. */
+  battle: Battle | null;
   input: InputController;
   fx: Feedback;
   /** Called when the Warden goes down a way down or comes back up: the scene follows. */
@@ -59,7 +62,7 @@ function mood(sim: Simulation): { boss: boolean; intensity: Intensity } {
  * While the game is paused, or the briefing is still up, no steps run and no time
  * accumulates. It runs before every other frame callback so meshes read fresh state.
  */
-export function GameLoop({ expedition, input, fx, onSwitch }: GameLoopProps): null {
+export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopProps): null {
   const surface = expedition.surface;
   const element = useThree((state) => state.gl.domElement);
   const [clock] = useState(() => new FixedClock(SIM_DT, 5 * FAST_FORWARD));
@@ -72,6 +75,8 @@ export function GameLoop({ expedition, input, fx, onSwitch }: GameLoopProps): nu
   const walked = useRef(0);
   const lastSpot = useRef({ x: surface.captainTransform.x, z: surface.captainTransform.z });
   const wasFast = useRef(false);
+  // The battle's outcome, once it has been called.
+  const decided = useRef<BattleOutcome | null>(null);
   // Starts true if the scene remounts after the day already ended (a settings change).
   const finished = useRef(surface.ended !== null);
   // The splits of the best clear, kept from before this day started.
@@ -102,6 +107,10 @@ export function GameLoop({ expedition, input, fx, onSwitch }: GameLoopProps): nu
     const cursorZ = aim ? sim.captainTransform.z + aim.z : camera.position.z + probe.z * t;
 
     const store = useGameStore.getState();
+    if (store.endRequested) {
+      useGameStore.setState({ endRequested: false });
+      if (!surface.ended) surface.endNow();
+    }
     if (store.paused || store.briefing) {
       audio.setWhistle(false);
       // Any press made while the game was stopped is thrown away, not saved up.
@@ -122,6 +131,15 @@ export function GameLoop({ expedition, input, fx, onSwitch }: GameLoopProps): nu
     let switched = false;
     for (let i = 0; i < steps && !sim.ended; i++) {
       sim.step(input.sample(cursorX, cursorZ));
+      // The rival keeps pace step by step, and the battle is called the moment it is won.
+      if (battle && sim === surface && !surface.ended) {
+        battle.advance(1);
+        const outcome = battle.decide(surface);
+        if (outcome) {
+          decided.current = outcome;
+          surface.ended = 'decided';
+        }
+      }
       for (const event of sim.events) fx.handle(event);
       if (sim === surface) headmaster.events(sim.events);
       // Below: a cave that is finished, or a Warden who fell there, settles the visit.
@@ -147,8 +165,9 @@ export function GameLoop({ expedition, input, fx, onSwitch }: GameLoopProps): nu
       fx.popup(relic.name, sim.level.kiln.x, sim.level.kiln.z - 3, '#fff2c8');
       headmaster.relic(relic);
     }
-    // Each Sunshard home is compared with the same shard on the best clear so far (surface only).
-    for (let i = delivered; sim === surface && i < sim.stats.deliveryTimes.length; i++) {
+    // Each Sunshard home is compared with the same shard on the best story clear (surface only).
+    const splits = sim === surface && store.playMode === 'story';
+    for (let i = delivered; splits && i < sim.stats.deliveryTimes.length; i++) {
       const best = bestSplits.current?.[i];
       if (best === undefined) continue;
       const diff = sim.stats.deliveryTimes[i] - best;
@@ -183,7 +202,22 @@ export function GameLoop({ expedition, input, fx, onSwitch }: GameLoopProps): nu
       if (!finished.current) {
         finished.current = true;
         audio.play('dayEnd');
-        store.finishDay(surface, surface.ended, expedition.haul);
+        let outcome = decided.current ?? undefined;
+        if (battle && !outcome) {
+          // Sunset, or the Warden or squad lost, is judged as it stands. Ending the day early
+          // from the pause menu concedes.
+          const race = battle.race(surface);
+          outcome = (surface.ended !== 'endedEarly' && battle.decide(surface)) || {
+            mode: battle.mode,
+            outcome: 'lost',
+            you: race.you,
+            rival: race.rival,
+            unit: race.unit,
+            reason: 'You ended the day early, and conceded.',
+          };
+        }
+        if (battle) store.setRace(battle.race(surface));
+        store.finishDay(surface, surface.ended, expedition.haul, outcome);
       }
       return;
     }
@@ -224,6 +258,7 @@ export function GameLoop({ expedition, input, fx, onSwitch }: GameLoopProps): nu
     }
 
     frame.current++;
+    if (battle && frame.current % HUD_INTERVAL_FRAMES === 0) store.setRace(battle.race(surface));
     if (frame.current % HUD_INTERVAL_FRAMES === 0 || sim.entityVersion !== store.entityVersion) {
       store.publish(
         sim,

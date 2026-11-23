@@ -192,7 +192,20 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
     sim.sapTimer = SAP.seconds;
     sim.emit('sap', to.x, to.z, SAP.seconds);
   }
-  if (carryable.workerYield > 0) {
+  if (carryable.kind === 'treasure' || carryable.kind === 'carcass' || carryable.kind === 'bloom') {
+    sim.stats.weightDelivered += carryable.weight;
+  }
+  if (to.site < 0) {
+    sim.stats.deliveries.push({
+      kind: carryable.kind,
+      id: carryable.id,
+      from: carryable.from,
+      weight: carryable.weight,
+      time: sim.elapsed,
+    });
+  }
+  // On a fixed-squad trial the Kiln grows nothing.
+  if (carryable.workerYield > 0 && sim.growth) {
     // A kind of the day that has died out comes back first, so no job is ever shut for good.
     const lost = extinctKind(sim);
     for (let i = 0; i < carryable.workerYield; i++) {

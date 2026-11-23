@@ -5,6 +5,8 @@ import { audio } from '../audio/audioManager';
 import { useGameStore } from '../core/gameStore';
 import { CameraRig } from '../camera/CameraRig';
 import type { InputController } from '../commands/input';
+import { Battle, RIVAL_NAMES } from '../modes/battle';
+import { isBattle, MODES } from '../modes/modes';
 import { Expedition } from '../simulation/expedition';
 import { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
@@ -65,6 +67,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   // The day: the surface and any caves gone down into. `sim` is whichever is being played.
   const [expedition, setExpedition] = useState<Expedition | null>(null);
   const [sim, setSim] = useState<Simulation | null>(null);
+  const [battle, setBattle] = useState<Battle | null>(null);
   const [fx] = useState(() => new Feedback());
   const playing = useGameStore((state) => state.phase === 'playing' && !state.paused);
 
@@ -74,14 +77,24 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   const pauseOnBlur = useGameStore((state) => state.settings.pauseOnBlur);
 
   useEffect(() => {
-    const created = new Expedition(new Simulation(level));
+    // The mode and rival are fixed when the day starts; the scene is rebuilt for every new day.
+    const { playMode, rival } = useGameStore.getState();
+    const rules = MODES[playMode];
+    const created = new Expedition(
+      new Simulation(level, { endsWhen: rules.endsWhen, growth: rules.growth }),
+    );
+    const race = isBattle(playMode) ? new Battle(playMode, level, rival) : null;
     setExpedition(created);
     setSim(created.active);
+    setBattle(race);
     // Development builds only: lets browser checks reach the running day.
     if (import.meta.env.DEV) {
       (window as unknown as { __dandori?: unknown }).__dandori = { expedition: created, setSim };
     }
-    return () => created.dispose();
+    return () => {
+      created.dispose();
+      race?.dispose();
+    };
   }, [level]);
 
   // Effects sit on raised ground of whichever place is being played.
@@ -156,7 +169,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         <OverlayInMainPass />
       )}
       {expedition && sim && (
-        <GameLoop expedition={expedition} input={input} fx={fx} onSwitch={setSim} />
+        <GameLoop expedition={expedition} battle={battle} input={input} fx={fx} onSwitch={setSim} />
       )}
       {/*
         Everything that belongs to one place is rebuilt when the Warden goes down or up. The two
@@ -180,6 +193,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
           <WaterAndBridges sim={sim} />
           <Beacons sim={sim} />
           <Minimap sim={sim} />
+          {battle && <Minimap sim={battle.rival} rival={RIVAL_NAMES[battle.rivalLevel]} />}
           <HazardMeshes sim={sim} />
           <AimArc sim={sim} />
           <CursorFx sim={sim} />

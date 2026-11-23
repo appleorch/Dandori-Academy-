@@ -3,7 +3,8 @@ import { evaluateDay, type ScoreBreakdown } from '../dandori/scoring';
 import { grantAchievement, unlockAchievements } from '../progression/achievements';
 import {
   bestClearTime,
-  bestScore,
+  modeBest,
+  storyCleared,
   discover,
   emptySave,
   loadSave,
@@ -21,12 +22,22 @@ import type { DayEnd, Simulation } from '../simulation/Simulation';
 import { bonusParts, LEVELS } from '../world/level';
 import type { Line } from '../story/headmaster';
 import type { Haul } from '../simulation/expedition';
-import { makeRun, type RunEntry } from '../leaderboard/runCode';
-import { adviseDay, tallyDay, type Advice, type DayTally } from '../dandori/tally';
+import { makeChallengeRun, type RunEntry } from '../leaderboard/runCode';
+import {
+  isBattle,
+  isChallenge,
+  scoreChallenge,
+  type ChallengeScore,
+  type ModeId,
+} from '../modes/modes';
+import { challengeFacts, liveChallenge, type LiveChallenge } from '../modes/facts';
+import type { BattleOutcome, RaceSnapshot, RivalLevel } from '../modes/battle';
+import { tallyDay, type DayTally } from '../dandori/tally';
 import { dayFeats } from '../progression/feats';
 import { GAME_VERSION } from './changelog';
 import type { SproutKind } from '../workers/sprouts';
-import { CHAIN } from './config';
+import { CHAIN, TWIN } from './config';
+import { twinStyle } from '../world/twins';
 import { penaltyPerLoss, type Difficulty } from './difficulty';
 import {
   loadSettings,
@@ -48,7 +59,22 @@ function deviceDefaults(): Settings {
 }
 
 /** Screens reachable from the main menu. */
-export type MenuScreen = 'menu' | 'achievements' | 'settings' | 'journal' | 'guide' | 'leaderboard';
+export type MenuScreen =
+  | 'menu'
+  | 'map'
+  | 'challenges'
+  | 'battles'
+  | 'achievements'
+  | 'settings'
+  | 'journal'
+  | 'guide'
+  | 'leaderboard';
+
+/** The screen a day of a mode is chosen from, and returned to. */
+export function screenFor(mode: ModeId): MenuScreen {
+  if (mode === 'story') return 'map';
+  return isBattle(mode) ? 'battles' : 'challenges';
+}
 export type GamePhase = MenuScreen | 'story' | 'playing' | 'results';
 
 /** Low-frequency copy of simulation state for the HUD. */
@@ -77,6 +103,10 @@ export interface HudSnapshot {
   selected: SproutKind;
   /** The cave the Warden is in, by name, or null on the surface (whose clock is then stopped). */
   below: string | null;
+  /** In a challenge: the score so far and the next medal. */
+  challenge: LiveChallenge | null;
+  /** Twin pairs with one half home and the other still out, and the seconds left to match it. */
+  twins: { letter: string; colour: string; shape: string; left: number }[];
 }
 
 export interface BossSnapshot {
@@ -109,13 +139,19 @@ export interface DayResult {
   run: RunEntry | null;
   /** The day taken apart: required and optional treasure, and the squad. */
   tally: DayTally;
-  /** What the next rank would take, and where points were left behind. */
-  advice: Advice;
   enemiesDefeated: number;
   workersAlive: number;
   /** Ids of achievements earned by this day. */
   achievements: string[];
   difficulty: Difficulty;
+  mode: ModeId;
+  /** A challenge's score by its rule, and its medal. */
+  challenge: ChallengeScore | null;
+  /** A battle's outcome. */
+  battle: BattleOutcome | null;
+  /** The story's day count after this day, and relics recovered for the first time today. */
+  storyDay: number;
+  newRelics: number;
 }
 
 interface GameStore {
@@ -124,8 +160,14 @@ interface GameStore {
   levelId: string;
   /** Difficulty of the day being played, fixed when it starts. */
   playDifficulty: Difficulty;
+  /** How the day is being played: the story, a challenge or a battle. */
+  playMode: ModeId;
+  /** How hard the rival in a battle is. */
+  rival: RivalLevel;
   /** Incremented for every new day so the scene builds a fresh simulation. */
   runId: number;
+  /** Set by "End the day now": the game loop ends the day on its next frame. */
+  endRequested: boolean;
   /** While true the simulation does not advance and the pause menu shows. */
   paused: boolean;
   /** While true the day has not begun: the briefing is showing over the field. */
@@ -145,13 +187,20 @@ interface GameStore {
   /** Which pages the story screen is showing. */
   storyKind: 'prologue' | 'epilogue';
   hud: HudSnapshot | null;
+  /** A battle as it stands, or null outside battles. */
+  race: RaceSnapshot | null;
   /** Mirrors Simulation.entityVersion so entity lists re-render when it changes. */
   entityVersion: number;
   result: DayResult | null;
   save: SaveData;
   settings: Settings;
-  startDay: (levelId: string) => void;
+  /** Starts a day on a lesson; the mode and rival stay as they were unless given. */
+  startDay: (levelId: string, mode?: ModeId, rival?: RivalLevel) => void;
   showScreen: (screen: MenuScreen) => void;
+  /** Ends a challenge day where it stands, or concedes a battle. */
+  endDay: () => void;
+  /** Leaves a day for the screen its mode is chosen from. */
+  leaveDay: () => void;
   pause: () => void;
   resume: () => void;
   showStory: (kind: 'prologue' | 'epilogue') => void;
@@ -176,7 +225,8 @@ interface GameStore {
    */
   publish: (sim: Simulation, below?: { name: string; timeLeft: number } | null) => void;
   setSplit: (split: number) => void;
-  finishDay: (sim: Simulation, reason: DayEnd, haul?: Haul) => void;
+  setRace: (race: RaceSnapshot | null) => void;
+  finishDay: (sim: Simulation, reason: DayEnd, haul?: Haul, battle?: BattleOutcome) => void;
   /** The relay has taken a run from the outbox. */
   runPosted: (run: RunEntry) => void;
   /** Puts one of the player's own runs in the outbox by hand (a best from before posting was on). */
@@ -198,9 +248,24 @@ function squadKinds(sim: Simulation): Record<SproutKind, number> {
   return counts;
 }
 
+/** Twin pairs waiting on their second half, while there is still time to bring it home. */
+function pendingTwins(sim: Simulation): HudSnapshot['twins'] {
+  const pending: HudSnapshot['twins'] = [];
+  for (const [rune, arrival] of sim.twinArrivals) {
+    const left = TWIN.window - (sim.elapsed - arrival.time);
+    if (left <= 0) continue;
+    const out = [...sim.carryables.entries()].some(([, carryable]) => carryable.twin === rune);
+    if (!out) continue;
+    const style = twinStyle(sim.level, rune);
+    pending.push({ letter: style.letter, colour: style.colour, shape: style.shape, left });
+  }
+  return pending;
+}
+
 function snapshot(sim: Simulation): HudSnapshot {
   const counts = sim.countWorkers();
   return {
+    twins: pendingTwins(sim),
     timeLeft: sim.timeLeft,
     squad: counts.squad,
     idle: counts.idle,
@@ -218,6 +283,7 @@ function snapshot(sim: Simulation): HudSnapshot {
     split: null,
     squadKinds: squadKinds(sim),
     below: null,
+    challenge: null,
     selected: sim.selected,
     chain: sim.chain >= 2 && sim.elapsed - sim.lastDelivery <= CHAIN.window ? sim.chain : 0,
   };
@@ -271,7 +337,10 @@ export const useGameStore = create<GameStore>((set, get) => {
     storyKind: 'prologue',
     levelId: LEVELS[0].id,
     playDifficulty: 'normal',
+    playMode: 'story',
+    rival: 'normal',
     runId: 0,
+    endRequested: false,
     paused: false,
     briefing: false,
     hint: null,
@@ -281,19 +350,26 @@ export const useGameStore = create<GameStore>((set, get) => {
     nearAscent: false,
     pokerOpen: false,
     hud: null,
+    race: null,
     entityVersion: 0,
     result: null,
     save: initial.save,
     settings,
 
-    startDay: (levelId) =>
+    startDay: (levelId, mode, rival) =>
       set((state) => ({
         phase: 'playing',
         levelId,
-        playDifficulty: state.settings.difficulty,
+        playMode: mode ?? state.playMode,
+        rival: rival ?? state.rival,
+        // Hard is a story setting: challenges and battles are measured on the Normal day.
+        playDifficulty: (mode ?? state.playMode) === 'story' ? state.settings.difficulty : 'normal',
         runId: state.runId + 1,
+        endRequested: false,
         paused: false,
-        briefing: state.settings.briefings,
+        // Challenges and battles always open on their rules; the story's briefings can be turned off.
+        briefing: state.settings.briefings || (mode ?? state.playMode) !== 'story',
+        race: null,
         hint: null,
         sprocket: null,
         nearSecret: false,
@@ -304,6 +380,10 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     showScreen: (screen) =>
       set({ phase: screen, paused: false, briefing: false, hint: null, hud: null, result: null }),
+
+    endDay: () => set({ endRequested: true, paused: false }),
+
+    leaveDay: () => get().showScreen(screenFor(get().playMode)),
 
     showStory: (kind) =>
       set({
@@ -397,18 +477,23 @@ export const useGameStore = create<GameStore>((set, get) => {
       set((state) => ({
         hud: {
           ...snapshot(sim),
+          challenge: isChallenge(state.playMode) ? liveChallenge(state.playMode, sim) : null,
           ...(below ? { below: below.name, timeLeft: below.timeLeft } : {}),
           split: state.hud?.split ?? null,
         },
         entityVersion: sim.entityVersion,
       })),
 
+    setRace: (race) => set({ race }),
+
     setSplit: (split) => set((state) => (state.hud ? { hud: { ...state.hud, split } } : {})),
 
-    finishDay: (sim, reason, haul) => {
+    finishDay: (sim, reason, haul, battle) => {
       const { level, stats } = sim;
+      const mode = get().playMode;
       const workersAlive = sim.workers.size;
       const cleared = stats.treasuresCollected.length === stats.treasuresTotal;
+      // The story's classic breakdown is still worked out: the tally and the feats use it.
       const score = evaluateDay(
         {
           treasureValue: stats.treasureValue,
@@ -431,13 +516,20 @@ export const useGameStore = create<GameStore>((set, get) => {
         grown: stats.grown,
         timeLeft: sim.timeLeft,
       });
+      const facts = isChallenge(mode) ? challengeFacts(sim) : null;
+      const challenge = isChallenge(mode) && facts ? scoreChallenge(mode, level, facts) : null;
+      const now = new Date();
       const day: DayRecord = {
         levelId: level.id,
         difficulty: level.difficulty,
+        mode,
         // A side lesson never moves the numbered run along.
         stage: level.side ? 0 : level.stage,
-        score: score.total,
-        rank: score.rank,
+        score: challenge?.total ?? 0,
+        rank: challenge?.rank ?? null,
+        battle: battle?.outcome,
+        rival: battle ? get().rival : undefined,
+        perfectBloom: challenge?.perfectBloom,
         workersAlive,
         workersLost: stats.workersLost,
         treasureIds: stats.treasuresCollected,
@@ -453,29 +545,32 @@ export const useGameStore = create<GameStore>((set, get) => {
         extraTreasures: haul?.relics ?? [],
         feats: dayFeats(sim, tally, haul),
         run:
-          makeRun(
-            {
-              levelId: level.id,
-              difficulty: level.difficulty,
-              score,
-              shards: stats.treasuresCollected.length,
-              shardsTotal: stats.treasuresTotal,
-              elapsed: sim.elapsed,
-              timeLeft: sim.timeLeft,
-              alive: workersAlive,
-              lost: stats.workersLost,
-            },
-            GAME_VERSION,
-            new Date(),
-          ) ?? undefined,
+          isChallenge(mode) && facts && challenge
+            ? (makeChallengeRun(
+                {
+                  levelId: level.id,
+                  difficulty: level.difficulty,
+                  mode,
+                  facts,
+                  score: challenge,
+                  elapsed: sim.elapsed,
+                },
+                GAME_VERSION,
+                now,
+              ) ?? undefined)
+            : undefined,
       };
       const previous = get().save;
       const recorded = recordDay(previous, day);
       // A new personal best goes in the outbox for the Academy board; it is sent while posting
       // is on, and waits there while it is off.
       const queued = day.run ? queueForBoard(previous, recorded, day.run) : recorded;
-      const { save, unlocked } = unlockAchievements(queued, day, new Date());
+      const { save, unlocked } = unlockAchievements(queued, day, now);
       persist(save);
+      const relicKeys = [
+        ...stats.treasuresCollected.map((id) => `${level.id}:${id}`),
+        ...(haul?.relics ?? []),
+      ];
       set({
         phase: 'results',
         paused: false,
@@ -489,24 +584,32 @@ export const useGameStore = create<GameStore>((set, get) => {
           score,
           treasuresCollected: stats.treasuresCollected.length,
           treasuresTotal: stats.treasuresTotal,
-          isBestScore: score.total > bestScore(previous, level.id, level.difficulty),
+          isBestScore:
+            challenge !== null &&
+            challenge.total > modeBest(previous, mode, level.id, level.difficulty),
           unlockedNext: save.stage > previous.stage && level.stage < LEVELS.length,
           firstClear:
-            stats.treasuresCollected.length === stats.treasuresTotal &&
-            bestScore(previous, level.id, 'normal') === 0 &&
-            bestScore(previous, level.id, 'hard') === 0,
+            mode === 'story' &&
+            cleared &&
+            !storyCleared(previous, level.id, 'normal') &&
+            !storyCleared(previous, level.id, 'hard'),
           elapsed: sim.elapsed,
           clearTime: cleared ? sim.elapsed : null,
-          previousBest: bestClearTime(previous, level.id, level.difficulty),
+          previousBest:
+            mode === 'story' ? bestClearTime(previous, level.id, level.difficulty) : null,
           bestChain: stats.bestChain,
           caveRelics: haul?.relics.length ?? 0,
           run: day.run ?? null,
           tally,
-          advice: adviseDay(level, score, tally, penaltyPerLoss(level.difficulty)),
           enemiesDefeated: stats.enemiesDefeated,
           workersAlive,
           difficulty: level.difficulty,
           achievements: unlocked.map((achievement) => achievement.id),
+          mode,
+          challenge,
+          battle: battle ?? null,
+          storyDay: save.story.day,
+          newRelics: relicKeys.filter((key) => !previous.treasuresCollected.includes(key)).length,
         },
       });
     },

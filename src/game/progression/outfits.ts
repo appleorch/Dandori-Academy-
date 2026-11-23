@@ -16,6 +16,7 @@ export interface Outfit {
   unlocked: (save: SaveData) => boolean;
 }
 
+/** Lessons with a challenge medal (or an old story rank) of at least `rank`. */
 function lessonsAtLeast(save: SaveData, rank: Rank): number {
   return LEVELS.filter((level) => {
     const earned = bestRank(save, level.id);
@@ -39,7 +40,7 @@ export const OUTFITS: readonly Outfit[] = [
   {
     id: 'kindling',
     name: 'Kindling',
-    requirement: 'Earn Gold or better in five lessons.',
+    requirement: 'Earn Gold or better in challenges on five lessons.',
     suit: '#9a3a22',
     trim: '#ffb347',
     hat: '#f0703a',
@@ -49,7 +50,7 @@ export const OUTFITS: readonly Outfit[] = [
   {
     id: 'harvest',
     name: 'Harvest',
-    requirement: 'Earn Gold or better in twelve lessons.',
+    requirement: 'Earn Gold or better in challenges on twelve lessons.',
     suit: '#6a5a2a',
     trim: '#e2b05a',
     hat: '#c86a2a',
@@ -80,7 +81,7 @@ export const OUTFITS: readonly Outfit[] = [
   {
     id: 'ironclad',
     name: 'Ironclad',
-    requirement: 'Earn Silver or better on Hard in any lesson.',
+    requirement: 'Clear any lesson on Hard in the story.',
     suit: '#4a4e58',
     trim: '#c8ccd4',
     hat: '#6a6e78',
@@ -100,7 +101,7 @@ export const OUTFITS: readonly Outfit[] = [
   {
     id: 'platinum',
     name: 'Platinum',
-    requirement: 'Earn Platinum in every lesson.',
+    requirement: 'Earn Platinum in a challenge on every lesson.',
     suit: '#cfe8f0',
     trim: '#7fe3ff',
     hat: '#f4fbff',
@@ -110,7 +111,7 @@ export const OUTFITS: readonly Outfit[] = [
   {
     id: 'diamond',
     name: 'Diamond',
-    requirement: 'Earn Diamond in five lessons.',
+    requirement: 'Earn Diamond in challenges on five lessons.',
     suit: '#eef6ff',
     trim: '#b48cff',
     hat: '#ffffff',

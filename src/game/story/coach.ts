@@ -183,7 +183,7 @@ const RULES: readonly Rule[] = [
     limit: 1,
     test: (sim) =>
       sim.stats.workersLost > 0
-        ? 'You lost one. Every loss costs points, and a pair of hands.'
+        ? 'You lost one. That is a pair of hands gone for the rest of the day.'
         : null,
   },
   {

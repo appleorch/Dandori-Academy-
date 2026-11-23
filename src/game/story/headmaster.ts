@@ -123,6 +123,50 @@ export function evaluation(rank: Rank, levelId: string): string {
   return pick(EVALUATIONS[rank], seed);
 }
 
+/** What he says after a story day: the lesson cleared, or not yet. */
+const STORY_VERDICTS = {
+  cleared: [
+    'Every Sunshard home! The lesson is passed, cadet. On to the next, and mind the dawdling.',
+    'Cleared! I knew you would. I said so to nobody, but I said it.',
+    'All home and accounted for. That is a Warden’s day’s work.',
+  ],
+  short: [
+    'Not every shard came home. The lesson waits for you, cadet. So do I.',
+    'Nearly. Nearly is a start. Plan the order and try it again.',
+    'The Kiln is not full yet. Back you go, with a better plan.',
+  ],
+} as const;
+
+/** What he says after a battle. */
+const BATTLE_VERDICTS = {
+  won: [
+    'You won! I shall be insufferable about this at the staff dinner.',
+    'Victory! Your rival is still looking for their last Sproutling.',
+  ],
+  lost: [
+    'Beaten, this time. Watch how your rival orders the day, then do it better.',
+    'A loss. They planned the first minute better than you did. Plan yours.',
+  ],
+  drawn: [
+    'A draw! Perfectly even. I find that deeply unsatisfying. Again!',
+    'Level. Neither of you will hear the end of it from me.',
+  ],
+} as const;
+
+function seedOf(levelId: string): number {
+  let seed = 0;
+  for (const char of levelId) seed += char.charCodeAt(0);
+  return seed;
+}
+
+export function storyVerdict(cleared: boolean, levelId: string): string {
+  return pick(STORY_VERDICTS[cleared ? 'cleared' : 'short'], seedOf(levelId));
+}
+
+export function battleVerdict(outcome: 'won' | 'lost' | 'drawn', levelId: string): string {
+  return pick(BATTLE_VERDICTS[outcome], seedOf(levelId));
+}
+
 export class Headmaster {
   private quiet = 0;
   private spoke = false;

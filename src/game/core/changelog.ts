@@ -8,6 +8,21 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.18.0',
+    date: '2026-11-23',
+    changes: [
+      'Ways to play, in the spirit of the classics of the genre: the main menu now offers Story, Challenges and Battles.',
+      'The story is played from an illustrated map of the Academy grounds: a region for each term round the Academy, the trail through every lesson, the Undercroft beneath, and caves beside the lessons that lead to them. The story keeps no score now: bring every Sunshard home to clear a lesson and open the next. It counts the days you take, and the results show what the day did.',
+      'Five challenges, each with its own rule, medals and Academy board: Growing Season (your headcount at sunset), Treasure Hunt (treasure, survivors and time, with a Perfect Bloom for losing nobody), Mission (the time bonus only on a 100% clear), Dandori Challenge (weight home, and seconds once everything is collected) and the Lean Squad Trial (no new Sproutlings at all). The HUD shows your score so far and the next medal, and the day can be ended early from the pause menu.',
+      'Collecting everything now matters: in the Mission, the Dandori Challenge and the Trial, Platinum and Diamond need every Sunshard, every beast and every carcass, at a pace measured for collecting everything.',
+      'Glowcaps add to a challenge score on their own line but never count for a medal, so they can neither block one nor buy one.',
+      'Three battles against a CPU rival working their own copy of the field, shown on a second map: Marble Race, Bingo Race and Dandori Duel, against Cadet Pell, Warden Quill or Proctor Ashwick.',
+      'Twin pairs are easy to tell apart: each pair in a lesson has its own colour, marker shape and letter on the field, the minimap and the briefing, and once the first half is home the HUD counts down the seconds left to bring the other.',
+      'Achievements reworked for the new modes, and 10 new ones: Perfect Bloom, a medal in every challenge, battle wins, beating Proctor Ashwick and more. Old saves keep their progress: lessons passed under the old ranks count as cleared, and their runs stay on the Classic board.',
+      'Fix: on Hard, pausing could rebuild the day from the start.',
+    ],
+  },
+  {
     version: '0.17.1',
     date: '2026-11-21',
     changes: [

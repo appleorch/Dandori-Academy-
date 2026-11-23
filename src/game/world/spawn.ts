@@ -78,6 +78,7 @@ function addCarryable(
     bonusSpeed: CARRY.bonusSpeed,
     dest: -1,
     seed: null,
+    from: null,
     ...fields,
   });
   sim.entityVersion++;
@@ -142,6 +143,7 @@ export function spawnCarcass(sim: Simulation, x: number, z: number, kind: EnemyK
       maxCarriers: spec.carcassWeight * 2,
       workerYield: spec.carcassYield,
       radius: CARCASS_RADIUS,
+      from: kind,
     },
   );
 }

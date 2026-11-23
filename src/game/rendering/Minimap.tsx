@@ -3,6 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { Vector3 } from 'three';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { Box } from '../navigation/NavGrid';
+import { twinStyle } from '../world/twins';
 import type { Simulation } from '../simulation/Simulation';
 import type { GateSpawn } from '../world/levelTypes';
 import { inDanger } from './danger';
@@ -23,14 +24,17 @@ function makeCanvas(className: string): HTMLCanvasElement {
  * pointing to any Emberling in danger that the camera cannot see. Both are plain
  * canvases laid over the game, drawn from the simulation each frame.
  */
-export function Minimap({ sim }: { sim: Simulation }) {
+export function Minimap({ sim, rival }: { sim: Simulation; rival?: string }) {
   const gl = useThree((state) => state.gl);
   const { width, depth } = sim.level;
   const scale = MAP_WIDTH / width;
   const height = Math.round(depth * scale);
   const { map, arrows } = useMemo(
-    () => ({ map: makeCanvas('minimap'), arrows: makeCanvas('threat-arrows') }),
-    [],
+    () => ({
+      map: makeCanvas(rival ? 'minimap rival-map' : 'minimap'),
+      arrows: makeCanvas('threat-arrows'),
+    }),
+    [rival],
   );
 
   useEffect(() => {
@@ -41,16 +45,22 @@ export function Minimap({ sim }: { sim: Simulation }) {
     map.style.width = `${MAP_WIDTH}px`;
     map.style.height = `${height}px`;
     map.getContext('2d')?.scale(ratio, ratio);
-    host.append(map, arrows);
+    // The rival's map is a window on their field: no danger arrows for their Sproutlings.
+    if (rival) host.append(map);
+    else host.append(map, arrows);
     return () => {
       map.remove();
       arrows.remove();
     };
-  }, [gl, map, arrows, height]);
+  }, [gl, map, arrows, height, rival]);
 
   useFrame(({ camera, clock, size }) => {
     const time = clock.elapsedTime;
     const frame = Math.round(time * 60);
+    if (rival) {
+      if (frame % REDRAW_FRAMES === 0) drawMap(camera.position.x, camera.position.z);
+      return;
+    }
 
     // Edge arrows for threatened workers off screen.
     if (arrows.width !== size.width || arrows.height !== size.height) {
@@ -153,7 +163,10 @@ export function Minimap({ sim }: { sim: Simulation }) {
     }
 
     // The minimap itself, redrawn a few times a second.
-    if (frame % REDRAW_FRAMES !== 0) return;
+    if (frame % REDRAW_FRAMES === 0) drawMap(camera.position.x, camera.position.z);
+  });
+
+  const drawMap = (cameraX: number, cameraZ: number): void => {
     const ink = map.getContext('2d');
     if (!ink) return;
     const toX = (x: number): number => (x + width / 2) * scale;
@@ -192,8 +205,10 @@ export function Minimap({ sim }: { sim: Simulation }) {
     dot(kiln.x, kiln.z, 4, '#ffb347');
     for (const [entity, carryable] of sim.carryables.entries()) {
       const at = sim.transforms.require(entity);
-      const color =
-        carryable.kind === 'treasure'
+      // Twin halves show in their pair's colour, so the two can be found on the map.
+      const color = carryable.twin
+        ? twinStyle(sim.level, carryable.twin).colour
+        : carryable.kind === 'treasure'
           ? '#ffd257'
           : carryable.kind === 'log'
             ? '#c9a46a'
@@ -221,8 +236,14 @@ export function Minimap({ sim }: { sim: Simulation }) {
     // The part of the field the camera is looking at.
     ink.strokeStyle = 'rgba(255, 246, 220, 0.6)';
     ink.lineWidth = 1;
-    ink.strokeRect(toX(camera.position.x) - 26, toY(camera.position.z - 16) - 14, 52, 28);
-  });
+    if (!rival) {
+      ink.strokeRect(toX(cameraX) - 26, toY(cameraZ - 16) - 14, 52, 28);
+    } else {
+      ink.fillStyle = 'rgba(255, 246, 220, 0.9)';
+      ink.font = '600 11px system-ui, sans-serif';
+      ink.fillText(rival, 6, height - 6);
+    }
+  };
 
   return null;
 }

@@ -5,7 +5,7 @@ import { approachPoint, damageTaken, isTargetable } from '../enemies/combat';
 import { ENEMY, ENEMY_SPECS, HAZARDS } from '../enemies/enemyKinds';
 import type { Point } from '../navigation/NavGrid';
 import { createMover, steerTo } from '../navigation/steering';
-import type { Enemy, Transform } from '../simulation/components';
+import type { Carryable, Enemy, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { SPROUT_KINDS, SPROUTS, type SproutKind } from '../workers/sprouts';
 import type { GateSpawn } from './levelTypes';
@@ -224,7 +224,12 @@ function reachSpot(sim: Simulation, foe: Enemy, at: Transform): Point {
 }
 
 /** Nearest job the squad can fully staff: an unguarded haul, else an enemy when at full strength. */
-function chooseJob(sim: Simulation, squad: number, total: number): Entity {
+function chooseJob(
+  sim: Simulation,
+  squad: number,
+  total: number,
+  prefer?: (carryable: Carryable) => boolean,
+): Entity {
   const nearest = (candidates: Entity[]): Entity => {
     let best: Entity = NO_ENTITY;
     let bestDist = Infinity;
@@ -255,6 +260,9 @@ function chooseJob(sim: Simulation, squad: number, total: number): Entity {
       hauls.push(entity);
     }
   }
+  // Hauls it prefers come first, when any can be staffed.
+  const preferred = prefer ? hauls.filter((entity) => prefer(sim.carryables.require(entity))) : [];
+  if (preferred.length > 0) return nearest(preferred);
   if (hauls.length > 0) return nearest(hauls);
   // A haul is waiting for a kind that is standing idle somewhere: fetch them before fighting.
   if (wantedKind(sim)) return NO_ENTITY;
@@ -494,14 +502,37 @@ export function playGreedy(
   watch?: (tick: number, job: Entity) => void,
   style: BotStyle = BOT_STYLES[0],
 ): void {
+  const player = greedyPlayer(sim, style);
+  for (let tick = 0; tick < 60 * 1500 && !sim.ended; tick++) {
+    sim.step(player.input(tick));
+    watch?.(tick, player.job);
+  }
+}
+
+/** The test player one step at a time: what it would press now. Used for the CPU rival. */
+export interface GreedyPlayer {
+  input(tick: number): InputState;
+  /** The job it is on, for watching. */
+  readonly job: Entity;
+}
+
+/**
+ * The greedy player as a step-by-step controller. `prefer`, if given, picks out hauls it goes
+ * for first (a battle's marbles, or the squares on its bingo card).
+ */
+export function greedyPlayer(
+  sim: Simulation,
+  style: BotStyle = BOT_STYLES[0],
+  prefer?: (carryable: Carryable) => boolean,
+): GreedyPlayer {
   const mover = createMover();
   const dir = { x: 0, z: 0 };
   let job: Entity = NO_ENTITY;
-  for (let tick = 0; tick < 60 * 1500 && !sim.ended; tick++) {
+  const input = (tick: number): InputState => {
     const from = sim.captainTransform;
     const { squad, total } = sim.countWorkers();
     if (!unfinished(sim, job) || (squad === 0 && !bossFight(sim, job))) {
-      job = chooseJob(sim, squad, total);
+      job = chooseJob(sim, squad, total, prefer);
     }
     // An enemy this close is dealt with first: fought with a squad, avoided without one.
     const threat = nearestEnemy(sim);
@@ -580,7 +611,12 @@ export function playGreedy(
     }
     rescue(sim, input);
     dodge(sim, input);
-    sim.step(input);
-    watch?.(tick, job);
-  }
+    return input;
+  };
+  return {
+    input,
+    get job() {
+      return job;
+    },
+  };
 }

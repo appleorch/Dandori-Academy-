@@ -43,6 +43,7 @@ describe('achievements', () => {
   it('unlocks day feats for a perfect day, and never twice', () => {
     const perfect: DayRecord = {
       ...day,
+      mode: 'hunt',
       rank: 'Platinum',
       workersLost: 0,
       treasureIds: ['a', 'b', 'c', 'd'],
@@ -91,35 +92,64 @@ describe('achievements', () => {
     expect(ids).not.toContain('uprooted');
   });
 
-  it('awards the Hard-mode milestones from Hard ranks only', () => {
-    const hardSilver: SaveData = { ...emptySave(), bestRanksHard: { 'many-hands': 'Silver' } };
-    expect(unlockAchievements(hardSilver, null, now).unlocked.map((a) => a.id)).toEqual([
-      'hardened',
-    ]);
-    const bell: SaveData = { ...emptySave(), bestRanksHard: { 'the-bellwether': 'Platinum' } };
-    expect(unlockAchievements(bell, null, now).unlocked.map((a) => a.id)).toEqual([
-      'hardened',
-      'hard-as-stone',
-    ]);
+  it('awards the Hard milestones for story clears on Hard', () => {
+    const hardClear: DayRecord = {
+      ...day,
+      levelId: 'many-hands',
+      difficulty: 'hard',
+      rank: null,
+      score: 0,
+      treasureIds: ['a', 'b', 'c', 'd'],
+    };
+    expect(play(emptySave(), hardClear).ids).toContain('hardened');
+    expect(
+      play(emptySave(), { ...day, levelId: 'many-hands', difficulty: 'hard' }).ids,
+    ).not.toContain('hardened');
+    const bell: DayRecord = { ...hardClear, levelId: 'the-bellwether', workersLost: 0 };
+    expect(play(emptySave(), bell).ids).toContain('hard-as-stone');
+    expect(play(emptySave(), { ...bell, workersLost: 1 }).ids).not.toContain('hard-as-stone');
   });
 
-  it('awards the rank milestones', () => {
+  it('awards the medal milestones from challenge medals', () => {
     const allPlatinum: SaveData = {
       ...emptySave(),
-      bestRanks: Object.fromEntries(LEVELS.map((level) => [level.id, 'Platinum'])),
+      medals: Object.fromEntries(LEVELS.map((level) => [`hunt|${level.id}`, 'Platinum'])),
     };
     const ids = unlockAchievements(allPlatinum, null, now).unlocked.map((a) => a.id);
     expect(ids).toEqual([
       'platinum-student',
       'honor-roll',
-      'graduate',
-      'first-ember',
-      'restorer',
       'dandori-master',
       'gold-standard',
       'platinum-ten',
-      'well-travelled',
     ]);
+  });
+
+  it('awards the story milestones for lessons cleared in the story', () => {
+    const story: SaveData = {
+      ...emptySave(),
+      story: { day: 40, cleared: LEVELS.map((level) => level.id) },
+    };
+    const ids = unlockAchievements(story, null, now).unlocked.map((a) => a.id);
+    expect(ids).toEqual(['graduate', 'first-ember', 'restorer', 'well-travelled']);
+  });
+
+  it('awards the challenge and battle milestones', () => {
+    const hunt: DayRecord = { ...day, mode: 'hunt', rank: 'Bronze', perfectBloom: true };
+    expect(play(emptySave(), hunt).ids).toContain('perfect-bloom');
+    const won: DayRecord = { ...day, mode: 'marble', rank: null, battle: 'won', rival: 'hard' };
+    const first = play(emptySave(), won);
+    expect(first.ids).toEqual(expect.arrayContaining(['first-blood', 'proctor-beaten']));
+    expect(play(emptySave(), { ...won, rival: 'easy' }).ids).not.toContain('proctor-beaten');
+    const crown: SaveData = {
+      ...emptySave(),
+      battles: {
+        marble: { won: 1, lost: 0, drawn: 0 },
+        bingo: { won: 1, lost: 0, drawn: 0 },
+        duel: { won: 1, lost: 0, drawn: 0 },
+      },
+    };
+    expect(unlockAchievements(crown, null, now).unlocked.map((a) => a.id)).toContain('every-race');
   });
 });
 

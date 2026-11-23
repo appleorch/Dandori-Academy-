@@ -1,5 +1,6 @@
 import { cleanWardenName } from '../core/settings';
 import type { Difficulty } from '../core/difficulty';
+import type { ChallengeId } from '../modes/modes';
 import {
   checkRun,
   compareRuns,
@@ -65,28 +66,40 @@ export async function entryOf(code: string): Promise<BoardEntry | null> {
   return { ...post.run, player: post.player, name: post.name, code };
 }
 
-/** Each player's best run on a lesson and difficulty, best first. */
+/** Which board a run belongs on: its challenge, or 'classic' for runs from the scored story. */
+export type BoardMode = ChallengeId | 'classic';
+
+export function boardMode(entry: Pick<BoardEntry, 'mode'>): BoardMode {
+  return entry.mode ?? 'classic';
+}
+
+/** Each player's best run on a lesson, difficulty and board, best first. */
 export function standings(
   entries: readonly BoardEntry[],
   levelId: string,
   difficulty: Difficulty,
+  mode: BoardMode = 'classic',
 ): BoardEntry[] {
   return keepBest(entries).filter(
-    (entry) => entry.level === levelId && entry.difficulty === difficulty,
+    (entry) =>
+      entry.level === levelId && entry.difficulty === difficulty && boardMode(entry) === mode,
   );
 }
 
-/** One run per player per lesson and difficulty (their best), and at most `KEPT_PER_LESSON` each. */
+/**
+ * One run per player per board, lesson and difficulty (their best), and at most
+ * `KEPT_PER_LESSON` on each.
+ */
 export function keepBest(entries: readonly BoardEntry[]): BoardEntry[] {
   const best = new Map<string, BoardEntry>();
   for (const entry of entries) {
-    const key = `${entry.player}|${entry.level}|${entry.difficulty}`;
+    const key = `${entry.player}|${boardMode(entry)}|${entry.level}|${entry.difficulty}`;
     const held = best.get(key);
     if (!held || compareRuns(entry, held) < 0) best.set(key, entry);
   }
   const lessons = new Map<string, BoardEntry[]>();
   for (const entry of best.values()) {
-    const key = `${entry.level}|${entry.difficulty}`;
+    const key = `${boardMode(entry)}|${entry.level}|${entry.difficulty}`;
     lessons.set(key, [...(lessons.get(key) ?? []), entry]);
   }
   return [...lessons.values()].flatMap((list) => list.sort(compareRuns).slice(0, KEPT_PER_LESSON));

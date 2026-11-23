@@ -12,10 +12,21 @@ import {
   forDifficulty,
   LEVELS,
   shardCount,
+  sproutlingsPossible,
   treasureTotal,
   type LevelDefinition,
 } from '../world/level';
 import { BLOOM_VALUE_PER_WEIGHT } from '../world/spawn';
+import {
+  carcassWeight,
+  CHALLENGE_IDS,
+  challengeOpen,
+  scoreChallenge,
+  shardWeight,
+  type ChallengeFacts,
+  type ChallengeId,
+  type ChallengeScore,
+} from '../modes/modes';
 
 /**
  * A finished day, written down so it can be shared: the numbers behind its score, which
@@ -51,6 +62,20 @@ export interface RunEntry {
   lost: number;
   /** When it was played, as an ISO date. */
   at: string;
+  /**
+   * The challenge the run was played in. Missing on runs from before the challenges, which were
+   * story days scored the way the story was then (the board calls them Classic).
+   */
+  mode?: ChallengeId;
+  /** Challenge runs: weight brought home, of it carcasses, beasts left standing, and whether
+   * everything was collected and the Warden and squad made it to the end. */
+  weight?: number;
+  /** Challenge runs: of the weight, the Glowcaps' (their points are in `glowcaps`). */
+  glowcapWeight?: number;
+  carcassWeight?: number;
+  beastsLeft?: number;
+  everything?: boolean;
+  survived?: boolean;
 }
 
 /** Two FNV-1a hashes with different offsets: 16 hex digits, plenty to tell lessons apart. */
@@ -135,7 +160,7 @@ export function legacyPrint(levelId: string, difficulty: Difficulty): string | n
 
 /** Whether a run was played on the lesson as it is now (or as it was in 0.17.0, for its runs). */
 export function playedOnThisLesson(run: RunEntry): boolean {
-  return run.glowcaps === undefined
+  return run.glowcaps === undefined && run.mode === undefined
     ? run.print === legacyPrint(run.level, run.difficulty)
     : run.print === lessonPrint(run.level, run.difficulty);
 }
@@ -209,6 +234,7 @@ export function checkRun(run: RunEntry): string | null {
   const level = lessonOf(run.level, run.difficulty);
   if (!level) return 'unknown lesson';
   if (!playedOnThisLesson(run)) return 'played on another version of this lesson';
+  if (run.mode !== undefined) return checkChallengeRun(run, run.mode, level);
   // A run from 0.17.0 has no Glowcap count: it was ranked on its whole score, against that
   // version's par, which counted every Glowcap.
   const legacy = run.glowcaps === undefined;
@@ -366,4 +392,130 @@ export async function decodePost(code: string): Promise<BoardPost | null> {
   }
   if (typeof post.name !== 'string' || post.name.length === 0 || post.name.length > 20) return null;
   return isRun(post.run) ? (post as BoardPost) : null;
+}
+
+/** A finished challenge day as a run for the board. */
+export function makeChallengeRun(
+  day: {
+    levelId: string;
+    difficulty: Difficulty;
+    mode: ChallengeId;
+    facts: ChallengeFacts;
+    score: ChallengeScore;
+    elapsed: number;
+  },
+  game: string,
+  at: Date,
+): RunEntry | null {
+  const print = lessonPrint(day.levelId, day.difficulty);
+  if (!print) return null;
+  const { facts } = day;
+  return {
+    v: 1,
+    game,
+    level: day.levelId,
+    difficulty: day.difficulty,
+    print,
+    mode: day.mode,
+    score: day.score.total,
+    rank: day.score.rank,
+    treasure: facts.treasureValue,
+    timeBonus: 0,
+    workerBonus: 0,
+    lossPenalty: 0,
+    shards: facts.shardsHome,
+    shardsTotal: facts.shardsTotal,
+    time: Math.round(day.elapsed * 100) / 100,
+    timeLeft: Math.max(0, Math.ceil(facts.timeLeft)),
+    alive: facts.alive,
+    lost: facts.lost,
+    glowcaps: facts.glowcapValue,
+    weight: facts.weight,
+    glowcapWeight: facts.glowcapWeight,
+    carcassWeight: facts.carcassWeight,
+    beastsLeft: facts.beastsLeft,
+    everything: facts.everything,
+    survived: facts.survived,
+    at: at.toISOString(),
+  };
+}
+
+/** Most weight a lesson can send home in a day: every Sunshard, Glowcap and carcass, twice over. */
+function weightCeiling(level: LevelDefinition): number {
+  const blooms = (level.blooms ?? []).reduce((sum, bloom) => sum + bloom.weight, 0);
+  return (shardWeight(level) + carcassWeight(level) + blooms) * 2;
+}
+
+/**
+ * Why a challenge run cannot be right, or null if it adds up: its score is worked out again by
+ * the challenge's own rule from what it says it did, and what it says it did must fit the lesson.
+ */
+function checkChallengeRun(
+  run: RunEntry,
+  mode: ChallengeId,
+  level: LevelDefinition,
+): string | null {
+  if (!(CHALLENGE_IDS as readonly string[]).includes(mode)) return 'unknown challenge';
+  if (!challengeOpen(mode, level)) return 'no such challenge on this lesson';
+  const counts = [
+    run.score,
+    run.treasure,
+    run.shards,
+    run.shardsTotal,
+    run.timeLeft,
+    run.alive,
+    run.lost,
+    run.weight,
+    run.carcassWeight,
+    run.beastsLeft,
+    run.glowcaps,
+    run.glowcapWeight,
+  ];
+  if (!counts.every(isCount)) return 'malformed numbers';
+  if (typeof run.everything !== 'boolean' || typeof run.survived !== 'boolean') {
+    return 'malformed flags';
+  }
+  if (typeof run.time !== 'number' || !Number.isFinite(run.time) || run.time < 0) {
+    return 'malformed time';
+  }
+  if (!RANKS.includes(run.rank)) return 'unknown rank';
+  if (run.shardsTotal !== shardCount(level)) return 'wrong Sunshard count';
+  if (run.shards > run.shardsTotal) return 'more Sunshards than the lesson has';
+  if (run.time > level.dayLength + 0.01) return 'longer than the day';
+  if (Math.abs(run.time + run.timeLeft - level.dayLength) > 1.01) return 'clock does not add up';
+  if (run.alive > WORKER.maxOnField) return 'more Sproutlings than the field holds';
+  if (run.treasure > treasureCeiling(level)) return 'more treasure than the lesson holds';
+  const weight = run.weight ?? 0;
+  if (weight > weightCeiling(level) || (run.carcassWeight ?? 0) > weight) {
+    return 'more weight than the lesson holds';
+  }
+  if (run.everything && (run.shards !== run.shardsTotal || run.beastsLeft !== 0)) {
+    return 'claims everything collected without it';
+  }
+  if (mode === 'growing' && run.alive > sproutlingsPossible(level) * 2)
+    return 'too many Sproutlings';
+  const blooms = (level.blooms ?? []).reduce((sum, bloom) => sum + bloom.weight, 0);
+  if ((run.glowcapWeight ?? 0) > blooms * 2 || (run.glowcaps ?? 0) > run.treasure) {
+    return 'more Glowcaps than the lesson grows';
+  }
+  const scored = scoreChallenge(mode, level, {
+    treasureValue: run.treasure,
+    glowcapValue: run.glowcaps ?? 0,
+    glowcapWeight: run.glowcapWeight ?? 0,
+    weight,
+    carcassWeight: run.carcassWeight ?? 0,
+    shardsHome: run.shards,
+    shardsTotal: run.shardsTotal,
+    beastsLeft: run.beastsLeft ?? 0,
+    everything: run.everything,
+    alive: run.alive,
+    lost: run.lost,
+    timeLeft: run.timeLeft,
+    survived: run.survived,
+  });
+  if (run.score !== scored.total) return 'score does not add up';
+  if (run.rank !== scored.rank) return 'wrong rank for the score';
+  const fastest = mode === 'growing' ? 0 : level.diamondTime * 0.5;
+  if (run.everything && run.time < fastest) return 'faster than possible';
+  return null;
 }
