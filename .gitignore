@@ -3,3 +3,7 @@ dist
 *.log
 .DS_Store
 .board-build
+
+release/
+.desktop-stage/
+.wrangler/

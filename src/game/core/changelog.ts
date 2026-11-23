@@ -8,6 +8,16 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.19.0',
+    date: '2026-11-23',
+    changes: [
+      'The Academy board has a home of its own: a small server that keeps every Warden\u2019s best run for good, so the leaderboard never resets. New runs show at once, and every run already on the board came along.',
+      'Play anywhere: the game is on Cloudflare (dandori-academy.pages.dev) and itch.io, with Windows and Linux downloads for the desktop. F11 toggles full screen there.',
+      'Graphics: Auto, the new default, picks a level for your device and, while you play, lowers the resolution and then the level if the frame rate drops.',
+      'Ready for 3D models: a glTF model of the Warden, with idle, walk and run animations, can replace the built-in one.',
+    ],
+  },
+  {
     version: '0.18.0',
     date: '2026-11-23',
     changes: [

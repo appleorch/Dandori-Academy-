@@ -11,20 +11,21 @@ import {
 } from './runCode';
 
 /**
- * The Academy board needs no server of its own. Runs travel through a public relay and come to
- * rest in a file in the game's own repository:
+ * The Academy board lives on a small server: a Cloudflare Worker over a D1 database
+ * (`worker/`). It never resets.
  *
- * 1. When a day ends with a new personal best, the game posts the signed run to a topic on
- *    ntfy.sh, a free public message relay that browsers may post to and read from without an
- *    account. The relay keeps messages for 12 hours.
- * 2. A scheduled GitHub Action in the repository (`.github/workflows/leaderboard.yml`) reads
- *    the topic every half hour, checks every run against the game's own rules, and commits the
- *    survivors to `leaderboard/board.json`.
- * 3. The board reads that file (served by GitHub, which browsers may also read), plus whatever
- *    reached the relay in the last 12 hours, so a new run shows up at once.
+ * 1. When a day ends with a new personal best, the game posts the signed run to
+ *    `BOARD_API/runs`. The server checks it with these same rules and keeps each player's best
+ *    run per board, lesson and difficulty.
+ * 2. The board reads `BOARD_API/board`.
+ * 3. If the server cannot be reached, runs go to the old public relay (ntfy.sh, kept 12 hours)
+ *    and the board reads the relay plus `leaderboard/board.json`, a backup of the server's board
+ *    that a scheduled GitHub Action keeps. The server collects the relay every half hour.
  *
- * Every run is checked again wherever it is read, so neither the relay nor the file is trusted.
+ * Every run is checked again wherever it is read, so neither the server nor the relay is trusted.
  */
+/** The board server. The web, itch.io and desktop builds all use the same one. */
+export const BOARD_API = 'https://dandori-board.dandori-academy.workers.dev';
 export const BOARD_REPO = 'appleorch/Dandori-Academy-';
 export const RELAY = 'https://ntfy.sh';
 export const BOARD_TOPIC = 'dandori-academy-runs-v1-q7k2m9x4';
@@ -127,20 +128,39 @@ export function relayMessage(code: string): string {
   return JSON.stringify({ dandori: 1, code });
 }
 
-/** Posts a run to the relay. True once the relay has taken it. */
+/** Posts a run to the server, or to the relay if the server is away. True once one has it. */
 export async function sendPost(
   post: BoardPost,
   fetcher: Fetcher = defaultFetcher,
 ): Promise<boolean> {
+  const code = await encodePost(post);
+  try {
+    const response = await fetcher(`${BOARD_API}/runs`, {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    // 422 and 403 (a run the server refuses, a banned player) will never be taken: stop trying.
+    if (response.ok || response.status === 422 || response.status === 403) return true;
+  } catch {
+    // Fall through to the relay.
+  }
   try {
     const response = await fetcher(`${RELAY}/${BOARD_TOPIC}`, {
       method: 'POST',
-      body: relayMessage(await encodePost(post)),
+      body: relayMessage(code),
     });
     return response.ok;
   } catch {
     return false;
   }
+}
+
+/** Every run the server keeps. Throws if the server cannot be reached. */
+export async function readServer(fetcher: Fetcher = defaultFetcher): Promise<string[]> {
+  const response = await fetcher(`${BOARD_API}/board`);
+  if (!response.ok) throw new Error(`The board server answered ${response.status}.`);
+  return parseBoardFile(await response.text());
 }
 
 /** Every post on the relay from the last 12 hours. Throws if the relay cannot be reached. */
@@ -182,13 +202,23 @@ export async function checkPosts(
 
 export interface Board {
   entries: BoardEntry[];
-  /** Which sources answered: the board file and the relay. */
+  /** Which sources answered: the server, or else the backup file and the relay. */
+  server: boolean;
   file: boolean;
   relay: boolean;
 }
 
-/** The whole board: the file and the relay together. Throws only if neither can be read. */
+/**
+ * The whole board: the server's, or, when the server is away, the backup file and the relay
+ * together. Throws only if nothing can be read.
+ */
 export async function fetchBoard(fetcher: Fetcher = defaultFetcher): Promise<Board> {
+  try {
+    const codes = await readServer(fetcher);
+    return { entries: keepBest(await checkPosts(codes)), server: true, file: false, relay: false };
+  } catch {
+    // Fall back to the backup file and the relay.
+  }
   const [file, relay] = await Promise.allSettled([readBoardFile(fetcher), readRelay(fetcher)]);
   if (file.status === 'rejected' && relay.status === 'rejected') {
     throw new Error('The board could not be reached. Check your connection and try again.');
@@ -199,6 +229,7 @@ export async function fetchBoard(fetcher: Fetcher = defaultFetcher): Promise<Boa
   ];
   return {
     entries: keepBest(await checkPosts(codes)),
+    server: false,
     file: file.status === 'fulfilled',
     relay: relay.status === 'fulfilled',
   };

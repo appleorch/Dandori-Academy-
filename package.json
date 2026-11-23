@@ -1,7 +1,7 @@
 {
   "name": "dandori-academy",
   "private": true,
-  "version": "0.18.0",
+  "version": "0.19.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,12 @@
     "test": "vitest run",
     "build:docs": "tsc --noEmit && vite build --outDir docs --emptyOutDir",
     "balance": "VITE_BALANCE=1 vitest run src/game/world/balance.report.test.ts -u",
-    "board:collect": "vite build --ssr scripts/collect-board.ts --outDir .board-build --emptyOutDir --logLevel warn && node .board-build/collect-board.js"
+    "board:collect": "vite build --ssr scripts/collect-board.ts --outDir .board-build --emptyOutDir --logLevel warn && node .board-build/collect-board.js",
+    "build:desktop": "npm run build && node scripts/build-desktop.mjs",
+    "desktop": "npm run build && electron desktop/dev.cjs",
+    "deploy:web": "npm run build && wrangler pages deploy --branch main",
+    "deploy:board": "wrangler deploy --config worker/wrangler.toml",
+    "deploy:itch": "npm run build && node scripts/push-itch.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
@@ -25,11 +30,14 @@
     "zustand": "^5.1.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261123.1",
+    "@electron/packager": "^20.3.0",
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.187.0",
     "@vitejs/plugin-react": "^6.3.0",
+    "electron": "^45.4.1",
     "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -38,6 +46,7 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.7",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "^4.166.0"
   }
 }

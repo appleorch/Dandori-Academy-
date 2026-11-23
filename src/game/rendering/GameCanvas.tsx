@@ -10,7 +10,7 @@ import { isBattle, MODES } from '../modes/modes';
 import { Expedition } from '../simulation/expedition';
 import { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
-import type { GraphicsLevel } from '../core/settings';
+import type { RenderLevel } from '../core/settings';
 import type { LevelDefinition } from '../world/level';
 import { AimArc } from './AimArc';
 import { Architecture } from './Architecture';
@@ -26,7 +26,9 @@ import { HazardMeshes } from './HazardMeshes';
 import { Minimap } from './Minimap';
 import { ParticleField } from './ParticleField';
 import { OverlayInMainPass } from './OverlayInMainPass';
+import { currentAutoLevel, lowerAutoLevel } from './autoQuality';
 import { PostFx } from './PostFx';
+import { QualityGovernor } from './QualityGovernor';
 import { Popups } from './Popups';
 import { Scenery } from './Scenery';
 import { SkyLight } from './SkyLight';
@@ -46,7 +48,7 @@ interface Quality {
   dpr: [number, number];
 }
 
-const QUALITY: Record<GraphicsLevel, Quality> = {
+const QUALITY: Record<RenderLevel, Quality> = {
   low: { shadows: false, shadowMapSize: 512, postFx: false, ambientOcclusion: false, dpr: [1, 1] },
   medium: {
     shadows: true,
@@ -72,7 +74,10 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   const playing = useGameStore((state) => state.phase === 'playing' && !state.paused);
 
   const graphics = useGameStore((state) => state.settings.graphics);
-  const quality = QUALITY[graphics];
+  // Auto starts at a level guessed for the device and steps down if the game runs slowly.
+  const [autoLevel, setAutoLevel] = useState<RenderLevel>(currentAutoLevel);
+  const level3d: RenderLevel = graphics === 'auto' ? autoLevel : graphics;
+  const quality = QUALITY[level3d];
   const zoomSpeed = useGameStore((state) => state.settings.zoomSpeed);
   const pauseOnBlur = useGameStore((state) => state.settings.pauseOnBlur);
 
@@ -147,7 +152,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
 
   return (
     <Canvas
-      key={graphics}
+      key={level3d}
       shadows={quality.shadows ? 'soft' : false}
       dpr={quality.dpr}
       gl={{
@@ -163,6 +168,15 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         position: [level.captain.x, 70, level.captain.z + 44],
       }}
     >
+      {graphics === 'auto' && (
+        <QualityGovernor
+          maxDpr={quality.dpr[1]}
+          onTooSlow={() => {
+            const lower = lowerAutoLevel();
+            if (lower) setAutoLevel(lower);
+          }}
+        />
+      )}
       {quality.postFx ? (
         <PostFx ambientOcclusion={quality.ambientOcclusion} />
       ) : (

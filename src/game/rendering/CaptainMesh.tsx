@@ -1,4 +1,6 @@
 import { useFrame } from '@react-three/fiber';
+import { useModel } from './models/modelLibrary';
+import { RiggedModel } from './models/RiggedModel';
 import { useRef } from 'react';
 import type { Group } from 'three';
 import { useGameStore } from '../core/gameStore';
@@ -56,9 +58,13 @@ export function CaptainMesh({ sim }: { sim: Simulation }) {
   });
   const look = useGameStore((store) => wornOutfit(store.save, store.settings.outfit));
 
+  // A Warden model in src/assets/models/warden.glb replaces the built-in one.
+  const model = useModel('warden');
+  const speedRef = useRef(0);
+
   useFrame(({ clock }, frameDelta) => {
     const node = root.current;
-    if (!node || !hips.current || !torso.current || !head.current) return;
+    if (!node) return;
     const dt = Math.min(0.05, Math.max(0.001, frameDelta));
     const s = state.current;
     const { x, z, facing } = sim.captainTransform;
@@ -79,6 +85,8 @@ export function CaptainMesh({ sim }: { sim: Simulation }) {
     node.position.set(x, heightAt(sim.level, x, z), z);
     node.rotation.set(0, s.facing, 0);
     node.visible = Math.floor(sim.captainState.invuln * 12) % 2 === 0;
+    speedRef.current = s.speed;
+    if (!hips.current || !torso.current || !head.current) return;
     // Bob on each footfall; breathe when standing still.
     hips.current.position.y =
       0.42 + Math.abs(Math.sin(s.phase)) * 0.08 * gait + Math.sin(time * 2) * 0.01 * (1 - gait);
@@ -112,6 +120,14 @@ export function CaptainMesh({ sim }: { sim: Simulation }) {
         0.15 + 0.5 * gait + s.tail.x * 0.6 + Math.sin(time * 9) * 0.04 * gait;
     }
   });
+
+  if (model) {
+    return (
+      <group ref={root}>
+        <RiggedModel model={model} speed={speedRef} />
+      </group>
+    );
+  }
 
   return (
     <group ref={root}>

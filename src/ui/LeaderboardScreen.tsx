@@ -2,13 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DIFFICULTIES, type Difficulty } from '../game/core/difficulty';
 import { useGameStore } from '../game/core/gameStore';
 import { cleanWardenName, defaultWardenName, WARDEN_NAME_MAX } from '../game/core/settings';
-import {
-  BOARD_REPO,
-  fetchBoard,
-  standings,
-  type BoardEntry,
-  type BoardMode,
-} from '../game/leaderboard/board';
+import { fetchBoard, standings, type BoardEntry, type BoardMode } from '../game/leaderboard/board';
 import { CHALLENGE_IDS, challengeOpen, isChallenge, MODES } from '../game/modes/modes';
 import { playedOnThisLesson, type RunEntry } from '../game/leaderboard/runCode';
 import { runKey, runsKey, type SaveData } from '../game/save/saveManager';
@@ -93,7 +87,11 @@ export function LeaderboardScreen() {
     setLoad({ state: 'loading' });
     fetchBoard()
       .then((board) => {
-        cached = { entries: board.entries, at: Date.now(), partial: !board.file || !board.relay };
+        cached = {
+          entries: board.entries,
+          at: Date.now(),
+          partial: !board.server && (!board.file || !board.relay),
+        };
         setLoad({ state: 'ready', ...cached });
       })
       .catch((error: unknown) => {
@@ -348,12 +346,11 @@ export function LeaderboardScreen() {
         </section>
 
         <p className="note">
-          The Academy board needs no server of its own. Each challenge keeps its own board, and each
-          new personal best in a challenge is posted by itself to a public relay (ntfy.sh), with
-          your Warden name and a random player id and nothing else. Every half hour the game&apos;s
-          GitHub repository ({BOARD_REPO}) collects the relay, checks every run against the
-          lesson&apos;s own rules, and keeps the best run per Warden per lesson. New runs show here
-          at once. Runs from an older version of a lesson are left off.
+          Each challenge keeps its own board, and it never resets. Each new personal best in a
+          challenge is posted by itself to the Academy&apos;s board server, with your Warden name
+          and a random player id and nothing else. The server checks every run against the
+          lesson&apos;s own rules and keeps the best run per Warden per lesson, so new runs show
+          here at once. Runs from an older version of a lesson are left off.
         </p>
       </div>
     </main>

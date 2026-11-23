@@ -1,7 +1,7 @@
-# Keeps the Academy leaderboard. Every half hour it reads the runs players' games have posted to
-# the relay (ntfy.sh keeps them 12 hours), checks each against the game's own rules, and commits
-# the best run per Warden per lesson to leaderboard/board.json, which the game reads.
-# See src/game/leaderboard/board.ts. Scheduled runs only happen on the default branch.
+# Keeps a backup of the Academy leaderboard. Every half hour it carries runs that went to the old
+# relay (ntfy.sh) to the board server (worker/, on Cloudflare), then writes the server's
+# board, checked again, to leaderboard/board.json, which the game reads if the server is away.
+# See scripts/collect-board.ts. Scheduled runs only happen on the default branch.
 name: Leaderboard
 
 on:
