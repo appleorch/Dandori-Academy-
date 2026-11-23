@@ -47,17 +47,6 @@ import {
   type Settings,
 } from './settings';
 
-/** Phones and tablets start at medium graphics; they can raise it in Settings. */
-function deviceDefaults(): Settings {
-  try {
-    if (window.matchMedia('(pointer: coarse)').matches)
-      return { ...DEFAULT_SETTINGS, graphics: 'medium' };
-  } catch {
-    // No window (tests): use the plain defaults.
-  }
-  return DEFAULT_SETTINGS;
-}
-
 /** Screens reachable from the main menu. */
 export type MenuScreen =
   | 'menu'
@@ -326,7 +315,7 @@ export const useGameStore = create<GameStore>((set, get) => {
   // Grant anything an older save already qualifies for, such as rank milestones.
   const initial = unlockAchievements(storage ? loadSave(storage) : emptySave(), null, new Date());
   if (initial.unlocked.length > 0) persist(initial.save);
-  const loaded = storage ? loadSettings(storage, deviceDefaults()) : deviceDefaults();
+  const loaded = storage ? loadSettings(storage) : { ...DEFAULT_SETTINGS };
   // Every browser gets its own player id for the board, made once and kept with the settings.
   const settings = loaded.playerId ? loaded : { ...loaded, playerId: newPlayerId() };
   if (storage && settings !== loaded) writeSettings(storage, settings);

@@ -1,0 +1,14 @@
+# The Academy board server. Deploy with `npm run deploy:board`.
+name = "dandori-board"
+main = "index.ts"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[triggers]
+crons = ["*/30 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dandori-board"
+database_id = "6be8de5d-8d7e-4ea5-99e2-36c5e7c5a907"
+migrations_dir = "migrations"

@@ -22,7 +22,7 @@ describe('settings', () => {
 
   it('turns the old shadows switch into a graphics level', () => {
     expect(parseSettings({ shadows: false }).graphics).toBe('low');
-    expect(parseSettings({ shadows: true }).graphics).toBe('high');
+    expect(parseSettings({ shadows: true }).graphics).toBe('auto');
   });
 
   it('clamps volumes to 0..1', () => {

@@ -3,9 +3,13 @@ import { DIFFICULTIES, type Difficulty } from './difficulty';
 /**
  * Rendering quality. Low: no shadows or effects. Medium: shadows, bloom, tilt-shift
  * and vignette. High: adds ambient occlusion, sharper shadows and full resolution.
+ * Auto: picks one for the device and steps down (resolution first) if the game runs slowly.
  */
-export const GRAPHICS_LEVELS = ['low', 'medium', 'high'] as const;
+export const GRAPHICS_LEVELS = ['auto', 'low', 'medium', 'high'] as const;
 export type GraphicsLevel = (typeof GRAPHICS_LEVELS)[number];
+/** A level the renderer can draw at: Auto resolves to one of these. */
+export type RenderLevel = Exclude<GraphicsLevel, 'auto'>;
+export const RENDER_LEVELS = ['low', 'medium', 'high'] as const satisfies readonly RenderLevel[];
 
 /** Player preferences. Stored per browser, separate from progress. */
 export interface Settings {
@@ -61,7 +65,7 @@ export function newPlayerId(): string {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  graphics: 'high',
+  graphics: 'auto',
   difficulty: 'normal',
   carrierCounts: true,
   healthBars: true,

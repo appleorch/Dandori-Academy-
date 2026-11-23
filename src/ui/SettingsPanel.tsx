@@ -25,6 +25,7 @@ const TOGGLES: readonly (readonly [ToggleKey, string, string])[] = [
 ];
 
 const GRAPHICS_HINTS: Record<GraphicsLevel, string> = {
+  auto: 'Picks a level for this device, and lowers it if the game runs slowly.',
   low: 'No shadows or effects. Smoothest on slow phones.',
   medium: 'Shadows, glow and the miniature depth-of-field look.',
   high: 'Adds soft ambient shadows in creases and full resolution.',
