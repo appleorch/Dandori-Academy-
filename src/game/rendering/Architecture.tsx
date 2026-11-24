@@ -8,7 +8,7 @@ import {
   type Texture,
 } from 'three';
 import { Rng } from '../core/rng';
-import type { LevelDefinition, Plateau, Ramp, Wall } from '../world/levelTypes';
+import type { LevelDefinition, Plateau, Ramp, Wall, WallLook } from '../world/levelTypes';
 import { gameTextures, turfTextures, type Painted } from './textures';
 import { themeOf } from './theme';
 
@@ -25,12 +25,13 @@ const PARAPET_HEIGHT = 0.9;
 const STEP = 0.55;
 const dummy = new Object3D();
 
-/** How a wall is drawn when the level does not say: long, thin walls are ruins; the rest rock. */
-export function wallLook(
-  level: LevelDefinition,
-  wall: Wall,
-): 'rock' | 'ruin' | 'cliff' | 'parapet' {
+/**
+ * How a wall is drawn: its own look, the field's look for walls, or, when neither says, long thin
+ * walls are ruins and the rest rock.
+ */
+export function wallLook(level: LevelDefinition, wall: Wall): WallLook {
   if (wall.look) return wall.look;
+  if (level.wallLook) return level.wallLook;
   if (level.theme === 'cave') return 'rock';
   const long = Math.max(wall.w, wall.d);
   const thin = Math.min(wall.w, wall.d);

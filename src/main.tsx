@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { audio } from './game/audio/audioManager';
 import { initPhysics } from './game/simulation/physics';
+import { applyToonShading } from './game/rendering/toon';
 import { recordError } from './game/core/errorLog';
 import { GAME_VERSION } from './game/core/changelog';
 import './ui/ui.css';
@@ -17,6 +18,9 @@ window.addEventListener('error', (event) =>
 window.addEventListener('unhandledrejection', (event) =>
   recordError('unhandled promise', event.reason, GAME_VERSION),
 );
+
+// The game's shading must be in place before any material compiles.
+applyToonShading();
 
 // Browsers only allow sound after the player has interacted with the page.
 // iOS only counts the end of a touch, so every kind of press is listened for.

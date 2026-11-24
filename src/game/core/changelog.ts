@@ -8,6 +8,15 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.21.0',
+    date: '2026-11-25',
+    changes: [
+      'A new look for the whole game: soft toon shading in three bands with a warm rim light on everything, and ink outlines round walls, creatures, Sproutlings and treasure on medium and high graphics.',
+      'The garden at insect scale: walls can now be giant everyday things (clipped hedges, garden brick, flowerpots, picket fences, books, roof tiles, roots, greenhouse glass and clockwork gears), and fields are dressed with giant flowerpots, watering cans, trowels, gloves, teacups, pocket watches and more.',
+      'Many Hands, Over the Wall, Seedbed and Pod Orchard are the first fields dressed this way. Nothing about how any field plays has changed, and no leaderboard was reset.',
+    ],
+  },
+  {
     version: '0.20.1',
     date: '2026-11-24',
     changes: [

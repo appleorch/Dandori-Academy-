@@ -27,6 +27,16 @@ const MANY_HANDS: LevelSpec = {
   blooms: [{ x: 2, z: -9, weight: 1, at: 4, lifetime: 30 }],
   pods: [],
   enemies: [{ x: 13, z: -2, kind: 'mound', reveals: 'pod' }],
+  // A corner of the Academy's kitchen garden, seen from far too close.
+  props: [
+    { kind: 'flowerpot', x: -26, z: -16, scale: 1.3 },
+    { kind: 'watering-can', x: 27, z: 13, turn: 2.5 },
+    { kind: 'trowel', x: 7, z: -18, turn: 0.25 },
+    { kind: 'glove', x: -8, z: 18.5, turn: -0.5 },
+    { kind: 'croquet-hoop', x: 23, z: -5, turn: 1.4 },
+    { kind: 'button', x: 15, z: 16.5, turn: 0.4 },
+    { kind: 'acorn-cap', x: -24, z: 9, scale: 0.9 },
+  ],
 };
 
 const OVER_THE_WALL: LevelSpec = {
@@ -61,6 +71,16 @@ const OVER_THE_WALL: LevelSpec = {
     { x: 6, z: -2 },
   ],
   enemies: [{ x: 4, z: -12, kind: 'mound', drop: 2 }],
+  // The two walls are the kitchen garden's old brick, and the garden goes on past them.
+  wallLook: 'brick',
+  props: [
+    { kind: 'flowerpot', x: -30, z: 18, scale: 1.1 },
+    { kind: 'flowerpot', x: 30, z: -19, scale: 0.8 },
+    { kind: 'watering-can', x: 31, z: 12, turn: 3.6 },
+    { kind: 'spool', x: -29, z: -17 },
+    { kind: 'plant-label', x: -4, z: -17.5 },
+    { kind: 'plant-label', x: 10, z: 17.5, turn: 0.3 },
+  ],
 };
 
 const THE_GUARD: LevelSpec = {

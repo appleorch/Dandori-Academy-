@@ -157,6 +157,20 @@ function margins(level: LevelDefinition, rng: Rng, count: number): Placement[] {
   return spots;
 }
 
+/** How far round a prop of scale 1 the tree ring keeps clear. */
+const PROP_CLEARING = 9;
+
+/** The placements that do not stand where one of the field's props does. */
+function clearOfProps(level: LevelDefinition, spots: Placement[]): Placement[] {
+  const props = level.props ?? [];
+  if (props.length === 0) return spots;
+  return spots.filter((spot) =>
+    props.every(
+      (prop) => Math.hypot(spot.x - prop.x, spot.z - prop.z) > PROP_CLEARING * (prop.scale ?? 1),
+    ),
+  );
+}
+
 /** Spots just outside the field, all the way round: for things that frame the arena. */
 function perimeter(level: LevelDefinition, spacing: number, out: number): Placement[] {
   const spots: Placement[] = [];
@@ -391,7 +405,8 @@ export function Scenery({ level, sim }: { level: LevelDefinition; sim?: Simulati
       leaves: cave
         ? []
         : scatter(level, rng, Math.round(area / (level.theme === 'autumn' ? 8 : 40))),
-      trees: look.trees && !glasshouse ? treeLine(level, rng) : [],
+      // The tree ring makes room for the giant objects dressing the field (see kit.ts).
+      trees: look.trees && !glasshouse ? clearOfProps(level, treeLine(level, rng)) : [],
       clovers: cave ? [] : margins(level, rng, Math.round(area / 90)),
       mushrooms: margins(level, rng, Math.round(area / (cave ? 110 : 220))),
       crystals: cave ? margins(level, rng, Math.round(area / 330)) : [],

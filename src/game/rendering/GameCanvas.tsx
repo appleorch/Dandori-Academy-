@@ -16,6 +16,7 @@ import type { GraphicsLevel } from '../core/settings';
 import type { LevelDefinition } from '../world/level';
 import { AimArc } from './AimArc';
 import { Architecture } from './Architecture';
+import { KitMeshes } from './KitMeshes';
 import { Beacons } from './Beacons';
 import { Atmosphere } from './Atmosphere';
 import { CaptainMesh } from './CaptainMesh';
@@ -236,6 +237,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         <group key={`world-${sim?.level.id ?? level.id}`}>
           <Terrain level={sim?.level ?? level} />
           <Architecture level={sim?.level ?? level} />
+          <KitMeshes level={sim?.level ?? level} />
           <Scenery level={sim?.level ?? level} sim={sim ?? undefined} />
         </group>
         {sim && (

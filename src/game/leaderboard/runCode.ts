@@ -103,6 +103,8 @@ export function playPrint(level: LevelDefinition): string {
 const NOT_PLAY = [
   'name',
   'brief',
+  'wallLook',
+  'props',
   'platinumTime',
   'parScore',
   'diamondTime',
@@ -153,7 +155,11 @@ function boardLesson(levelId: string, difficulty: Difficulty): LevelDefinition |
   const base = levelById(levelId);
   if (!base) return null;
   const closed = CLOSED_PLATINUM[levelId];
-  const asClosed = closed === undefined ? base : defineLevel({ ...base, platinumTime: closed });
+  // Dressing added since (props, a look for the walls) never changed how a lesson played.
+  const { props: _props, wallLook: _look, ...plain } = base;
+  void _props;
+  void _look;
+  const asClosed = closed === undefined ? plain : defineLevel({ ...plain, platinumTime: closed });
   return forDifficulty(asClosed, difficulty);
 }
 

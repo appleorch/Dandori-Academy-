@@ -74,6 +74,18 @@ history, squad roster, mode targets, touch controls, race panel and prologue; an
 in `src/game/story/` (story pages, coach and Headmaster lines, relic descriptions), the lesson and
 challenge-field briefs where they are shown, rank names and achievement text.
 
+**Art direction.** `docs-design/ART_DIRECTION.md` is the reference for the look: a garden seen at
+insect scale (a Sproutling is about two centimetres tall), full of giant everyday objects. Walls can
+be drawn as one of them (`look` per wall, or `wallLook` for a whole field: hedge, brick, flowerpot,
+fence, book, tile, root, glass, gear), and `props` dress a field with giant objects the rules never
+see (flowerpots, watering cans, trowels, teacups, pocket watches and more). Both are built from
+instanced pieces (`src/game/rendering/kit.ts`, `KitMeshes.tsx`), so a field's whole kit costs a
+handful of draw calls, and both are left out of a field's fingerprint, so dressing a field never
+resets its leaderboard or changes a rule. Every standard material shares a soft three-band toon
+ramp and a warm rim light (`src/game/rendering/toon.ts`); medium and high graphics add ink outlines
+drawn from the scene's depth (`PostFx.tsx`). Many Hands, Over the Wall, Seedbed and Pod Orchard are
+the dressed reference fields; before and after pictures are in `docs-design/art/`.
+
 ## Play without installing anything
 
 `docs/` holds a ready-to-serve build. With GitHub Pages enabled (Settings, Pages, Deploy from a

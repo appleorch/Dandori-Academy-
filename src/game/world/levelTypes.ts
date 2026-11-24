@@ -38,8 +38,54 @@ export interface CoilSpawn {
 /** The look and sound of a lesson's setting. It changes nothing about the rules. */
 export type LevelTheme = 'meadow' | 'autumn' | 'marsh' | 'dusk' | 'cave' | 'terrarium';
 
-/** How a wall is drawn. Rules treat every wall alike. */
-export type WallLook = 'rock' | 'ruin' | 'cliff' | 'parapet';
+/**
+ * How a wall is drawn. Rules treat every wall alike. Besides rock, ruins, terrace cliffs and
+ * parapets, a wall can be drawn as one of the garden's giant everyday objects (see
+ * docs-design/ART_DIRECTION.md and src/game/rendering/kit.ts).
+ */
+export type WallLook =
+  | 'rock'
+  | 'ruin'
+  | 'cliff'
+  | 'parapet'
+  | 'hedge'
+  | 'brick'
+  | 'flowerpot'
+  | 'fence'
+  | 'book'
+  | 'tile'
+  | 'root'
+  | 'glass'
+  | 'gear';
+
+/** A giant everyday object placed for art only (see `LevelDefinition.props`). */
+export type PropKind =
+  | 'flowerpot'
+  | 'watering-can'
+  | 'trowel'
+  | 'glove'
+  | 'croquet-hoop'
+  | 'button'
+  | 'teacup'
+  | 'acorn-cap'
+  | 'conker'
+  | 'spool'
+  | 'pocket-watch'
+  | 'thimble'
+  | 'coin'
+  | 'candle'
+  | 'book-stack'
+  | 'plant-label'
+  | 'lily-pad'
+  | 'gear';
+
+export interface PropSpawn extends Point {
+  kind: PropKind;
+  /** Size relative to the prop's usual size (see the art direction's scale table). */
+  scale?: number;
+  /** Turn about the vertical, in radians. */
+  turn?: number;
+}
 
 /** A solid box in the level, with how it should look. */
 export interface Wall extends Box {
@@ -187,6 +233,13 @@ export interface LevelDefinition {
   descent?: Point & { to: string };
   /** A side lesson: not part of the numbered run, opened by finding its way down. */
   side?: boolean;
+  /** How walls without a `look` of their own are drawn. Art only: no rule reads it. */
+  wallLook?: WallLook;
+  /**
+   * Giant everyday objects placed round the field for art only: no rule, test player or
+   * fingerprint sees them. Keep them out of where anything walks or is carried.
+   */
+  props?: PropSpawn[];
   /** A challenge's own field; see `ChallengeField`. Lessons have none. */
   challenge?: ChallengeField;
   /** No clock: the day lasts until its goal is met, or the player calls it. `dayLength` is 0. */

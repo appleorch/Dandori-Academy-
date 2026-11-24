@@ -51,6 +51,17 @@ const FIELDS: FieldSpec[] = [
       { x: 6, z: 12, kind: 'mound', reveals: 'pod' },
       { x: 14, z: -12, kind: 'mound', reveals: 'pod' },
     ],
+    // A freshly sown seed bed, its rows marked with plant labels.
+    props: [
+      { kind: 'plant-label', x: -14, z: -18 },
+      { kind: 'plant-label', x: -2, z: -18.2, turn: 0.2 },
+      { kind: 'plant-label', x: 10, z: -18, turn: -0.15 },
+      { kind: 'plant-label', x: 4, z: 18.2, turn: 0.1 },
+      { kind: 'trowel', x: -30, z: 6, turn: 1.3 },
+      { kind: 'flowerpot', x: 30, z: -18, scale: 0.9 },
+      { kind: 'flowerpot', x: 31, z: 14, scale: 1.2 },
+      { kind: 'watering-can', x: -29, z: -15, turn: -0.6 },
+    ],
   },
   {
     id: 'pod-orchard',
@@ -89,6 +100,15 @@ const FIELDS: FieldSpec[] = [
     enemies: [
       { x: -8, z: -4, kind: 'mound', reveals: 'pod' },
       { x: 24, z: -8, kind: 'mossback' },
+    ],
+    // The rows are clipped hedges; the orchard's tools lie about its edges.
+    wallLook: 'hedge',
+    props: [
+      { kind: 'flowerpot', x: -36, z: -22, scale: 1.2 },
+      { kind: 'watering-can', x: 37, z: 20, turn: 2.2 },
+      { kind: 'glove', x: 36, z: -24, turn: 0.8 },
+      { kind: 'conker', x: -36, z: 22 },
+      { kind: 'trowel', x: 8, z: 24, turn: -0.2 },
     ],
   },
   {
