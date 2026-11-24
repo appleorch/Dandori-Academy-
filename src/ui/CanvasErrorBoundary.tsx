@@ -1,6 +1,7 @@
 import { Component, Fragment, type ReactNode } from 'react';
 import { GAME_VERSION } from '../game/core/changelog';
 import { recordError } from '../game/core/errorLog';
+import { t } from '../i18n/i18n';
 
 interface Props {
   children: ReactNode;
@@ -36,22 +37,19 @@ export class CanvasErrorBoundary extends Component<Props, State> {
     return (
       <div className="screen overlay" role="alertdialog" aria-labelledby="canvas-error-title">
         <div className="panel">
-          <p className="eyebrow">Something went wrong</p>
-          <h1 id="canvas-error-title">The view of the field stopped working</h1>
-          <p>
-            This can happen when the graphics driver resets. Trying again usually works; a lower
-            graphics setting can help if it keeps happening.
-          </p>
-          <p className="note">The error was noted in Settings, under the error log.</p>
+          <p className="eyebrow">{t('error.eyebrow')}</p>
+          <h1 id="canvas-error-title">{t('error.title')}</h1>
+          <p>{t('error.body')}</p>
+          <p className="note">{t('error.noted')}</p>
           <button
             type="button"
             onClick={() => this.setState((state) => ({ error: null, attempt: state.attempt + 1 }))}
             autoFocus
           >
-            Try again
+            {t('error.retry')}
           </button>
           <button type="button" className="secondary" onClick={this.props.onLeave}>
-            Back to the menu
+            {t('error.back')}
           </button>
         </div>
       </div>

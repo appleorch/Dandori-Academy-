@@ -1,10 +1,12 @@
 import { useGameStore, type MenuScreen } from '../game/core/gameStore';
-import { BATTLE_IDS, CHALLENGE_IDS, MODES } from '../game/modes/modes';
+import { BATTLE_IDS, CHALLENGE_IDS } from '../game/modes/modes';
 import { storyCleared } from '../game/save/saveManager';
 import { CHALLENGE_LEVELS, MAIN_LEVELS } from '../game/world/level';
 import { currentSection, sectionProgress } from '../game/campaign/campaign';
 import { hasMedal, nextStoryLesson } from './lessonAccess';
 import { MenuNav } from './MenuNav';
+import { t } from '../i18n/i18n';
+import { fieldName, modeName, modeSummary, sectionName } from '../i18n/gameText';
 
 interface ModeCard {
   screen: MenuScreen;
@@ -40,30 +42,38 @@ export function MainMenu() {
   const cards: ModeCard[] = [
     {
       screen: 'camp',
-      title: 'Story',
-      blurb: MODES.campaign.summary,
-      detail: `${section.name} · day ${save.campaign.day + 1} · ${progress.parts} of ${progress.partsTotal} Clock parts`,
+      title: t('menu.card.story'),
+      blurb: modeSummary('campaign'),
+      detail: t('menu.card.storyDetail', {
+        section: sectionName(section),
+        day: save.campaign.day + 1,
+        parts: progress.parts,
+        total: progress.partsTotal,
+      }),
       className: 'mode-card campaign',
     },
     {
       screen: 'map',
-      title: 'Time Attack',
-      blurb: MODES.lessons.summary,
-      detail: `${cleared} of ${MAIN_LEVELS.length} lessons cleared`,
+      title: t('menu.card.timeAttack'),
+      blurb: modeSummary('lessons'),
+      detail: t('menu.card.timeAttackDetail', { cleared, total: MAIN_LEVELS.length }),
       className: 'mode-card lessons',
     },
     {
       screen: 'challenges',
-      title: 'Challenges',
-      blurb: `${CHALLENGE_IDS.length} challenges with twelve fields each, built for their own rules: ${CHALLENGE_IDS.map((id) => MODES[id].name).join(', ')}.`,
-      detail: `${medals} of ${CHALLENGE_LEVELS.length} fields with a medal`,
+      title: t('menu.card.challenges'),
+      blurb: t('menu.card.challengesBlurb', {
+        count: CHALLENGE_IDS.length,
+        names: CHALLENGE_IDS.map(modeName).join(', '),
+      }),
+      detail: t('menu.card.challengesDetail', { medals, total: CHALLENGE_LEVELS.length }),
       className: 'mode-card challenge',
     },
     {
       screen: 'battles',
-      title: 'Battles',
-      blurb: `Race a rival Warden on a copy of a lesson: ${BATTLE_IDS.map((id) => MODES[id].name).join(', ')}.`,
-      detail: `${record.won} won · ${record.lost} lost`,
+      title: t('menu.card.battles'),
+      blurb: t('menu.card.battlesBlurb', { names: BATTLE_IDS.map(modeName).join(', ') }),
+      detail: t('menu.card.battlesDetail', { won: record.won, lost: record.lost }),
       className: 'mode-card battle',
     },
   ];
@@ -81,11 +91,9 @@ export function MainMenu() {
               />
             ))}
           </span>
-          <p className="hero-title">Dandori Academy</p>
+          <p className="hero-title">{t('menu.title')}</p>
           <p className="hero-sub">
-            {fresh
-              ? 'The Grand Botanical & Clockwork Academy. Your first day.'
-              : `The Grand Botanical & Clockwork Academy · Story day ${save.campaign.day + 1}`}
+            {fresh ? t('menu.subtitleFirst') : t('menu.subtitle', { day: save.campaign.day + 1 })}
           </p>
           <button
             type="button"
@@ -93,9 +101,9 @@ export function MainMenu() {
             onClick={() => showScreen('camp')}
             autoFocus
           >
-            {save.campaign.day === 0 ? 'Begin the story' : 'Continue the story'}
+            {save.campaign.day === 0 ? t('menu.beginStory') : t('menu.continueStory')}
             <small>
-              {section.name} · day {save.campaign.day + 1}
+              {t('menu.storyWhere', { section: sectionName(section), day: save.campaign.day + 1 })}
             </small>
           </button>
           <button
@@ -103,7 +111,7 @@ export function MainMenu() {
             className="secondary hero-lesson"
             onClick={() => startDay(next.id, 'lessons')}
           >
-            Time Attack: {next.stage}. {next.name}
+            {t('menu.timeAttackNext', { lesson: fieldName(next) })}
           </button>
         </header>
         <div className="mode-cards">

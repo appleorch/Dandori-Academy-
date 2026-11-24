@@ -2,6 +2,8 @@ import type { Difficulty } from '../game/core/difficulty';
 import { hardUnlocked, modeRank, storyCleared, type SaveData } from '../game/save/saveManager';
 import type { ChallengeId } from '../game/modes/modes';
 import { rankValue } from '../game/dandori/scoring';
+import { t } from '../i18n/i18n';
+import { fieldName } from '../i18n/gameText';
 import {
   CHALLENGE_LEVELS,
   entranceTo,
@@ -73,5 +75,5 @@ export function challengeLock(save: SaveData, level: LevelDefinition): string | 
     (other) => other.challenge?.order === field.order - 1,
   );
   if (!before || hasMedal(save, field.mode, before.id)) return null;
-  return `Win any medal on ${before.challenge?.order}. ${before.name} to open this field.`;
+  return t('challenges.locked', { field: fieldName(before) });
 }

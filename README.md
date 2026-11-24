@@ -55,6 +55,25 @@ progress cannot be read at start-up, it is copied to a backup key before a new s
 the player is offered it as a download (`loadSaveChecked` in `src/game/save/saveManager.ts`).
 Save format changes go through `SAVE_MIGRATIONS`, one step per version.
 
+**Languages.** The interface reads its text from message tables (`src/i18n/`): `t(key, params)`
+for the interface (`src/i18n/en.ts` is the English source, grouped by screen, whole sentences
+with `{placeholders}`), and `content(key, english)` for the game's own text kept with its data
+(field names and briefs, mode rules, relic names, story sections; helpers in
+`src/i18n/gameText.ts`). Settings has a Language choice. Besides English there is a
+**pseudo-locale** for testing: it accents every letter, brackets every string and pads it by a
+third, so untranslated text and clipped labels stand out; an end-to-end test switches to it and
+fails on any plain English left on the converted screens, and a unit test scans their markup for
+text written in directly. To add a language, add it to `LOCALES` with a message table for every
+key and, optionally, a content table.
+
+Converted so far: the main menu and its tabs, the pause menu, the story's base camp, the challenge
+list, the credits, and the save, error and loading notices. Still to move onto the tables (each is
+plain English in its markup today): the briefing, HUD, results, Time Attack map, battle list,
+journal, Field Guide, achievements, leaderboard, settings and controls pages, wardrobe, revision
+history, squad roster, mode targets, touch controls, race panel and prologue; and the game text
+in `src/game/story/` (story pages, coach and Headmaster lines, relic descriptions), the lesson and
+challenge-field briefs where they are shown, rank names and achievement text.
+
 ## Play without installing anything
 
 `docs/` holds a ready-to-serve build. With GitHub Pages enabled (Settings, Pages, Deploy from a

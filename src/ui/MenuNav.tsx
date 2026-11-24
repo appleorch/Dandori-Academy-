@@ -2,18 +2,21 @@ import { useRef } from 'react';
 import { audio } from '../game/audio/audioManager';
 import { useGameStore, type MenuScreen } from '../game/core/gameStore';
 import { ACHIEVEMENTS } from '../game/progression/achievements';
+import { t } from '../i18n/i18n';
+import type { MessageKey } from '../i18n/en';
 
-const TABS: readonly (readonly [MenuScreen, string])[] = [
-  ['menu', 'Main menu'],
-  ['camp', 'Story'],
-  ['map', 'Time Attack'],
-  ['challenges', 'Challenges'],
-  ['battles', 'Battles'],
-  ['journal', 'Journal'],
-  ['guide', 'Field Guide'],
-  ['leaderboard', 'Leaderboard'],
-  ['achievements', 'Achievements'],
-  ['settings', 'Wardrobe & settings'],
+const TABS: readonly (readonly [MenuScreen, MessageKey])[] = [
+  ['menu', 'nav.menu'],
+  ['camp', 'nav.camp'],
+  ['map', 'nav.map'],
+  ['challenges', 'nav.challenges'],
+  ['battles', 'nav.battles'],
+  ['journal', 'nav.journal'],
+  ['guide', 'nav.guide'],
+  ['leaderboard', 'nav.leaderboard'],
+  ['achievements', 'nav.achievements'],
+  ['settings', 'nav.settings'],
+  ['credits', 'nav.credits'],
 ];
 
 /** Knocks on the crest needed to be let in, and how long the Emberlings wait for them. */
@@ -44,7 +47,7 @@ export function MenuNav() {
   return (
     <div className="menu-head">
       <p className="eyebrow crest-line">
-        <button type="button" className="crest" onClick={knock} aria-label="The Academy crest">
+        <button type="button" className="crest" onClick={knock} aria-label={t('nav.crest')}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path
               d="M12 2c5 5 7 9 7 13a7 7 0 0 1-14 0c0-2 1-4 2.5-5.5C8 12 9.5 13 10 14c0-4 0-8 2-12z"
@@ -52,9 +55,9 @@ export function MenuNav() {
             />
           </svg>
         </button>
-        Dandori Academy
+        {t('nav.title')}
       </p>
-      <nav className="tabs" aria-label="Menu">
+      <nav className="tabs" aria-label={t('nav.label')}>
         {TABS.map(([screen, label]) => (
           <button
             key={screen}
@@ -63,7 +66,7 @@ export function MenuNav() {
             aria-current={screen === phase ? 'page' : undefined}
             onClick={() => showScreen(screen)}
           >
-            {label}
+            {t(label)}
             {screen === 'achievements' && (
               <span className="tab-count">
                 {earned}/{Math.max(visible, earned)}
@@ -73,7 +76,7 @@ export function MenuNav() {
         ))}
         {knowsTheRoom && (
           <button type="button" className="tab" onClick={openPoker}>
-            ♠ Back room
+            {t('nav.backRoom')}
           </button>
         )}
       </nav>

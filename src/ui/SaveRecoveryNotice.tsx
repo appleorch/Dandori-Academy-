@@ -1,4 +1,5 @@
 import { useGameStore } from '../game/core/gameStore';
+import { t } from '../i18n/i18n';
 
 /** Offers the unreadable data as a file, named after when it was found. */
 function download(key: string): void {
@@ -32,21 +33,15 @@ export function SaveRecoveryNotice() {
       aria-labelledby="save-recovery-title"
     >
       <div className="panel">
-        <p className="eyebrow">Your save</p>
-        <h1 id="save-recovery-title">Your progress could not be read</h1>
-        <p>
-          The saved progress in this browser is damaged, or from a version this one cannot read. It
-          has been kept safe, untouched, and a new save started so you can play.
-        </p>
-        <p className="note">
-          Download it to keep a copy, or to send with a bug report. If you have a save file from
-          Settings, you can load it there.
-        </p>
+        <p className="eyebrow">{t('recovery.eyebrow')}</p>
+        <h1 id="save-recovery-title">{t('recovery.title')}</h1>
+        <p>{t('recovery.body')}</p>
+        <p className="note">{t('recovery.note')}</p>
         <button type="button" onClick={() => download(backup)} autoFocus>
-          Download the old save
+          {t('recovery.download')}
         </button>
         <button type="button" className="secondary" onClick={dismiss}>
-          Start fresh
+          {t('recovery.fresh')}
         </button>
       </div>
     </div>

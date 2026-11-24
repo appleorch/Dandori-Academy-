@@ -5,7 +5,6 @@ import {
   challengeTimed,
   isChallenge,
   medalTargets,
-  MODES,
   trialLosses,
   type ChallengeId,
 } from '../game/modes/modes';
@@ -13,16 +12,21 @@ import { modeBest, modeRank } from '../game/save/saveManager';
 import { formatPoints, formatTime } from './format';
 import { challengeFieldsOf, challengeLock, hasMedal } from './lessonAccess';
 import { MenuNav } from './MenuNav';
+import { t } from '../i18n/i18n';
+import { levelBrief, levelName, modeName, modeRules, modeSummary } from '../i18n/gameText';
 
 /** One line on what a field's Platinum asks for, by its challenge's rule. */
 function paceLine(mode: ChallengeId, level: ReturnType<typeof challengeFieldsOf>[number]): string {
-  if (mode === 'growing') return `Platinum: ${level.challenge?.pace} Sproutlings by sunset`;
+  if (mode === 'growing')
+    return t('challenges.pace.growing', { count: level.challenge?.pace ?? 0 });
   if (mode === 'trial') {
     const losses = trialLosses(level);
-    return losses === 0 ? 'Platinum: lose nobody' : `Platinum: lose ${losses} or fewer`;
+    return losses === 0
+      ? t('challenges.pace.trialNone')
+      : t('challenges.pace.trial', { count: losses });
   }
   return challengeTimed(mode, level)
-    ? `Platinum pace ${formatTime(level.challenge?.pace ?? 0)}`
+    ? t('challenges.pace.timed', { time: formatTime(level.challenge?.pace ?? 0) })
     : '';
 }
 
@@ -36,7 +40,6 @@ export function ChallengeSelect() {
   const startDay = useGameStore((state) => state.startDay);
   const lastMode = useGameStore((state) => state.playMode);
   const [mode, setMode] = useState<ChallengeId>(isChallenge(lastMode) ? lastMode : 'hunt');
-  const spec = MODES[mode];
   const fields = challengeFieldsOf(mode);
   const won = fields.filter((level) => hasMedal(save, mode, level.id)).length;
 
@@ -44,8 +47,8 @@ export function ChallengeSelect() {
     <main className="screen">
       <div className="panel wide">
         <MenuNav />
-        <h1>Challenges</h1>
-        <nav className="tabs mode-tabs" aria-label="Challenge">
+        <h1>{t('challenges.title')}</h1>
+        <nav className="tabs mode-tabs" aria-label={t('challenges.label')}>
           {CHALLENGE_IDS.map((id) => (
             <button
               key={id}
@@ -54,24 +57,20 @@ export function ChallengeSelect() {
               aria-pressed={id === mode}
               onClick={() => setMode(id)}
             >
-              {MODES[id].name}
+              {modeName(id)}
             </button>
           ))}
         </nav>
         <section className="mode-rules">
-          <p className="mode-summary">{spec.summary}</p>
+          <p className="mode-summary">{modeSummary(mode)}</p>
           <ul>
-            {spec.rules.map((rule) => (
+            {modeRules(mode).map((rule) => (
               <li key={rule}>{rule}</li>
             ))}
           </ul>
-          <p className="note">
-            Twelve fields, each built for this challenge. Medals run Bronze, Silver, Gold, Platinum
-            and Diamond; Platinum is set by the Academy’s test player on each field. Glowcaps add to
-            a score but are never needed for a medal.
-          </p>
+          <p className="note">{t('challenges.note')}</p>
           <p className="challenge-progress">
-            {won} of {fields.length} fields with a medal
+            {t('challenges.progress', { won, total: fields.length })}
           </p>
         </section>
         <ol className="lessons">
@@ -87,12 +86,12 @@ export function ChallengeSelect() {
                   type="button"
                   className={locked ? 'lesson locked' : 'lesson'}
                   disabled={locked !== null}
-                  title={locked ?? level.brief}
+                  title={locked ?? levelBrief(level)}
                   onClick={() => startDay(level.id, mode)}
                 >
                   <span className="lesson-number">{level.challenge?.order}</span>
                   <span className="lesson-text">
-                    <strong>{level.name}</strong>
+                    <strong>{levelName(level)}</strong>
                     <span className="targets-line">
                       {locked ? (
                         <span>{locked}</span>
@@ -100,7 +99,9 @@ export function ChallengeSelect() {
                         <>
                           {platinum && (
                             <span className="rank-platinum">
-                              Platinum {formatPoints(platinum.score)}
+                              {t('challenges.platinumScore', {
+                                score: formatPoints(platinum.score),
+                              })}
                             </span>
                           )}
                           <span>{paceLine(mode, level)}</span>
@@ -111,7 +112,7 @@ export function ChallengeSelect() {
                   {rank && rank !== 'Copper' && (
                     <span className={`badge rank-${rank.toLowerCase()}`}>
                       {rank}
-                      <small>{formatPoints(best)} pts</small>
+                      <small>{t('challenges.points', { score: formatPoints(best) })}</small>
                     </span>
                   )}
                 </button>

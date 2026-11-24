@@ -1,3 +1,4 @@
+import { LOCALES, LOCALE_NAMES, t } from '../i18n/i18n';
 import { sameBindings } from '../game/commands/bindings';
 import { useGameStore } from '../game/core/gameStore';
 import {
@@ -258,6 +259,26 @@ export function SettingsPanel() {
       {SOUND_RANGES.map((range) => (
         <RangeRow key={range.key} range={range} />
       ))}
+      <div className="setting">
+        <span className="setting-text">
+          <strong id="language-label">{t('language.title')}</strong>
+          <small>{t('language.hint')}</small>
+        </span>
+        <span className="segmented" role="radiogroup" aria-labelledby="language-label">
+          {LOCALES.map((locale) => (
+            <button
+              key={locale}
+              type="button"
+              role="radio"
+              aria-checked={settings.locale === locale}
+              className={settings.locale === locale ? 'segment active' : 'segment'}
+              onClick={() => updateSettings({ locale })}
+            >
+              {LOCALE_NAMES[locale]}
+            </button>
+          ))}
+        </span>
+      </div>
 
       <h3>Playing</h3>
       {PLAY_TOGGLES.map((toggle) => (

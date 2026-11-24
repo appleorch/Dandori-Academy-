@@ -37,6 +37,7 @@ import { WaterAndBridges } from './WaterAndBridges';
 import { WorkerInstances } from './WorkerInstances';
 import { PerfProbe, ShadowBudget } from './perf';
 import { QualityTuner } from './QualityTuner';
+import { t } from '../../i18n/i18n';
 import { PerfOverlay } from '../../ui/PerfOverlay';
 
 /**
@@ -190,7 +191,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
       {!ready && (
         <div className="loading-kiln" role="status">
           <span className="loading-kiln-glow" aria-hidden="true" />
-          Stoking the Kiln…
+          {t('loading.kiln')}
         </div>
       )}
       <Canvas

@@ -99,3 +99,39 @@ test('once opened, the game loads and starts a day offline', async ({ page, cont
   await page.getByRole('button', { name: /Scattered Light/ }).click();
   await inDay(page);
 });
+
+/** Visible text on the page with two plain letters in a row: in the pseudo-locale, untranslated. */
+async function untranslated(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const found: string[] = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent?.trim() ?? '';
+      const element = node.parentElement;
+      if (!text || !element || element.closest('script, style, kbd, svg, [aria-hidden="true"]')) {
+        continue;
+      }
+      if (!element.checkVisibility()) continue;
+      if (/[A-Za-z]{2,}/.test(text)) found.push(text);
+    }
+    return found;
+  });
+}
+
+test('in the pseudo-locale, the converted screens show no untranslated text', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'dandori-academy-settings',
+      JSON.stringify({ graphics: 'low', graphicsTuned: true, seenIntro: true, locale: 'pseudo' }),
+    );
+  });
+  await page.goto('./');
+  await expect(page.locator('.hero-title')).toContainText('⟦');
+  expect(await untranslated(page)).toEqual([]);
+  await page.locator('.mode-card').first().click();
+  await expect(page.locator('.camp-day')).toContainText('⟦');
+  expect(await untranslated(page)).toEqual([]);
+  await page.locator('.mode-card, .tab').filter({ hasText: '⟦' }).nth(3).click();
+  await expect(page.locator('h1')).toContainText('⟦');
+  expect(await untranslated(page)).toEqual([]);
+});

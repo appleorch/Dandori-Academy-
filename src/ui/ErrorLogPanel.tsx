@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { clearErrors, errorReport, readErrors } from '../game/core/errorLog';
+import { t } from '../i18n/i18n';
 
 /**
  * The local error log: how many errors the game has noted, a button to copy them for a bug
@@ -18,16 +19,19 @@ export function ErrorLogPanel() {
   };
   return (
     <section className="save-file" aria-labelledby="errors-heading">
-      <h2 id="errors-heading">Error log</h2>
+      <h2 id="errors-heading">{t('errorLog.title')}</h2>
       <p>
         {errors.length === 0
-          ? 'No errors noted. If something goes wrong, it is noted here, on this device only, to paste into a bug report.'
-          : `${errors.length} ${errors.length === 1 ? 'error' : 'errors'} noted on this device, the latest on ${new Date(errors[errors.length - 1].at).toLocaleString()}.`}
+          ? t('errorLog.none')
+          : t(errors.length === 1 ? 'errorLog.one' : 'errorLog.some', {
+              count: errors.length,
+              when: new Date(errors[errors.length - 1].at).toLocaleString(),
+            })}
       </p>
       {errors.length > 0 && (
         <div className="button-row">
           <button type="button" className="secondary" onClick={() => void copy()}>
-            {copied ? 'Copied' : 'Copy the log'}
+            {copied ? t('errorLog.copied') : t('errorLog.copy')}
           </button>
           <button
             type="button"
@@ -37,7 +41,7 @@ export function ErrorLogPanel() {
               setErrors([]);
             }}
           >
-            Clear
+            {t('errorLog.clear')}
           </button>
         </div>
       )}

@@ -4,7 +4,8 @@ import type { LevelDefinition } from '../game/world/level';
 import { isBattle } from '../game/modes/modes';
 import { ModeTargets } from './ModeTargets';
 import { SettingsPanel } from './SettingsPanel';
-import { fieldTitle } from './format';
+import { t } from '../i18n/i18n';
+import { fieldName } from '../i18n/gameText';
 import { ActionPrompt } from './Glyph';
 
 /** Shown over a paused day: resume, restart, change settings or leave the lesson. */
@@ -20,39 +21,39 @@ export function PauseMenu({ level }: { level: LevelDefinition }) {
     <div className="screen overlay">
       <div className="panel" role="dialog" aria-labelledby="pause-title">
         <p className="eyebrow" id="pause-title">
-          Paused
+          {t('pause.title')}
         </p>
         {view === 'main' ? (
           <>
-            <h1>{fieldTitle(level)}</h1>
+            <h1>{fieldName(level)}</h1>
             <ModeTargets level={level} mode={mode} />
             <button type="button" onClick={resume} autoFocus>
-              Resume
+              {t('pause.resume')}
             </button>
             {mode === 'campaign' ? (
               // A story day is never thrown away: it can only be brought to an end.
               <button type="button" className="secondary" onClick={endDay}>
-                Call it a day
-                <small> Sproutlings away from the Kiln and the lit beacons are lost</small>
+                {t('pause.callItADay')}
+                <small> {t('pause.callItADayNote')}</small>
               </button>
             ) : (
               mode !== 'lessons' && (
                 <button type="button" className="secondary" onClick={endDay}>
-                  {isBattle(mode) ? 'Concede the battle' : 'End the day now'}
+                  {isBattle(mode) ? t('pause.concede') : t('pause.endNow')}
                 </button>
               )
             )}
             {mode !== 'campaign' && (
               <button type="button" className="secondary" onClick={() => startDay(level.id)}>
-                Restart <ActionPrompt action="restart" />
+                {t('pause.restart')} <ActionPrompt action="restart" />
               </button>
             )}
             <button type="button" className="secondary" onClick={() => setView('settings')}>
-              Settings
+              {t('pause.settings')}
             </button>
             {mode !== 'campaign' && (
               <button type="button" className="secondary" onClick={leaveDay}>
-                Quit
+                {t('pause.quit')}
               </button>
             )}
           </>
@@ -60,7 +61,7 @@ export function PauseMenu({ level }: { level: LevelDefinition }) {
           <>
             <SettingsPanel />
             <button type="button" onClick={() => setView('main')} autoFocus>
-              Back
+              {t('pause.back')}
             </button>
           </>
         )}

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Fragment, lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { audio } from './game/audio/audioManager';
 import { InputController } from './game/commands/input';
 import { useGameStore } from './game/core/gameStore';
@@ -8,6 +8,8 @@ import { dayField } from './game/campaign/campaign';
 import { CampScreen } from './ui/CampScreen';
 import { SaveRecoveryNotice } from './ui/SaveRecoveryNotice';
 import { CanvasErrorBoundary } from './ui/CanvasErrorBoundary';
+import { setLocale, t } from './i18n/i18n';
+import { CreditsScreen } from './ui/CreditsScreen';
 import { Briefing } from './ui/Briefing';
 import { Hud } from './ui/Hud';
 import { BattleSelect } from './ui/BattleSelect';
@@ -48,7 +50,7 @@ function ScreenLoading() {
   return (
     <div className="loading-kiln" role="status">
       <span className="loading-kiln-glow" aria-hidden="true" />
-      Loading…
+      {t('loading.screen')}
     </div>
   );
 }
@@ -57,6 +59,9 @@ function ScreenLoading() {
 const PASSWORD = 'allin';
 
 export function App() {
+  // The language is set before anything renders, and changing it redraws every screen.
+  const locale = useGameStore((state) => state.settings.locale);
+  setLocale(locale);
   const phase = useGameStore((state) => state.phase);
   const paused = useGameStore((state) => state.paused);
   const briefing = useGameStore((state) => state.briefing);
@@ -150,7 +155,7 @@ export function App() {
   }, []);
 
   return (
-    <>
+    <Fragment key={locale}>
       <SaveRecoveryNotice />
       {phase === 'menu' && <MainMenu />}
       {phase === 'camp' && <CampScreen />}
@@ -164,6 +169,7 @@ export function App() {
         {phase === 'leaderboard' && <LeaderboardScreen />}
         {phase === 'guide' && <FieldGuide />}
       </Suspense>
+      {phase === 'credits' && <CreditsScreen />}
       {phase === 'story' && <StoryScreen />}
       {inGame && (
         <div className="game">
@@ -184,6 +190,6 @@ export function App() {
           <PokerRoom />
         </Suspense>
       )}
-    </>
+    </Fragment>
   );
 }

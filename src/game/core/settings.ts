@@ -1,5 +1,6 @@
 import { copyBindings, DEFAULT_BINDINGS, parseBindings, type Bindings } from '../commands/bindings';
 import { DIFFICULTIES, type Difficulty } from './difficulty';
+import { LOCALES, type Locale } from '../../i18n/i18n';
 
 /**
  * Rendering quality. Low: no shadows or effects. Medium: shadows, bloom, tilt-shift
@@ -27,6 +28,8 @@ export interface Settings {
    * times were measured (see QualityTuner). Until then a slow device may have it lowered once.
    */
   graphicsTuned: boolean;
+  /** The language of the menus and the game's text. */
+  locale: Locale;
   /** Mode chosen on the lesson list. */
   difficulty: Difficulty;
   carrierCounts: boolean;
@@ -97,6 +100,7 @@ export function newPlayerId(): string {
 export const DEFAULT_SETTINGS: Settings = {
   graphics: 'high',
   graphicsTuned: false,
+  locale: 'en',
   difficulty: 'normal',
   carrierCounts: true,
   healthBars: true,
@@ -159,6 +163,7 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
   ] as const) {
     if (typeof raw[key] === 'boolean') settings[key] = raw[key];
   }
+  settings.locale = LOCALES.find((locale) => locale === raw.locale) ?? settings.locale;
   if (typeof raw.outfit === 'string') settings.outfit = raw.outfit;
   if (typeof raw.wardenName === 'string')
     settings.wardenName = cleanWardenName(raw.wardenName) ?? '';

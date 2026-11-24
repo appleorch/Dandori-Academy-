@@ -76,7 +76,8 @@ export type MenuScreen =
   | 'settings'
   | 'journal'
   | 'guide'
-  | 'leaderboard';
+  | 'leaderboard'
+  | 'credits';
 
 /** The screen a day of a mode is chosen from, and returned to. */
 export function screenFor(mode: ModeId): MenuScreen {
