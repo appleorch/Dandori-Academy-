@@ -24,7 +24,7 @@ export function JournalScreen() {
         <h1>Journal</h1>
         <p>
           {written} of {LEVELS.length} entries written. An entry is added each time a lesson is
-          cleared in the story.
+          cleared in Time Attack.
         </p>
         <div className="button-row">
           <button type="button" className="secondary small" onClick={() => showStory('prologue')}>

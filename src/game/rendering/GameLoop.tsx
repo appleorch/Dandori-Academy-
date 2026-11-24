@@ -21,6 +21,8 @@ import type { Feedback } from './feedback';
 const HUD_INTERVAL_FRAMES = 6;
 /** A chime sounds when this much of the day is left, and the music picks up. */
 const LAST_CALL_SECONDS = 30;
+/** In the story, the Headmaster calls sunset with this much daylight left. */
+const SUNSET_CALL = 60;
 /** The clock ticks aloud through the final seconds. */
 const TICKING_SECONDS = 10;
 /** Simulation speed while fast-forward is held. */
@@ -166,7 +168,7 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
       headmaster.relic(relic);
     }
     // Each Sunshard home is compared with the same shard on the best story clear (surface only).
-    const splits = sim === surface && store.playMode === 'story';
+    const splits = sim === surface && store.playMode === 'lessons';
     for (let i = delivered; splits && i < sim.stats.deliveryTimes.length; i++) {
       const best = bestSplits.current?.[i];
       if (best === undefined) continue;
@@ -182,6 +184,14 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
     }
     audio.setWhistle(sim.captainState.whistleRadius > 0 && !sim.ended);
     if (before > LAST_CALL_SECONDS && sim.timeLeft <= LAST_CALL_SECONDS) audio.play('warning');
+    // In the story the sun sets on whoever is still out: the minute before is called aloud.
+    if (store.playMode === 'campaign' && before > SUNSET_CALL && sim.timeLeft <= SUNSET_CALL) {
+      audio.play('warning');
+      store.say({
+        text: 'The sun is going down! Whistle everyone in and get them to the Kiln or a lit beacon.',
+        mood: 'alarm',
+      });
+    }
     if (sim.timeLeft <= TICKING_SECONDS && Math.ceil(before) !== Math.ceil(sim.timeLeft)) {
       audio.play('tick');
     }

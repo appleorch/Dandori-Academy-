@@ -15,6 +15,7 @@ import { FIELD_WORK } from './levels/fieldWork';
 import { KINDLING } from './levels/kindling';
 import { LONG_ROAD } from './levels/longRoad';
 import { WILD_MARCHES } from './levels/wildMarches';
+import { CHALLENGE_SPECS } from './levels/challenges';
 
 export type * from './levelTypes';
 
@@ -150,6 +151,11 @@ function withPar(spec: LevelSpec, difficulty: Difficulty = 'normal'): LevelDefin
   };
 }
 
+/** A field as written, made playable: its par worked out, on Normal. */
+export function defineLevel(spec: LevelSpec): LevelDefinition {
+  return withPar(spec);
+}
+
 /** The academy's lessons in play order, then the side lessons found by going down. */
 export const LEVELS: readonly LevelDefinition[] = [
   ...KINDLING,
@@ -161,6 +167,23 @@ export const LEVELS: readonly LevelDefinition[] = [
   ...DEPTHS.filter((spec) => spec.side),
 ].map((spec) => withPar(spec));
 
+/**
+ * Every challenge's own fields, in each challenge's order. They are not lessons: they have no
+ * stage, are never part of the numbered run, and are only played in their own challenge.
+ */
+export const CHALLENGE_LEVELS: readonly LevelDefinition[] = CHALLENGE_SPECS.map((spec) =>
+  withPar(spec),
+);
+
+const BY_ID = new Map<string, LevelDefinition>(
+  [...LEVELS, ...CHALLENGE_LEVELS].map((level) => [level.id, level]),
+);
+
+/** A lesson or challenge field by id, or undefined. */
+export function levelById(id: string): LevelDefinition | undefined {
+  return BY_ID.get(id);
+}
+
 /** A lesson as played on the given difficulty: Hard has a shorter day and its own par. */
 export function forDifficulty(level: LevelDefinition, difficulty: Difficulty): LevelDefinition {
   if (difficulty === level.difficulty) return level;
@@ -168,7 +191,7 @@ export function forDifficulty(level: LevelDefinition, difficulty: Difficulty): L
   const normalDay =
     level.difficulty === 'normal'
       ? level.dayLength
-      : (LEVELS.find((candidate) => candidate.id === level.id)?.dayLength ?? level.dayLength);
+      : (levelById(level.id)?.dayLength ?? level.dayLength);
   const dayLength = difficulty === 'hard' ? Math.round(normalDay * HARD.dayLength) : normalDay;
   // withPar replaces the par and difficulty.
   return withPar({ ...level, dayLength }, difficulty);

@@ -280,6 +280,97 @@ const HEAVY: readonly Relic[] = [
 
 export const RELICS: readonly Relic[] = [...COMMON, ...FRAGILE, ...HEAVY];
 
+/**
+ * The Great Clock's twelve parts, found in the story's grounds: each is its own relic, by the
+ * treasure id it has in its section.
+ */
+export const CLOCK_PARTS: Readonly<Record<string, Relic>> = {
+  'part-mainspring': {
+    id: 'part-mainspring',
+    name: 'The Great Mainspring',
+    shape: 'watch',
+    material: 'iron',
+    description: 'Coiled tight for a hundred years. It has been waiting to let go.',
+  },
+  'part-escapement': {
+    id: 'part-escapement',
+    name: 'The Grasshopper Escapement',
+    shape: 'gear',
+    material: 'brass',
+    description: 'It lets the Clock tick one moment at a time, and not all at once.',
+  },
+  'part-pendulum': {
+    id: 'part-pendulum',
+    name: 'The Pendulum Bob',
+    shape: 'compass',
+    material: 'gold',
+    description: 'Fished out of the lily pond, still swinging a little out of habit.',
+  },
+  'part-crown-wheel': {
+    id: 'part-crown-wheel',
+    name: 'The Crown Wheel',
+    shape: 'gear',
+    material: 'gold',
+    description: 'Warm to the touch. The vents have kept it at forging heat all this time.',
+  },
+  'part-chime-hammer': {
+    id: 'part-chime-hammer',
+    name: 'The Chime Hammer',
+    shape: 'bell',
+    material: 'silver',
+    description: 'It strikes the hour. The spark coils have been striking it instead.',
+  },
+  'part-hour-hand': {
+    id: 'part-hour-hand',
+    name: 'The Hour Hand',
+    shape: 'key',
+    material: 'iron',
+    description: 'Slow, patient, and longer than the Warden is tall.',
+  },
+  'part-balance-wheel': {
+    id: 'part-balance-wheel',
+    name: 'The Balance Wheel',
+    shape: 'orrery',
+    material: 'crystal',
+    description: 'Sealed in the crystal vault by someone who knew what it was worth.',
+  },
+  'part-moon-dial': {
+    id: 'part-moon-dial',
+    name: 'The Moon Dial',
+    shape: 'orrery',
+    material: 'silver',
+    description: 'It shows the phase of the moon, and, the founders claimed, of the Headmaster.',
+  },
+  'part-fusee': {
+    id: 'part-fusee',
+    name: 'The Fusee Cone',
+    shape: 'gear',
+    material: 'brass',
+    description: 'The Gravelmaw had been sleeping on it. It is slightly flatter on one side.',
+  },
+  'part-bell-housing': {
+    id: 'part-bell-housing',
+    name: 'The Bell Housing',
+    shape: 'bell',
+    material: 'iron',
+    description: 'The heaviest part of the Clock, and the loudest when dropped.',
+  },
+  'part-winding-key': {
+    id: 'part-winding-key',
+    name: 'The Winding Key',
+    shape: 'key',
+    material: 'gold',
+    description: 'Without it the Clock could never be wound again. The Skitters knew.',
+  },
+  'part-minute-hand': {
+    id: 'part-minute-hand',
+    name: 'The Minute Hand',
+    shape: 'lantern',
+    material: 'glass',
+    description: 'Glass, of all things. The founders liked to see the hours go by.',
+  },
+};
+
 function poolFor(variant: ShardVariant | undefined): readonly Relic[] {
   if (variant === 'dewglass') return FRAGILE;
   if (variant === 'lodestone') return HEAVY;
@@ -310,6 +401,7 @@ const ASSIGNED: ReadonlyMap<string, Relic> = (() => {
  * they take one from the common pool by their id.
  */
 export function relicFor(levelId: string, treasureId: string, variant?: ShardVariant): Relic {
+  if (levelId.startsWith('campaign-') && CLOCK_PARTS[treasureId]) return CLOCK_PARTS[treasureId];
   const known = ASSIGNED.get(`${levelId}:${treasureId}`);
   if (known) return known;
   const pool = poolFor(variant);

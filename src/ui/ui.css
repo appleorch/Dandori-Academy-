@@ -2725,3 +2725,150 @@ button.rival-card.active {
   bottom: auto;
   top: 150px;
 }
+
+/* ----- 0.19: the story's base camp, Time Attack, challenge fields ----- */
+
+.camp-day {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+svg.camp-map {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 18px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+.camp-ground {
+  fill: #4f6b3a;
+}
+.camp-plateau {
+  fill: #6f8a4c;
+  stroke: #3e3022;
+  stroke-width: 3;
+}
+.camp-water {
+  fill: #3f7fa8;
+}
+.camp-bridge {
+  fill: #8a6a46;
+}
+.camp-wall {
+  fill: #3a3a32;
+}
+.camp-gate {
+  fill: #6b4a2a;
+}
+.camp-gate.crystal {
+  fill: #9fe6ff;
+}
+.camp-beacon {
+  fill: #4a3a2a;
+  stroke: #ffd890;
+  stroke-width: 2;
+}
+.camp-beacon.lit {
+  fill: #ffd257;
+}
+.camp-relic {
+  fill: #fff2c8;
+  opacity: 0.8;
+}
+.camp-part {
+  fill: #2a2018;
+  stroke: #ffb347;
+  stroke-width: 3;
+}
+.camp-part.home {
+  fill: #ffb347;
+  stroke: #fff6dc;
+}
+.camp-part-hand {
+  fill: none;
+  stroke: #fff6dc;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.camp-kiln {
+  fill: #ffb347;
+  stroke: #6b5636;
+  stroke-width: 3;
+}
+.camp-label {
+  font:
+    700 16px Georgia,
+    'Times New Roman',
+    serif;
+  fill: #fff6dc;
+}
+.camp-stock ul {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+}
+.camp-stock li.none {
+  opacity: 0.45;
+}
+.kind-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.kind-dot.ember {
+  background: #e8432d;
+}
+.kind-dot.dew {
+  background: #3a8ae8;
+}
+.kind-dot.stone {
+  background: #8a8a92;
+}
+.kind-dot.spark {
+  background: #f2c62a;
+}
+.camp-parts ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  padding-left: 20px;
+  font-size: 0.88rem;
+}
+.camp-parts li {
+  opacity: 0.6;
+}
+.camp-parts li.home {
+  opacity: 1;
+}
+.camp-parts li small {
+  display: block;
+  opacity: 0.8;
+}
+.story-stamp {
+  color: var(--accent);
+}
+tr.missed th,
+tr.missed td {
+  color: #ff8a7a;
+}
+.chip.sunset {
+  background: rgba(140, 40, 20, 0.85);
+  animation: urgent-pulse 1s ease-in-out infinite;
+}
+.challenge-progress {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+button.lesson.locked {
+  opacity: 0.55;
+}
+button.mode-card.campaign {
+  border-color: rgba(125, 200, 90, 0.8);
+}
+button.mode-card.lessons {
+  border-color: rgba(120, 170, 255, 0.6);
+}

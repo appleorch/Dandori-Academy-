@@ -156,6 +156,8 @@ interface EnemyOptions {
   /** Weight of the Sunshard it drops on defeat. */
   drop?: number;
   reveals?: 'pod' | 'sap';
+  /** Its place in the lesson's list (see `Enemy.spawn`). */
+  spawn?: number;
 }
 
 export function spawnEnemy(
@@ -173,6 +175,7 @@ export function spawnEnemy(
     kind,
     shape: options.shape ?? null,
     parent: options.parent ?? NO_ENTITY,
+    spawn: options.spawn ?? -1,
     phase: 0,
     charges: 0,
     drop: options.drop ?? 0,

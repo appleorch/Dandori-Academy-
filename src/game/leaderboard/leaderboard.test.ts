@@ -3,7 +3,7 @@ import { penaltyPerLoss } from '../core/difficulty';
 import { evaluateDay } from '../dandori/scoring';
 import { initPhysics } from '../simulation/physics';
 import { Simulation } from '../simulation/Simulation';
-import { forDifficulty, LEVELS, shardCount, treasureTotal } from '../world/level';
+import { forDifficulty, levelById, LEVELS, shardCount, treasureTotal } from '../world/level';
 import { playGreedy } from '../world/testBot';
 import {
   BOARD_FILE_URL,
@@ -294,6 +294,50 @@ describe('challenge runs', () => {
     expect(standings(entries, LESSON.id, 'normal', 'hunt').map((e) => e.mode)).toEqual(['hunt']);
     expect(standings(entries, LESSON.id, 'normal').map((e) => e.mode)).toEqual([undefined]);
     expect(standings(entries, LESSON.id, 'normal', 'mission')).toEqual([]);
+  });
+});
+
+describe('runs on the challenge fields', () => {
+  /** A field played by the test player under its challenge's rules, written as the game does. */
+  function fieldRun(id: string): RunEntry {
+    const level = levelById(id);
+    if (!level?.challenge) throw new Error(id);
+    const mode = level.challenge.mode;
+    const sim = new Simulation(level, {
+      endsWhen: MODES[mode].endsWhen,
+      growth: MODES[mode].growth,
+    });
+    playGreedy(sim);
+    const facts = challengeFacts(sim);
+    const run = makeChallengeRun(
+      {
+        levelId: id,
+        difficulty: 'normal',
+        mode,
+        facts,
+        score: scoreChallenge(mode, level, facts),
+        elapsed: sim.elapsed,
+      },
+      '0.19.0',
+      new Date('2026-11-24T12:00:00Z'),
+    );
+    sim.dispose();
+    if (!run) throw new Error('no run');
+    return run;
+  }
+
+  it('checks out a Lean Squad Trial, which has no clock, and catches one that claims time left', () => {
+    const run = fieldRun('trial-careful-steps');
+    expect(run.timeLeft).toBe(0);
+    expect(checkRun(run)).toBeNull();
+    expect(checkRun({ ...run, timeLeft: 30 })).not.toBeNull();
+    expect(checkRun({ ...run, alive: run.alive + 5 })).not.toBeNull();
+  });
+
+  it('checks out a timed challenge field, and refuses it on another challenge’s board', () => {
+    const run = fieldRun('hunt-scattered-light');
+    expect(checkRun(run)).toBeNull();
+    expect(checkRun({ ...run, mode: 'mission' })).not.toBeNull();
   });
 });
 

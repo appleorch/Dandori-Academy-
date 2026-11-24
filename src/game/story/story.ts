@@ -311,3 +311,10 @@ export const EPILOGUE: readonly string[] = [
 export function chapterOf(stage: number): Chapter {
   return CHAPTERS.find((chapter) => stage >= chapter.from && stage <= chapter.to) ?? CHAPTERS[0];
 }
+
+/**
+ * Proctor Ashwick, on the first morning of the story's expedition. The lessons (Time Attack)
+ * are the Warden's training; this is the real thing.
+ */
+export const CAMPAIGN_INTRO =
+  'The Great Clock over the gate stopped at midnight, and the beasts have carried its works off into the Wild Quad. Twelve parts, Warden. Nobody is timing you, but the sun still sets: whoever is out in the grass when it does is not coming back. Bring them home before dark, every day, and the Clock will tick again.';

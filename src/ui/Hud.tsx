@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { audio } from '../game/audio/audioManager';
 import { useGameStore, type BossSnapshot } from '../game/core/gameStore';
-import { formatTime } from './format';
+import { fieldTitle, formatTime } from './format';
+import { currentSection } from '../game/campaign/campaign';
 import type { InputController } from '../game/commands/input';
 import { SPROUT_KINDS, SPROUTS } from '../game/workers/sprouts';
 import { SprocketPortrait } from './Portrait';
 import { isChallenge, medalTargets, MODES } from '../game/modes/modes';
-import { LEVELS, type LevelDefinition } from '../game/world/level';
+import { levelById, type LevelDefinition } from '../game/world/level';
 import { RacePanel } from './RacePanel';
 
 /** How long a remark of the Headmaster's stays up: it fades out over the end of this. */
@@ -41,7 +42,8 @@ export function Hud({
   const openPoker = useGameStore((state) => state.openPoker);
   const nearDescent = useGameStore((state) => state.nearDescent);
   const nearAscent = useGameStore((state) => state.nearAscent);
-  const below = LEVELS.find((candidate) => candidate.id === nearDescent);
+  const below = nearDescent ? levelById(nearDescent) : undefined;
+  const campaign = useGameStore((state) => state.save.campaign);
   useEffect(() => {
     if (hint) audio.play('hint');
   }, [hint]);
@@ -55,7 +57,16 @@ export function Hud({
     return () => window.clearTimeout(timer);
   }, [remark]);
   if (!hud) return null;
-  const elapsed = 1 - hud.timeLeft / level.dayLength;
+  const elapsed = level.dayLength > 0 ? 1 - hud.timeLeft / level.dayLength : 0;
+  const story = mode === 'campaign';
+  const untimed = level.untimed === true;
+  // The story counts Great Clock parts: those home before today, and those brought home today.
+  const section = story ? currentSection(campaign) : null;
+  const partsHome = section
+    ? section.parts.filter((id) => campaign.parts[id] !== undefined || hud.treasureIds.includes(id))
+        .length
+    : 0;
+  const sunset = story && hud.timeLeft <= 60;
   // The day bar marks the pace Platinum and Diamond need, in challenges that time the day.
   const marks = isChallenge(mode)
     ? medalTargets(mode, level).flatMap((target) =>
@@ -96,40 +107,64 @@ export function Hud({
     <div className={touch ? 'hud touch' : 'hud'}>
       <div className="hud-row">
         <div className="chip hud-level">
-          {mode === 'story'
-            ? `${level.stage}. ${level.name}`
-            : `${MODES[mode].name} · ${level.name}`}
+          {story
+            ? `Day ${campaign.day + (phase === 'results' ? 0 : 1)} · ${level.name}`
+            : mode === 'lessons'
+              ? fieldTitle(level)
+              : `${MODES[mode].name} · ${fieldTitle(level)}`}
         </div>
         {level.difficulty === 'hard' && <div className="chip hard-chip">Hard</div>}
         <div
           className={
             hud.below
               ? 'chip clock stopped'
-              : hud.timeLeft <= 30
+              : hud.timeLeft <= 30 && !untimed
                 ? 'chip clock urgent'
                 : 'chip clock'
           }
-          title={hud.below ? 'The day above waits until you come back up' : undefined}
+          title={
+            hud.below
+              ? 'The day above waits until you come back up'
+              : untimed
+                ? 'No clock today: time taken, for your own interest'
+                : story
+                  ? 'Daylight left. At sunset everyone away from the Kiln and the lit beacons is lost'
+                  : undefined
+          }
         >
-          {formatTime(hud.timeLeft)}
+          {untimed ? `⏱ ${formatTime(hud.elapsed)}` : formatTime(hud.timeLeft)}
           {hud.below && ' ⏸'}
         </div>
+        {sunset && (
+          <div className="chip sunset" role="status">
+            Sunset: back to the Kiln or a lit beacon!
+          </div>
+        )}
         {hud.below ? (
           <div className="chip below-chip">
             Below: {hud.below} · Relics {hud.treasuresCollected}/{hud.treasuresTotal}
           </div>
         ) : (
           <>
-            <div
-              className="chip"
-              title={
-                mode === 'story'
-                  ? 'Bring every Sunshard home to clear the lesson'
-                  : 'Sunshards home'
-              }
-            >
-              Sunshards {hud.treasuresCollected}/{hud.treasuresTotal}
-            </div>
+            {section ? (
+              <div
+                className="chip"
+                title="Parts of the Great Clock home, today and on earlier days"
+              >
+                Clock parts {partsHome}/{section.parts.length}
+              </div>
+            ) : (
+              <div
+                className="chip"
+                title={
+                  mode === 'lessons'
+                    ? 'Bring every Sunshard home to clear the lesson'
+                    : 'Sunshards home'
+                }
+              >
+                Sunshards {hud.treasuresCollected}/{hud.treasuresTotal}
+              </div>
+            )}
             {live && (
               <div
                 className="chip score-chip"
@@ -218,7 +253,7 @@ export function Hud({
         </div>
       )}
       {race && phase === 'playing' && <RacePanel race={race} />}
-      {!hud.below && (
+      {!hud.below && !untimed && (
         <div
           className="daybar"
           role="img"
@@ -287,7 +322,7 @@ export function Hud({
       )}
       <div className="hud-spacer" />
       {!touch && counts}
-      {phase === 'playing' && !hud.below && hud.timeLeft <= 30 && hud.timeLeft > 0 && (
+      {phase === 'playing' && !hud.below && !untimed && hud.timeLeft <= 30 && hud.timeLeft > 0 && (
         <div className="urgent-vignette" aria-hidden="true" />
       )}
     </div>

@@ -10,7 +10,7 @@ import {
   type SaveData,
 } from '../save/saveManager';
 import { recoveredRelics, RELICS } from '../story/relics';
-import { LEVELS, MAIN_LEVELS } from '../world/level';
+import { CHALLENGE_LEVELS, LEVELS, MAIN_LEVELS } from '../world/level';
 
 export interface Achievement {
   id: string;
@@ -31,9 +31,15 @@ function cleared(day: DayRecord): boolean {
   return day.treasureIds.length === day.treasuresTotal;
 }
 
-/** Lessons with a medal of at least `rank` in any challenge (or the rank the story once gave). */
+/** Every field a medal can be won on: the challenge fields, and the lessons they were once played on. */
+const MEDAL_FIELDS = [...LEVELS, ...CHALLENGE_LEVELS];
+
+/**
+ * Fields with a medal of at least `rank` in any challenge: the challenge fields, and the lessons
+ * (with the medals won on them before 0.19.0, or the rank the story once gave).
+ */
 function lessonsAtLeast(save: SaveData, rank: Rank, difficulty: Difficulty = 'normal'): number {
-  return LEVELS.filter((level) => {
+  return MEDAL_FIELDS.filter((level) => {
     const earned = bestRank(save, level.id, difficulty);
     return earned !== null && rankValue(earned) >= rankValue(rank);
   }).length;
@@ -49,9 +55,9 @@ function storyDone(save: SaveData, levelId: string): boolean {
   return storyCleared(save, levelId, 'normal') || storyCleared(save, levelId, 'hard');
 }
 
-/** Lessons with a medal of at least `rank` in one challenge. */
+/** Fields with a medal of at least `rank` in one challenge. */
 function medalsIn(save: SaveData, mode: string, rank: Rank): number {
-  return LEVELS.filter((level) => {
+  return MEDAL_FIELDS.filter((level) => {
     const earned = modeRank(save, mode, level.id);
     return earned !== null && rankValue(earned) >= rankValue(rank);
   }).length;
@@ -154,12 +160,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     1,
     (s) => lessonsAtLeast(s, 'Diamond'),
   ),
-  counter(
-    'honor-roll',
-    'Honor Roll',
-    'Earn Gold or better in challenges on five lessons.',
-    5,
-    (s) => lessonsAtLeast(s, 'Gold'),
+  counter('honor-roll', 'Honor Roll', 'Earn Gold or better on five challenge fields.', 5, (s) =>
+    lessonsAtLeast(s, 'Gold'),
   ),
   counter('hauler', 'Hauler', 'Bring 50 Sunshards home in total.', 50, (s) => s.totals.treasures),
   counter(
@@ -188,7 +190,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   {
     id: 'graduate',
     name: 'Graduate',
-    description: `Clear ${FINAL.name} in the story.`,
+    description: `Clear ${FINAL.name} in Time Attack.`,
     earned: (save) => storyDone(save, FINAL.id),
   },
   feat('lights-on', 'Lights On', 'Defeat the Snuffer.', (day) =>
@@ -197,13 +199,13 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   {
     id: 'first-ember',
     name: 'The First Ember',
-    description: 'Clear The Undercroft in the story.',
+    description: 'Clear The Undercroft in Time Attack.',
     earned: (save) => storyDone(save, 'the-undercroft'),
   },
   {
     id: 'restorer',
     name: 'Restorer',
-    description: 'Clear Restoration Day, the last of the Grand Curriculum, in the story.',
+    description: 'Clear Restoration Day, the last of the Grand Curriculum, in Time Attack.',
     earned: (save) => storyDone(save, 'restoration-day'),
   },
   counter(
@@ -213,7 +215,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     RELICS.length,
     (s) => recoveredRelics(s.treasuresCollected).size,
   ),
-  counter('hardened', 'Hardened', 'Clear any lesson on Hard in the story.', 1, (s) =>
+  counter('hardened', 'Hardened', 'Clear any lesson on Hard in Time Attack.', 1, (s) =>
     hardClears(s),
   ),
   {
@@ -224,7 +226,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
       // Earned by a Platinum here back when the story was scored, too.
       rankValue(bestRank(save, 'the-bellwether', 'hard') ?? 'Copper') >= rankValue('Platinum') ||
       (day !== null &&
-        (day.mode ?? 'story') === 'story' &&
+        (day.mode ?? 'lessons') === 'lessons' &&
         day.levelId === 'the-bellwether' &&
         day.difficulty === 'hard' &&
         cleared(day) &&
@@ -233,8 +235,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   counter(
     'dandori-master',
     'Dandori Master',
-    'Earn Platinum in a challenge on every lesson.',
-    LEVELS.length,
+    'Earn Platinum or better on thirty challenge fields.',
+    30,
     (s) => lessonsAtLeast(s, 'Platinum'),
   ),
   counter(
@@ -248,32 +250,28 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   counter(
     'gold-standard',
     'Gold Standard',
-    'Earn Gold or better in a challenge on every lesson.',
-    LEVELS.length,
+    'Earn Gold or better on thirty challenge fields.',
+    30,
     (s) => lessonsAtLeast(s, 'Gold'),
   ),
   counter(
     'platinum-ten',
     'Platinum Record',
-    'Earn Platinum or better in challenges on ten lessons.',
+    'Earn Platinum or better on ten challenge fields.',
     10,
     (s) => lessonsAtLeast(s, 'Platinum'),
   ),
   counter(
     'diamond-five',
     'Diamonds Are Forever',
-    'Earn Diamond in challenges on five lessons.',
+    'Earn Diamond on five challenge fields.',
     5,
     (s) => lessonsAtLeast(s, 'Diamond'),
   ),
-  counter(
-    'diamond-twenty',
-    'Diamond Mine',
-    'Earn Diamond in challenges on twenty lessons.',
-    20,
-    (s) => lessonsAtLeast(s, 'Diamond'),
+  counter('diamond-twenty', 'Diamond Mine', 'Earn Diamond on twenty challenge fields.', 20, (s) =>
+    lessonsAtLeast(s, 'Diamond'),
   ),
-  counter('hard-ten', 'Hardy Perennial', 'Clear ten lessons on Hard in the story.', 10, (s) =>
+  counter('hard-ten', 'Hardy Perennial', 'Clear ten lessons on Hard in Time Attack.', 10, (s) =>
     hardClears(s),
   ),
   {
@@ -291,7 +289,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   counter(
     'well-travelled',
     'Well Travelled',
-    'Clear every numbered lesson in the story.',
+    'Clear every numbered lesson in Time Attack.',
     MAIN_LEVELS.length,
     (s) => MAIN_LEVELS.filter((level) => storyDone(s, level.id)).length,
   ),
@@ -333,6 +331,26 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     CHALLENGE_IDS.length,
     (s) => CHALLENGE_IDS.filter((mode) => medalsIn(s, mode, 'Bronze') > 0).length,
   ),
+  counter(
+    'first-part',
+    'Tick',
+    'Bring a part of the Great Clock home in the story.',
+    1,
+    (s) => Object.keys(s.campaign.parts).length,
+  ),
+  counter(
+    'clockmaker',
+    'Clockmaker',
+    'Bring all twelve parts of the Great Clock home from the Wild Quad.',
+    12,
+    (s) => Object.keys(s.campaign.parts).length,
+  ),
+  {
+    id: 'like-clockwork',
+    name: 'Like Clockwork',
+    description: 'Bring all twelve parts of the Great Clock home within five days.',
+    earned: (save) => save.campaign.finished !== null && save.campaign.finished <= 5,
+  },
   counter('first-blood', 'Friendly Rivalry', 'Win a battle.', 1, (s) => battlesWon(s)),
   counter(
     'every-race',

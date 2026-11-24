@@ -21,7 +21,11 @@ const TOGGLES: readonly (readonly [ToggleKey, string, string])[] = [
     'Headmaster\u2019s commentary',
     'Professor Sprocket\u2019s remarks on chains, relics and emergencies.',
   ],
-  ['briefings', 'Briefings', 'Show the story and the lesson\u2019s goals before each day begins.'],
+  [
+    'briefings',
+    'Briefings',
+    'Show the briefing and the day\u2019s goals before each story and Time Attack day begins.',
+  ],
 ];
 
 const GRAPHICS_HINTS: Record<GraphicsLevel, string> = {

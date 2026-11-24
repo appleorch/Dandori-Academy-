@@ -11,12 +11,14 @@ import type { EndsWhen } from '../simulation/Simulation';
 import { EVERYTHING_TIMES, TRIAL_TIMES } from './paceTimes';
 
 /**
- * The ways to play a lesson. The story keeps no score: a lesson is passed by bringing every
- * Sunshard home. Each challenge scores the day by its own rule, in the spirit of a classic of
- * the genre, and gives a medal. Battles race a rival Warden on a copy of the same field.
+ * The ways to play. The story (`campaign`) is an open expedition kept from one day to the next.
+ * Time Attack (`lessons`) is the Academy's numbered lessons in order, against the clock: it was
+ * the story until 0.19.0. Each challenge is played on fields built for it alone and scores the
+ * day by its own rule, for a medal. Battles race a rival Warden on a copy of a lesson.
  */
 export const MODE_IDS = [
-  'story',
+  'campaign',
+  'lessons',
   'growing',
   'hunt',
   'mission',
@@ -41,7 +43,7 @@ export interface ModeSpec {
   summary: string;
   /** How the day is scored or won, line by line, for the briefing and the results. */
   rules: readonly string[];
-  kind: 'story' | 'challenge' | 'battle';
+  kind: 'campaign' | 'lessons' | 'challenge' | 'battle';
   endsWhen: EndsWhen;
   /** Whether the Kiln grows new Sproutlings. */
   growth: boolean;
@@ -59,17 +61,37 @@ export const HUNT_SECONDS_PER_POINT = 2;
 export const MISSION_POINTS_PER_SECOND = 10;
 /** A Growing Season's Platinum is this share of the most Sproutlings the lesson can grow. */
 export const GROWING_PLATINUM_SHARE = 0.9;
+/** A Growing Season's Diamond asks for this many times the test player's headcount. */
+export const GROWING_DIAMOND_FACTOR = 1.15;
+/** Points per Sproutling alive at the end of a Lean Squad Trial. */
+export const TRIAL_POINTS_PER_SPROUTLING = 50;
 
 export const MODES: Record<ModeId, ModeSpec> = {
-  story: {
-    id: 'story',
+  campaign: {
+    id: 'campaign',
     name: 'Story',
-    summary: 'The Academy’s lessons in order. No score: bring every Sunshard home.',
+    summary:
+      'An open expedition into the wild grounds. Explore freely, day after day, and bring the Great Clock’s parts home.',
+    rules: [
+      'The grounds are yours to roam: go where you like, in any order, over as many days as you need.',
+      'What you do stays done. Relics brought home, gates broken and bridges built are still that way tomorrow.',
+      'At sunset, every Sproutling not in your squad or near the Kiln or a lit beacon is lost to the night. Gather them before the sun goes down.',
+      'Sproutlings that make it home wait in the Kiln for the next day. End the day early from the pause menu.',
+    ],
+    kind: 'campaign',
+    endsWhen: 'clock',
+    growth: true,
+  },
+  lessons: {
+    id: 'lessons',
+    name: 'Time Attack',
+    summary:
+      'The Academy’s numbered lessons in order, against the clock. Bring every Sunshard home and beat your best time.',
     rules: [
       'Bring every Sunshard home to pass the lesson and open the next.',
-      'There is no score. The Academy keeps count of the days you take, the relics you recover and the Sproutlings you grow and lose.',
+      'Every Sunshard home is timed against the same shard on your fastest clear: green ahead, red behind.',
     ],
-    kind: 'story',
+    kind: 'lessons',
     endsWhen: 'shards',
     growth: true,
   },
@@ -128,14 +150,16 @@ export const MODES: Record<ModeId, ModeSpec> = {
   trial: {
     id: 'trial',
     name: 'Lean Squad Trial',
-    summary: 'The squad you start with is all you get: the Kiln grows nothing today.',
+    summary:
+      'No clock and no Kiln: bring every Sunshard home and lose as few Sproutlings as you can.',
     rules: [
+      'There is no clock. Take as long as you need: only losses count.',
       'The Kiln grows nothing: pods and carcasses add no Sproutlings. Every one lost is gone.',
-      'Score as in the Dandori Challenge: 10 for every point of weight home, and each second left once everything is collected.',
-      'Platinum and Diamond need everything collected.',
+      `Score: 10 for every point of Sunshard weight home, and once every Sunshard is home, ${TRIAL_POINTS_PER_SPROUTLING} for every Sproutling still alive. Beasts are worth nothing: fight only what stands in the way.`,
+      'Medals go by losses. Platinum and Diamond need every Sunshard home; Diamond needs nobody lost.',
     ],
     kind: 'challenge',
-    endsWhen: 'everything',
+    endsWhen: 'shards',
     growth: false,
   },
   marble: {
@@ -202,20 +226,39 @@ export function carcassWeight(level: LevelDefinition): number {
   return weight;
 }
 
-/** Whether a challenge can be played on a lesson. A trial needs a squad that can finish it. */
+/**
+ * Whether a challenge's rule applies to a field. A challenge field belongs to its own challenge.
+ * The lessons were played as challenges until 0.19.0; their runs are still checked by the rules
+ * they were played under, so a lesson still answers for the challenges it offered then.
+ */
 export function challengeOpen(mode: ChallengeId, level: LevelDefinition): boolean {
+  if (level.challenge) return level.challenge.mode === mode;
   return mode !== 'trial' || TRIAL_TIMES[level.id] !== undefined;
 }
 
+/** Whether a day is a Lean Squad Trial by the rule since 0.19.0: no clock, medals by losses. */
+function lossTrial(mode: ChallengeId, level: LevelDefinition): boolean {
+  return mode === 'trial' && level.challenge !== undefined;
+}
+
+/** Whether a challenge's medals ask for a pace: every one but the Growing Season and the Trial. */
+export function challengeTimed(mode: ChallengeId, level: LevelDefinition): boolean {
+  return mode !== 'growing' && !lossTrial(mode, level);
+}
+
 /**
- * The finish times a challenge's medals are measured against: the story's for the Treasure Hunt
- * (which ends with the last Sunshard, as the story does), and the measured times for collecting
- * everything for the Mission, the Dandori Challenge and the Trial.
+ * The finish times a challenge's medals are measured against. A challenge field carries the
+ * test player's own measured time. On a lesson (runs from before 0.19.0): the story's for the
+ * Treasure Hunt, and the measured times for collecting everything for the rest.
  */
 export function challengeTimes(
   mode: ChallengeId,
   level: LevelDefinition,
 ): { platinum: number; diamond: number } {
+  if (level.challenge) {
+    const pace = level.challenge.pace;
+    return { platinum: pace, diamond: Math.floor(pace * DIAMOND_SHARE) };
+  }
   const measured =
     mode === 'trial'
       ? TRIAL_TIMES[level.id]
@@ -226,9 +269,14 @@ export function challengeTimes(
   return { platinum: measured, diamond: Math.floor(measured * DIAMOND_SHARE) };
 }
 
+/** Sproutlings a Lean Squad Trial may lose and still earn Platinum: as many as the test player. */
+export function trialLosses(level: LevelDefinition): number {
+  return level.challenge?.mode === 'trial' ? level.challenge.pace : 0;
+}
+
 /**
- * Platinum and Diamond scores for a challenge on a lesson: a perfect day at the Platinum time,
- * and at the Diamond time. Glowcaps are left out, as they may sprout too late to take at pace;
+ * Platinum and Diamond scores for a challenge on a field: a perfect day at the Platinum pace,
+ * and at the Diamond pace. Glowcaps are left out, as they may sprout too late to take at pace;
  * they still add to the score, on top. Bronze, Silver and Gold are shares of Platinum.
  */
 export function challengePar(mode: ChallengeId, level: LevelDefinition): Par {
@@ -238,6 +286,15 @@ export function challengePar(mode: ChallengeId, level: LevelDefinition): Par {
   switch (mode) {
     case 'growing': {
       const possible = sproutlingsPossible(level);
+      if (level.challenge) {
+        // Platinum is the test player's headcount at sunset; Diamond a clearly bigger one.
+        const pace = level.challenge.pace;
+        const diamondScore = Math.max(
+          pace,
+          Math.min(possible, Math.ceil(pace * GROWING_DIAMOND_FACTOR)),
+        );
+        return { parScore: pace, diamondScore };
+      }
       return { parScore: Math.ceil(possible * GROWING_PLATINUM_SHARE), diamondScore: possible };
     }
     case 'hunt': {
@@ -256,6 +313,14 @@ export function challengePar(mode: ChallengeId, level: LevelDefinition): Par {
     }
     case 'dandori':
     case 'trial': {
+      if (lossTrial(mode, level)) {
+        const base = shardWeight(level) * POINTS_PER_WEIGHT;
+        const squad = level.startingWorkers;
+        return {
+          parScore: base + (squad - trialLosses(level)) * TRIAL_POINTS_PER_SPROUTLING,
+          diamondScore: base + squad * TRIAL_POINTS_PER_SPROUTLING,
+        };
+      }
       const base = (shardWeight(level) + carcassWeight(level)) * POINTS_PER_WEIGHT;
       return { parScore: base + (day - platinum), diamondScore: base + (day - diamond) };
     }
@@ -378,8 +443,29 @@ export function scoreChallenge(
       ];
       break;
     }
-    case 'dandori':
     case 'trial':
+    case 'dandori':
+      if (lossTrial(mode, level)) {
+        // Sunshard weight is the weight home less carcasses and Glowcaps.
+        const shardsWeight = Math.max(0, facts.weight - glowWeight - facts.carcassWeight);
+        gateMet = facts.shardsHome === facts.shardsTotal;
+        rows = [
+          {
+            label: `Sproutlings kept: ${facts.alive}`,
+            note: gateMet
+              ? `${TRIAL_POINTS_PER_SPROUTLING} each · ${facts.lost} lost`
+              : 'Only once every Sunshard is home',
+            value: gateMet ? facts.alive * TRIAL_POINTS_PER_SPROUTLING : 0,
+          },
+          {
+            label: `Sunshards home: ${facts.shardsHome} of ${facts.shardsTotal}`,
+            note: `${POINTS_PER_WEIGHT} per point of weight`,
+            value: shardsWeight * POINTS_PER_WEIGHT,
+          },
+          ...glowcapRow(glowWeight * POINTS_PER_WEIGHT),
+        ];
+        break;
+      }
       gateMet = facts.everything;
       rows = [
         {
@@ -417,22 +503,42 @@ export interface MedalTarget {
   score: number;
   /** The second of the day by which a perfect day must finish to reach it, if time counts. */
   finishBy: number | null;
+  /** What it asks for besides the score, in words, where the clock is not the measure. */
+  note?: string;
 }
 
 /** Bronze to Diamond: the score each needs, and for Platinum and Diamond the pace. */
 export function medalTargets(mode: ChallengeId, level: LevelDefinition): MedalTarget[] {
   const par = challengePar(mode, level);
   const { platinum, diamond } = challengeTimes(mode, level);
-  const timed = mode !== 'growing';
+  const timed = challengeTimed(mode, level);
+  const note = (rank: Rank): string | undefined => {
+    if (rank !== 'Platinum' && rank !== 'Diamond') return undefined;
+    if (lossTrial(mode, level)) {
+      const allowed = rank === 'Diamond' ? 0 : trialLosses(level);
+      return allowed === 0
+        ? 'Every Sunshard home, nobody lost'
+        : `Every Sunshard home, ${allowed} lost at most`;
+    }
+    if (mode === 'growing' && level.challenge) {
+      return `${rankScore(rank, par)} Sproutlings at sunset`;
+    }
+    return undefined;
+  };
   return (['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'] as const).map((rank) => ({
     rank,
     score: rankScore(rank, par),
     finishBy: !timed ? null : rank === 'Platinum' ? platinum : rank === 'Diamond' ? diamond : null,
+    note: note(rank),
   }));
 }
 
 /** What Platinum and Diamond need besides the score, in words, or null. */
-export function medalGate(mode: ChallengeId): string | null {
+export function medalGate(mode: ChallengeId, level?: LevelDefinition): string | null {
+  if (level && lossTrial(mode, level)) {
+    const allowed = trialLosses(level);
+    return `Platinum and Diamond need every Sunshard home. Platinum allows ${allowed} ${allowed === 1 ? 'loss' : 'losses'}; Diamond allows none.`;
+  }
   switch (mode) {
     case 'mission':
       return 'Platinum and Diamond need a 100% clear: every Sunshard home and every beast down.';

@@ -36,7 +36,7 @@ export function StoryScreen() {
           ))}
         </p>
         <button type="button" onClick={turn} autoFocus>
-          {last ? (kind === 'prologue' ? 'To the lessons' : 'Close the book') : 'Next'}
+          {last ? (kind === 'prologue' ? 'To the Academy' : 'Close the book') : 'Next'}
         </button>
         {!last && (
           <button type="button" className="secondary" onClick={finish}>

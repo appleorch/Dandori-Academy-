@@ -212,6 +212,8 @@ export class Simulation {
   readonly endsWhen: EndsWhen;
   /** Whether the Kiln grows new Sproutlings from pods and carcasses. */
   readonly growth: boolean;
+  /** A day with no clock (see `LevelDefinition.untimed`): only its goal or the player ends it. */
+  readonly untimed: boolean;
 
   constructor(
     readonly level: LevelDefinition,
@@ -220,6 +222,7 @@ export class Simulation {
     this.visit = options.visit ?? false;
     this.endsWhen = options.endsWhen ?? 'shards';
     this.growth = options.growth ?? true;
+    this.untimed = level.untimed ?? false;
     this.hard = level.difficulty === 'hard';
     this.captainMaxHp = this.hard ? HARD.captainHp : CAPTAIN.maxHp;
     this.captainState.hp = this.captainMaxHp;
@@ -227,7 +230,7 @@ export class Simulation {
       ...level.obstacles,
       ...(level.gates ?? []),
       ...(level.water ?? []),
-      ...(level.bridges ?? []),
+      ...(level.bridges ?? []).filter((bridge) => !bridge.built),
     ];
     this.nav = new NavGrid(level.width, level.depth, this.walls);
     this.nav.setLedges(level.ledges ?? []);
@@ -241,10 +244,21 @@ export class Simulation {
     this.kilnField = new FlowField(this.nav);
     this.kilnField.compute(this.nav.cellIndexAt(level.kiln.x, level.kiln.z));
     this.squadField = new FlowField(this.nav);
-    this.bridges = (level.bridges ?? []).map(
-      (bridge) => new BridgeSite(bridge, bridge.bank, bridge.needs, this.nav),
-    );
-    this.beacons = (level.beacons ?? []).map((spot) => new Beacon(spot.x, spot.z, this.nav));
+    this.bridges = (level.bridges ?? []).map((bridge) => {
+      const site = new BridgeSite(bridge, bridge.bank, bridge.needs, this.nav);
+      if (bridge.built) {
+        site.built = true;
+        site.delivered = bridge.needs;
+      } else {
+        site.delivered = Math.min(bridge.needs - 1, bridge.laid ?? 0);
+      }
+      return site;
+    });
+    this.beacons = (level.beacons ?? []).map((spot) => {
+      const beacon = new Beacon(spot.x, spot.z, this.nav);
+      beacon.lit = spot.lit ?? false;
+      return beacon;
+    });
     this.hatchAt = { ...level.kiln };
     this.timeLeft = level.dayLength;
     this.stats = {
@@ -297,15 +311,18 @@ export class Simulation {
     for (const pod of level.pods) if (pod.kind) this.knownKinds.add(pod.kind);
     (level.logs ?? []).forEach((log, index) => spawnLog(this, log, index));
     (level.saps ?? []).forEach((sap, index) => spawnSap(this, sap, index));
-    for (const enemy of level.enemies) {
+    level.enemies.forEach((enemy, spawn) => {
       spawnEnemy(this, enemy.x, enemy.z, enemy.kind, {
         drop: enemy.drop ?? 0,
         reveals: enemy.reveals,
+        spawn,
       });
-    }
-    for (const gate of level.gates ?? []) {
-      spawnEnemy(this, gate.x, gate.z, 'gate', { hp: gate.hp, shape: gate });
-    }
+    });
+    (level.gates ?? []).forEach((gate, spawn) => {
+      const enemy = spawnEnemy(this, gate.x, gate.z, 'gate', { hp: gate.hp, shape: gate, spawn });
+      // A gate worn down on an earlier day of the story starts the day as damaged as it was.
+      if (gate.left !== undefined) this.enemies.require(enemy).hp = Math.min(gate.hp, gate.left);
+    });
     for (const root of level.roots ?? []) {
       const core = spawnEnemy(this, root.x, root.z, 'lanternroot', { drop: root.drop });
       for (const knot of root.knots) spawnEnemy(this, knot.x, knot.z, 'rootknot', { parent: core });
@@ -370,13 +387,13 @@ export class Simulation {
     updateCarrying(this, dt);
     updateKiln(this, dt);
 
-    if (!this.visit) this.timeLeft = Math.max(0, this.timeLeft - dt);
+    if (!this.visit && !this.untimed) this.timeLeft = Math.max(0, this.timeLeft - dt);
     if (this.ended) return;
     if (this.goalMet()) {
       this.ended = 'allCollected';
     } else if (this.workers.size === 0 && this.kiln.queue.length === 0) {
       this.ended = 'wipedOut';
-    } else if (this.timeLeft === 0) {
+    } else if (this.timeLeft === 0 && !this.untimed) {
       this.ended = 'timeUp';
     }
   }

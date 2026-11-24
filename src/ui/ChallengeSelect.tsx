@@ -2,20 +2,34 @@ import { useState } from 'react';
 import { useGameStore } from '../game/core/gameStore';
 import {
   CHALLENGE_IDS,
-  challengeOpen,
+  challengeTimed,
   isChallenge,
   medalTargets,
   MODES,
+  trialLosses,
   type ChallengeId,
 } from '../game/modes/modes';
 import { modeBest, modeRank } from '../game/save/saveManager';
-import { formatPoints } from './format';
-import { openLessons } from './lessonAccess';
+import { formatPoints, formatTime } from './format';
+import { challengeFieldsOf, challengeLock, hasMedal } from './lessonAccess';
 import { MenuNav } from './MenuNav';
 
+/** One line on what a field's Platinum asks for, by its challenge's rule. */
+function paceLine(mode: ChallengeId, level: ReturnType<typeof challengeFieldsOf>[number]): string {
+  if (mode === 'growing') return `Platinum: ${level.challenge?.pace} Sproutlings by sunset`;
+  if (mode === 'trial') {
+    const losses = trialLosses(level);
+    return losses === 0 ? 'Platinum: lose nobody' : `Platinum: lose ${losses} or fewer`;
+  }
+  return challengeTimed(mode, level)
+    ? `Platinum pace ${formatTime(level.challenge?.pace ?? 0)}`
+    : '';
+}
+
 /**
- * The challenges: pick a way of scoring, then a lesson. Every lesson the story has opened can be
- * played as a challenge, for a medal and a place on the Academy board.
+ * The challenges: pick a challenge, then one of its twelve fields. Every field was built for its
+ * challenge's own rule. The first few are open from the start; each one after opens with a
+ * medal on the one before.
  */
 export function ChallengeSelect() {
   const save = useGameStore((state) => state.save);
@@ -23,7 +37,8 @@ export function ChallengeSelect() {
   const lastMode = useGameStore((state) => state.playMode);
   const [mode, setMode] = useState<ChallengeId>(isChallenge(lastMode) ? lastMode : 'hunt');
   const spec = MODES[mode];
-  const lessons = openLessons(save).filter((level) => challengeOpen(mode, level));
+  const fields = challengeFieldsOf(mode);
+  const won = fields.filter((level) => hasMedal(save, mode, level.id)).length;
 
   return (
     <main className="screen">
@@ -51,55 +66,59 @@ export function ChallengeSelect() {
             ))}
           </ul>
           <p className="note">
-            Medals run Bronze, Silver, Gold, Platinum and Diamond. Glowcaps add to a score but are
-            never needed for a medal. Challenges are played on the Normal day.
+            Twelve fields, each built for this challenge. Medals run Bronze, Silver, Gold, Platinum
+            and Diamond; Platinum is set by the Academy’s test player on each field. Glowcaps add to
+            a score but are never needed for a medal.
+          </p>
+          <p className="challenge-progress">
+            {won} of {fields.length} fields with a medal
           </p>
         </section>
-        {lessons.length === 0 ? (
-          <p className="note">
-            {mode === 'trial'
-              ? 'No lesson the story has opened can be finished by its starting squad alone yet.'
-              : 'Open lessons in the story to play them here.'}
-          </p>
-        ) : (
-          <ol className="lessons">
-            {lessons.map((level) => {
-              const rank = modeRank(save, mode, level.id);
-              const best = modeBest(save, mode, level.id);
-              const targets = medalTargets(mode, level);
-              const platinum = targets.find((target) => target.rank === 'Platinum');
-              const diamond = targets.find((target) => target.rank === 'Diamond');
-              return (
-                <li key={level.id}>
-                  <button type="button" className="lesson" onClick={() => startDay(level.id, mode)}>
-                    <span className="lesson-number">{level.side ? '▼' : level.stage}</span>
-                    <span className="lesson-text">
-                      <strong>{level.name}</strong>
-                      <span className="targets-line">
-                        {platinum && (
-                          <span className="rank-platinum">
-                            Platinum {formatPoints(platinum.score)}
-                          </span>
-                        )}
-                        {diamond && (
-                          <span className="rank-diamond">
-                            Diamond {formatPoints(diamond.score)}
-                          </span>
-                        )}
-                      </span>
+        <ol className="lessons">
+          {fields.map((level) => {
+            const locked = challengeLock(save, level);
+            const rank = modeRank(save, mode, level.id);
+            const best = modeBest(save, mode, level.id);
+            const targets = medalTargets(mode, level);
+            const platinum = targets.find((target) => target.rank === 'Platinum');
+            return (
+              <li key={level.id}>
+                <button
+                  type="button"
+                  className={locked ? 'lesson locked' : 'lesson'}
+                  disabled={locked !== null}
+                  title={locked ?? level.brief}
+                  onClick={() => startDay(level.id, mode)}
+                >
+                  <span className="lesson-number">{level.challenge?.order}</span>
+                  <span className="lesson-text">
+                    <strong>{level.name}</strong>
+                    <span className="targets-line">
+                      {locked ? (
+                        <span>{locked}</span>
+                      ) : (
+                        <>
+                          {platinum && (
+                            <span className="rank-platinum">
+                              Platinum {formatPoints(platinum.score)}
+                            </span>
+                          )}
+                          <span>{paceLine(mode, level)}</span>
+                        </>
+                      )}
                     </span>
-                    {rank && (
-                      <span className={`badge rank-${rank.toLowerCase()}`}>
-                        {rank}
-                        <small>{formatPoints(best)} pts</small>
-                      </span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        )}
+                  </span>
+                  {rank && rank !== 'Copper' && (
+                    <span className={`badge rank-${rank.toLowerCase()}`}>
+                      {rank}
+                      <small>{formatPoints(best)} pts</small>
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
       </div>
     </main>
   );

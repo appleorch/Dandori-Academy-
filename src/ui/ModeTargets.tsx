@@ -2,6 +2,7 @@ import { rankValue, type Rank } from '../game/dandori/scoring';
 import { RIVAL_NAMES, type RivalLevel } from '../game/modes/battle';
 import {
   isBattle,
+  challengeTimed,
   isChallenge,
   medalGate,
   medalTargets,
@@ -44,7 +45,7 @@ export function ModeTargets({ level, mode, rival, earned }: ModeTargetsProps) {
               <tr>
                 <th scope="col">Medal</th>
                 <th scope="col">Score</th>
-                <th scope="col">Pace</th>
+                <th scope="col">{challengeTimed(mode, level) ? 'Pace' : 'Needs'}</th>
               </tr>
             </thead>
             <tbody>
@@ -59,7 +60,7 @@ export function ModeTargets({ level, mode, rival, earned }: ModeTargetsProps) {
                     <td>{formatPoints(target.score)}</td>
                     <td>
                       {target.finishBy === null
-                        ? ''
+                        ? (target.note ?? '')
                         : `Done by ${formatTime(target.finishBy)} (${formatTime(level.dayLength - target.finishBy)} left)`}
                     </td>
                   </tr>
@@ -68,8 +69,9 @@ export function ModeTargets({ level, mode, rival, earned }: ModeTargetsProps) {
             </tbody>
           </table>
           <p className="note">
-            {medalGate(mode) ?? ''} Paces assume a perfect day otherwise. Glowcaps add to your score
-            but never count for a medal.
+            {medalGate(mode, level) ?? ''}{' '}
+            {challengeTimed(mode, level) ? 'Paces assume a perfect day otherwise.' : ''} Glowcaps
+            add to your score but never count for a medal.
           </p>
         </>
       )}

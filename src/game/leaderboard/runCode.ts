@@ -10,7 +10,7 @@ import {
 import {
   bonusParts,
   forDifficulty,
-  LEVELS,
+  levelById,
   shardCount,
   sproutlingsPossible,
   treasureTotal,
@@ -135,7 +135,7 @@ function hash(text: string): string {
 
 /** The lesson a run was played on, as it was played (Normal or Hard). */
 export function lessonOf(levelId: string, difficulty: Difficulty): LevelDefinition | null {
-  const base = LEVELS.find((level) => level.id === levelId);
+  const base = levelById(levelId);
   return base ? forDifficulty(base, difficulty) : null;
 }
 
@@ -481,9 +481,17 @@ function checkChallengeRun(
   if (!RANKS.includes(run.rank)) return 'unknown rank';
   if (run.shardsTotal !== shardCount(level)) return 'wrong Sunshard count';
   if (run.shards > run.shardsTotal) return 'more Sunshards than the lesson has';
-  if (run.time > level.dayLength + 0.01) return 'longer than the day';
-  if (Math.abs(run.time + run.timeLeft - level.dayLength) > 1.01) return 'clock does not add up';
+  // A field with no clock has no day to run over, and never any time left.
+  if (level.untimed) {
+    if (run.timeLeft !== 0) return 'time left on a day with no clock';
+  } else {
+    if (run.time > level.dayLength + 0.01) return 'longer than the day';
+    if (Math.abs(run.time + run.timeLeft - level.dayLength) > 1.01) return 'clock does not add up';
+  }
   if (run.alive > WORKER.maxOnField) return 'more Sproutlings than the field holds';
+  if (mode === 'trial' && level.untimed && run.alive + run.lost > level.startingWorkers) {
+    return 'more Sproutlings than the Trial starts with';
+  }
   if (run.treasure > treasureCeiling(level)) return 'more treasure than the lesson holds';
   const weight = run.weight ?? 0;
   if (weight > weightCeiling(level) || (run.carcassWeight ?? 0) > weight) {

@@ -2,6 +2,7 @@ import type { Difficulty } from '../core/difficulty';
 import { rankValue, RANKS, type Rank } from '../dandori/scoring';
 import { compareRuns, type RunEntry } from '../leaderboard/runCode';
 import type { ModeId } from '../modes/modes';
+import { newCampaign, parseCampaign, type CampaignState } from '../campaign/campaign';
 
 export const SAVE_VERSION = '1';
 const STORAGE_KEY = 'dandori-academy-save';
@@ -98,6 +99,11 @@ export interface SaveData {
   bests: Record<string, number>;
   /** Battles won, lost and drawn, per battle. */
   battles: Record<string, BattleRecord>;
+  /**
+   * The story's open expedition, kept from one day to the next. (The lesson run that was the
+   * story before 0.19.0, now Time Attack, keeps its progress in `story` and `stage`.)
+   */
+  campaign: CampaignState;
 }
 
 export interface StoryProgress {
@@ -194,6 +200,8 @@ export interface DayRecord {
   run?: RunEntry;
   /** What else the day did, for the achievements. */
   feats?: Partial<DayFeats>;
+  /** A story day: the expedition as it stands after it. */
+  campaign?: CampaignState;
 }
 
 /** The subset of the Web Storage API the save manager needs. */
@@ -230,6 +238,7 @@ export function emptySave(): SaveData {
     medals: {},
     bests: {},
     battles: {},
+    campaign: newCampaign(),
   };
 }
 
@@ -363,6 +372,7 @@ export function parseSave(value: unknown): SaveData | null {
     medals: isStringRecord(value.medals) ? value.medals : {},
     bests: isNumberRecord(value.bests) ? value.bests : {},
     battles: parseBattles(value.battles),
+    campaign: parseCampaign(value.campaign) ?? newCampaign(),
   };
 }
 
@@ -506,10 +516,10 @@ export function hardUnlocked(save: SaveData, levelId: string): boolean {
  * its best medal and score per lesson; a battle adds to its record.
  */
 export function recordDay(save: SaveData, day: DayRecord): SaveData {
-  const mode = day.mode ?? 'story';
+  const mode = day.mode ?? 'lessons';
   const hard = day.difficulty === 'hard';
   const cleared = day.treasureIds.length === day.treasuresTotal;
-  const story = mode === 'story';
+  const story = mode === 'lessons';
   const key = splitKey(day.levelId, day.difficulty);
   const ids = [
     ...day.treasureIds.map((id) => `${day.levelId}:${id}`),
@@ -563,6 +573,7 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
     medals,
     bests,
     battles,
+    campaign: day.campaign ?? save.campaign,
     totals: {
       days: save.totals.days + 1,
       treasures: save.totals.treasures + day.treasureIds.length,

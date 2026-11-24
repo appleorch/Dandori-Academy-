@@ -105,6 +105,11 @@ export interface Enemy {
   shape: Box | null;
   /** The Lanternroot a root-knot belongs to, or NO_ENTITY. */
   parent: Entity;
+  /**
+   * Its place in the lesson's list of enemies (or of gates, for a gate), or -1 for anything
+   * that arrived during the day. The story uses it to remember what was beaten.
+   */
+  spawn: number;
   /** Late phases unlocked as health falls; 0 at full health. */
   phase: number;
   /** Charges made since it last recovered. */
