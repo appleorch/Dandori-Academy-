@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ACESFilmicToneMapping } from 'three';
 import { audio } from '../game/audio/audioManager';
 import { useGameStore } from '../game/core/gameStore';
@@ -10,6 +10,10 @@ import { evaluate } from './hand';
 import { PokerScene, type TableView } from './PokerScene';
 import { useTouchDevice } from '../ui/useTouchDevice';
 import { PLAYERS, STARTING_STACK, WARDEN } from './table';
+import { allInStreak, WALKOUT_SHOVES } from './walkout';
+
+/** What is through the dark door. Loaded only when somebody goes through it. */
+const Squarehollow = lazy(() => import('../squarehollow/Squarehollow'));
 
 const NAMES = [WARDEN, ...PLAYERS.map((player) => player.name)];
 /** How long a regular takes to decide, and how long the table waits before the next card. */
@@ -18,6 +22,10 @@ const DEAL_MS = 1000;
 /** With the Warden out of the hand the regulars play it out briskly. */
 const HURRY = 0.45;
 const SPEECH_MS = 2600;
+/** A beat after the last shove before the Warden gets up, so the chips land first. */
+const STAND_DELAY_MS = 1300;
+/** When, into the walk out, Mr. Ashford has something to say about it. */
+const WARNING_MS = 2500;
 
 function newGame(): PokerGame {
   const game = new PokerGame(NAMES, STARTING_STACK, Math.random);
@@ -107,6 +115,19 @@ export function PokerRoom() {
   const [wanted, setWanted] = useState(0);
   const [found, setFound] = useState(false);
   const bump = useCallback(() => setVersion((v) => v + 1), []);
+  // Three shoves in a row and the Warden walks out through the dark door, and beyond it.
+  const [away, setAway] = useState<'walking' | 'beyond' | null>(null);
+  const [returns, setReturns] = useState(0);
+  const [caption, setCaption] = useState<string | null>(null);
+  const streak = useRef(0);
+  const blackout = useRef<HTMLDivElement>(null);
+  const standTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (standTimer.current !== null) window.clearTimeout(standTimer.current);
+    },
+    [],
+  );
 
   // Finding the room is its own reward.
   useEffect(() => {
@@ -133,9 +154,10 @@ export function PokerRoom() {
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [game, handNumber]);
 
-  // The regulars' turns, and the dealing of each street, on a timer.
+  // The regulars' turns, and the dealing of each street, on a timer. The table waits while
+  // the Warden is away.
   useEffect(() => {
-    if (game.handOver || game.toAct === 0) return;
+    if (away || game.handOver || game.toAct === 0) return;
     const me = game.seats[0];
     const hurry = me.folded || me.out || me.allIn ? HURRY : 1;
     if (game.toAct > 0) {
@@ -170,7 +192,30 @@ export function PokerRoom() {
       bump();
     }, DEAL_MS * hurry);
     return () => window.clearTimeout(timer);
-  }, [game, view, version, grant, bump]);
+  }, [game, view, version, grant, bump, away]);
+
+  // The regulars notice the Warden getting up, and one of them knows where that door goes.
+  useEffect(() => {
+    if (away !== 'walking') return;
+    const present = PLAYERS.flatMap((_, i) => (game.seats[i + 1].out ? [] : [i + 1]));
+    const ashford = PLAYERS.findIndex((player) => player.name === 'Mr. Ashford') + 1;
+    const first = present.filter((index) => index !== ashford);
+    const timers: number[] = [];
+    if (first.length > 0) {
+      const index = first[Math.floor(Math.random() * first.length)];
+      timers.push(window.setTimeout(() => say(view, index, PLAYERS[index - 1].quips.leave), 300));
+    }
+    const warner = present.includes(ashford) ? ashford : present[0];
+    if (warner !== undefined) {
+      timers.push(
+        window.setTimeout(() => {
+          say(view, warner, PLAYERS[warner - 1].quips.leave);
+          setCaption(`${PLAYERS[warner - 1].name}: “${PLAYERS[warner - 1].quips.leave}”`);
+        }, WARNING_MS),
+      );
+    }
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [away, game, view]);
 
   // A soft chime when the action comes round to the Warden.
   useEffect(() => {
@@ -183,11 +228,36 @@ export function PokerRoom() {
       const before = game.pot;
       game.act(action);
       soundFor(game, 0, before);
+      streak.current = allInStreak(streak.current, game.seats[0].lastAction);
+      if (streak.current >= WALKOUT_SHOVES && standTimer.current === null) {
+        streak.current = 0;
+        standTimer.current = window.setTimeout(() => {
+          standTimer.current = null;
+          setAway('walking');
+        }, STAND_DELAY_MS);
+      }
       if (game.handOver) finishHand({ game, view }, grant);
       bump();
     },
     [game, view, grant, bump],
   );
+
+  const through = useCallback(() => {
+    setCaption(null);
+    setAway('beyond');
+  }, []);
+
+  // Back through the door and into the chair, as if nothing happened.
+  const comeBack = useCallback(() => {
+    setAway(null);
+    setReturns((n) => n + 1);
+    audio.play('doorOpen');
+    const present = PLAYERS.flatMap((_, i) => (game.seats[i + 1].out ? [] : [i + 1]));
+    if (present.length > 0) {
+      const index = present[Math.floor(Math.random() * present.length)];
+      window.setTimeout(() => say(view, index, PLAYERS[index - 1].quips.back), 900);
+    }
+  }, [game, view]);
 
   const nextHand = useCallback(() => {
     if (!game.handOver || game.champion >= 0 || game.seats[0].out) return;
@@ -205,6 +275,8 @@ export function PokerRoom() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
+      // On the way out, and beyond the door, the table's keys do nothing.
+      if (away) return;
       if (event.code === 'Escape') leave();
       else if (event.code === 'Space' || event.code === 'Enter') {
         event.preventDefault();
@@ -214,7 +286,7 @@ export function PokerRoom() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [leave, nextHand, act]);
+  }, [leave, nextHand, act, away]);
 
   const myHand =
     seat.cards.length === 2 && !seat.folded && game.community.length >= 3
@@ -245,138 +317,163 @@ export function PokerRoom() {
     : [];
 
   return (
-    <div className="poker">
-      <Canvas
-        shadows={lite ? false : 'soft'}
-        dpr={lite ? [1, 1.5] : graphics === 'high' ? [1, 2] : [1, 1.5]}
-        gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
-        camera={{ fov: 62, near: 0.05, far: 40, position: [0, 1.62, 2.95] }}
+    <>
+      <div
+        className={`poker${away === 'walking' ? ' walking' : ''}${away === 'beyond' ? ' away' : ''}`}
       >
-        <PokerScene game={game} view={view} version={version} lite={lite} />
-      </Canvas>
-      <div className="poker-vignette" />
-      <div className="poker-top">
-        <div className="chip">
-          The Back Room · Hand {game.handNumber} · Blinds {small}/{big}
-          <small> · up in {handsLeft}</small>
+        <Canvas
+          frameloop={away === 'beyond' ? 'never' : 'always'}
+          shadows={lite ? false : 'soft'}
+          dpr={lite ? [1, 1.5] : graphics === 'high' ? [1, 2] : [1, 1.5]}
+          gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
+          camera={{ fov: 62, near: 0.05, far: 40, position: [0, 1.62, 2.95] }}
+        >
+          <PokerScene
+            game={game}
+            view={view}
+            version={version}
+            lite={lite}
+            leaving={away === 'walking'}
+            blackout={blackout}
+            onThrough={through}
+          />
+        </Canvas>
+        <div className="poker-vignette" />
+        <div className="poker-top">
+          <div className="chip">
+            The Back Room · Hand {game.handNumber} · Blinds {small}/{big}
+            <small> · up in {handsLeft}</small>
+          </div>
+          <div className="chip poker-board" aria-label="Board">
+            {game.community.length === 0
+              ? 'No cards on the board yet'
+              : game.community.map((card) => (
+                  <span key={card} className={isRed(card) ? 'card-glyph red' : 'card-glyph'}>
+                    {cardLabel(card)}
+                  </span>
+                ))}
+            {pot > 0 && !game.handOver && <strong>Pot {pot}</strong>}
+          </div>
+          <button type="button" className="chip quit" onClick={leave}>
+            Leave the table <kbd>Esc</kbd>
+          </button>
         </div>
-        <div className="chip poker-board" aria-label="Board">
-          {game.community.length === 0
-            ? 'No cards on the board yet'
-            : game.community.map((card) => (
+        {found && <p className="poker-found">Achievement unlocked: Five Knocks</p>}
+
+        <div className="poker-bottom">
+          <div className="poker-me">
+            <span>
+              Your chips <strong>{seat.stack}</strong>
+            </span>
+            <span className="poker-cards">
+              {seat.cards.map((card) => (
                 <span key={card} className={isRed(card) ? 'card-glyph red' : 'card-glyph'}>
                   {cardLabel(card)}
                 </span>
               ))}
-          {pot > 0 && !game.handOver && <strong>Pot {pot}</strong>}
-        </div>
-        <button type="button" className="chip quit" onClick={leave}>
-          Leave the table <kbd>Esc</kbd>
-        </button>
-      </div>
-      {found && <p className="poker-found">Achievement unlocked: Five Knocks</p>}
+            </span>
+            {myHand && <span className="poker-hand">{myHand}</span>}
+            {seat.folded && <span className="poker-hand">Folded</span>}
+          </div>
 
-      <div className="poker-bottom">
-        <div className="poker-me">
-          <span>
-            Your chips <strong>{seat.stack}</strong>
-          </span>
-          <span className="poker-cards">
-            {seat.cards.map((card) => (
-              <span key={card} className={isRed(card) ? 'card-glyph red' : 'card-glyph'}>
-                {cardLabel(card)}
-              </span>
-            ))}
-          </span>
-          {myHand && <span className="poker-hand">{myHand}</span>}
-          {seat.folded && <span className="poker-hand">Folded</span>}
-        </div>
-
-        {champion === 0 ? (
-          <div className="poker-actions">
-            <p className="poker-status">
-              You cleaned out the table. The regulars would like it known that this never happened.
-            </p>
-            <button type="button" onClick={restart}>
-              Play again
-            </button>
-          </div>
-        ) : bust ? (
-          <div className="poker-actions">
-            <p className="poker-status">You are out of chips. {summary}</p>
-            <button type="button" onClick={restart}>
-              Buy back in
-            </button>
-          </div>
-        ) : game.handOver ? (
-          <div className="poker-actions">
-            <p className="poker-status">{summary}</p>
-            <button type="button" onClick={nextHand} autoFocus>
-              Deal the next hand <kbd>Space</kbd>
-            </button>
-          </div>
-        ) : legal ? (
-          <div className="poker-actions">
-            <div className="poker-buttons">
-              {!legal.canCheck && (
-                <button type="button" className="secondary" onClick={() => act({ type: 'fold' })}>
-                  Fold <kbd>F</kbd>
-                </button>
-              )}
-              <button type="button" onClick={() => act({ type: 'call' })}>
-                {legal.canCheck
-                  ? 'Check'
-                  : legal.callAmount >= seat.stack
-                    ? `Call all in ${legal.callAmount}`
-                    : `Call ${legal.callAmount}`}{' '}
-                <kbd>C</kbd>
+          {champion === 0 ? (
+            <div className="poker-actions">
+              <p className="poker-status">
+                You cleaned out the table. The regulars would like it known that this never
+                happened.
+              </p>
+              <button type="button" onClick={restart}>
+                Play again
               </button>
-              {legal.canRaise && (
-                <button
-                  type="button"
-                  className="raise"
-                  onClick={() => act({ type: 'raise', to: raiseTo })}
-                >
-                  {raiseTo >= legal.maxRaiseTo
-                    ? `All in ${legal.maxRaiseTo}`
-                    : game.currentBet === 0
-                      ? `Bet ${raiseTo}`
-                      : `Raise to ${raiseTo}`}
+            </div>
+          ) : bust ? (
+            <div className="poker-actions">
+              <p className="poker-status">You are out of chips. {summary}</p>
+              <button type="button" onClick={restart}>
+                Buy back in
+              </button>
+            </div>
+          ) : game.handOver ? (
+            <div className="poker-actions">
+              <p className="poker-status">{summary}</p>
+              <button type="button" onClick={nextHand} autoFocus>
+                Deal the next hand <kbd>Space</kbd>
+              </button>
+            </div>
+          ) : legal ? (
+            <div className="poker-actions">
+              <div className="poker-buttons">
+                {!legal.canCheck && (
+                  <button type="button" className="secondary" onClick={() => act({ type: 'fold' })}>
+                    Fold <kbd>F</kbd>
+                  </button>
+                )}
+                <button type="button" onClick={() => act({ type: 'call' })}>
+                  {legal.canCheck
+                    ? 'Check'
+                    : legal.callAmount >= seat.stack
+                      ? `Call all in ${legal.callAmount}`
+                      : `Call ${legal.callAmount}`}{' '}
+                  <kbd>C</kbd>
                 </button>
+                {legal.canRaise && (
+                  <button
+                    type="button"
+                    className="raise"
+                    onClick={() => act({ type: 'raise', to: raiseTo })}
+                  >
+                    {raiseTo >= legal.maxRaiseTo
+                      ? `All in ${legal.maxRaiseTo}`
+                      : game.currentBet === 0
+                        ? `Bet ${raiseTo}`
+                        : `Raise to ${raiseTo}`}
+                  </button>
+                )}
+              </div>
+              {legal.canRaise && legal.maxRaiseTo > legal.minRaiseTo && (
+                <div className="poker-raise">
+                  <input
+                    type="range"
+                    aria-label="Raise amount"
+                    min={legal.minRaiseTo}
+                    max={legal.maxRaiseTo}
+                    step={5}
+                    value={raiseTo}
+                    onChange={(event) => setWanted(Number(event.target.value))}
+                  />
+                  {presets.map(([label, amount]) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className="secondary small"
+                      onClick={() => setWanted(amount)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
-            {legal.canRaise && legal.maxRaiseTo > legal.minRaiseTo && (
-              <div className="poker-raise">
-                <input
-                  type="range"
-                  aria-label="Raise amount"
-                  min={legal.minRaiseTo}
-                  max={legal.maxRaiseTo}
-                  step={5}
-                  value={raiseTo}
-                  onChange={(event) => setWanted(Number(event.target.value))}
-                />
-                {presets.map(([label, amount]) => (
-                  <button
-                    key={label}
-                    type="button"
-                    className="secondary small"
-                    onClick={() => setWanted(amount)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="poker-actions">
-            <p className="poker-status">
-              {acting ? `${acting} is thinking...` : 'The dealer turns a card...'}
-            </p>
-          </div>
-        )}
+          ) : (
+            <div className="poker-actions">
+              <p className="poker-status">
+                {acting ? `${acting} is thinking...` : 'The dealer turns a card...'}
+              </p>
+            </div>
+          )}
+        </div>
+        {caption && <p className="poker-caption">{caption}</p>}
+        <div
+          key={returns}
+          ref={blackout}
+          className={returns > 0 ? 'poker-blackout back' : 'poker-blackout'}
+        />
       </div>
-    </div>
+      {away === 'beyond' && (
+        <Suspense fallback={<div className="sq" />}>
+          <Squarehollow onLeave={comeBack} />
+        </Suspense>
+      )}
+    </>
   );
 }

@@ -84,7 +84,13 @@ export type SoundName =
   | 'yourTurn'
   | 'allIn'
   | 'rake'
-  | 'voice';
+  | 'voice'
+  | 'scrape'
+  | 'darkDoor'
+  | 'dig'
+  | 'build'
+  | 'shatter'
+  | 'rustle';
 
 /** Where the game is: it sets the reverb and the ambience. */
 export type AudioScene =
@@ -664,6 +670,39 @@ class AudioManager {
       }
       case 'pokerLose':
         this.notes(out, [330, 294, 247], 0.2, 0.4, 0.14);
+        break;
+      case 'scrape':
+        // A chair pushed back over boards.
+        this.tone(out, 95 * d, 72, 0.32, 'sawtooth', 0.05);
+        this.burst(out, 0.3, 700, 0.16, 0, 'bandpass', 420);
+        break;
+      case 'darkDoor':
+        // A door that has not been opened in a long time, onto somewhere very quiet.
+        this.tone(out, 120, 260, 1.1, 'sawtooth', 0.045);
+        this.tone(out, 62, 38, 2.4, 'sine', 0.3, 0.2);
+        this.burst(out, 1.8, 900, 0.14, 0.15, 'lowpass', 90);
+        this.bell(out, 196, 2.2, 0.05, 0.6);
+        break;
+      case 'dig': {
+        // A crunch: lower for soil, a sharper crack for stone. `pitch` sets which.
+        const p = options?.pitch ?? 1;
+        this.burst(out, 0.14, 1100 * p, 0.32, 0, 'lowpass', 260 * p);
+        this.tone(out, 150 * p * d, 70, 0.09, 'sine', 0.3);
+        if (p > 1.3) this.burst(out, 0.04, 4200, 0.14, 0, 'highpass');
+        break;
+      }
+      case 'build':
+        this.tone(out, 210 * (options?.pitch ?? 1) * d, 150, 0.07, 'triangle', 0.3);
+        this.burst(out, 0.05, 1800, 0.18, 0, 'bandpass', 900);
+        break;
+      case 'shatter':
+        this.burst(out, 0.2, 5200, 0.2, 0, 'highpass');
+        for (let i = 0; i < 6; i++)
+          this.bell(out, rand(2200, 3800), 0.16, 0.05, i * rand(0.02, 0.04));
+        break;
+      case 'rustle':
+        this.burst(out, 0.26, 2600, 0.22, 0, 'bandpass', 1100);
+        this.burst(out, 0.18, 3400, 0.12, 0.08, 'bandpass', 1600);
         break;
     }
   }

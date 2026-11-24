@@ -5,7 +5,16 @@
  */
 
 export type TrackName =
-  'menu' | 'meadow' | 'autumn' | 'marsh' | 'dusk' | 'cave' | 'terrarium' | 'boss' | 'poker';
+  | 'menu'
+  | 'meadow'
+  | 'autumn'
+  | 'marsh'
+  | 'dusk'
+  | 'cave'
+  | 'terrarium'
+  | 'boss'
+  | 'poker'
+  | 'blocks';
 
 /** 0: calm (briefings, quiet moments). 1: a normal working day. 2: danger close by. */
 export type Intensity = 0 | 1 | 2;
@@ -430,6 +439,46 @@ const SONGS: Record<TrackName, Song> = {
       ride: { from: 0, pattern: 'x...x.xox...x.xo', volume: 0.035 },
       snare: { from: 0, pattern: '....o.......o...', volume: 0.035 },
       kick: { from: 0, pattern: 'o.......o.......', volume: 0.14 },
+    },
+  },
+  /**
+   * Squarehollow, through the dark door: unhurried keys in a lilting three-three-two, a pad,
+   * and a bell that only comes in now and then. After dark only the keys and the pad stay.
+   */
+  blocks: {
+    bpm: 76,
+    swing: 0.5,
+    root: 64,
+    scale: MAJOR,
+    bars: [0, 5, 3, 4, 0, 5, 1, 4],
+    chord: TRIAD,
+    echo: 0.45,
+    pad: { from: 0, volume: 0.045, octave: -1, cutoff: 800 },
+    bass: {
+      from: 1,
+      volume: 0.14,
+      octave: -2,
+      steps: [0, _, _, _, _, _, _, _, 2, _, _, _, _, _, _, _],
+    },
+    arp: {
+      from: 0,
+      volume: 0.07,
+      octave: 0,
+      voice: 'keys',
+      steps: [0, _, _, 2, _, _, 1, _, _, 2, _, _, 0, _, _, _],
+    },
+    lead: {
+      from: 1,
+      volume: 0.075,
+      octave: 1,
+      voice: 'bell',
+      phrases: [
+        [4, _, _, _, _, _, _, _, 2, _, _, _, 4, _, 5, _],
+        [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+        [7, _, _, _, 6, _, _, _, 4, _, _, _, _, _, _, _],
+        [2, _, _, _, _, _, 1, _, 0, _, _, _, _, _, _, _],
+      ],
+      order: [0, 1, 2, 1, 0, 1, 3, 1],
     },
   },
 };
