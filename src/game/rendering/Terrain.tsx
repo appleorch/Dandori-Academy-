@@ -1,11 +1,12 @@
 import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { Group, Mesh, MeshStandardMaterial } from 'three';
 import type { LevelDefinition } from '../world/level';
 import { wallLook } from './Architecture';
 import { rockGeometry } from './rocks';
 import { gameTextures, turfTextures } from './textures';
 import { themeOf } from './theme';
+import { groundMaterial, splatMap } from './ground';
 
 /** World units covered by one repeat of the grass texture. */
 const GRASS_TILE = 7;
@@ -124,21 +125,29 @@ export function Terrain({ level }: { level: LevelDefinition }) {
     return [field, outer, bump];
   }, [floor, level]);
 
+  // Turf, worn soil and moss blended by the field's splat map (caves keep their stone floor).
+  const fieldMaterial = useMemo(() => {
+    const splat = look.stoneFloor ? null : splatMap(level);
+    return groundMaterial({
+      turf: fieldMap,
+      bump: fieldBump,
+      soil: soil.color,
+      splat,
+      color: look.ground,
+      bumpScale: look.stoneFloor ? 2.5 : 1.5,
+      repeat: [level.width / GRASS_TILE, level.depth / GRASS_TILE],
+    });
+  }, [level, look, fieldMap, fieldBump, soil]);
+  useEffect(() => () => fieldMaterial.dispose(), [fieldMaterial]);
+
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]} receiveShadow>
         <planeGeometry args={[level.width + 240, level.depth + 240]} />
         <meshStandardMaterial map={outerMap} color={look.outer} roughness={1} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={fieldMaterial}>
         <planeGeometry args={[level.width, level.depth]} />
-        <meshStandardMaterial
-          map={fieldMap}
-          bumpMap={fieldBump}
-          bumpScale={look.stoneFloor ? 2.5 : 1.5}
-          color={look.ground}
-          roughness={0.95}
-        />
       </mesh>
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}

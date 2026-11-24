@@ -29,7 +29,8 @@ type ToggleKey =
   | 'whistleToggle'
   | 'fastToggle'
   | 'alwaysShowArc'
-  | 'aimAssist';
+  | 'aimAssist'
+  | 'tiltShift';
 
 type Toggle = readonly [ToggleKey, string, string];
 
@@ -51,6 +52,11 @@ const PLAY_TOGGLES: readonly Toggle[] = [
 ];
 
 const COMFORT_TOGGLES: readonly Toggle[] = [
+  [
+    'tiltShift',
+    'Miniature blur',
+    'Blur the top and bottom of the view, as a close-up camera does, on medium and high graphics.',
+  ],
   [
     'reducedMotion',
     'Reduced motion',

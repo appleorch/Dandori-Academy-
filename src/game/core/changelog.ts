@@ -8,6 +8,18 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.22.0',
+    date: '2026-11-25',
+    changes: [
+      'The ground comes alive: paths of bare soil worn from the Kiln to every treasure, soil round the feet of walls and along the water, and moss in the shade of walls.',
+      'Meadow, marsh and dusk fields are ringed by giant grass and flowers that sway in the wind, with lily pads on the marsh water. Lower graphics settings draw fewer of them.',
+      'New water: deeper in the middle, foam along the banks, and ripples round every Sproutling wading through it.',
+      'In the story the sun now sets over the last 90 seconds of every day, so the light itself tells you it is time to gather your Sproutlings in.',
+      'Mist over the marsh and at dusk, and shafts of light through the glass roof of the Terrarium.',
+      'A new Comfort setting turns off the miniature blur at the top and bottom of the screen.',
+    ],
+  },
+  {
     version: '0.21.0',
     date: '2026-11-25',
     changes: [

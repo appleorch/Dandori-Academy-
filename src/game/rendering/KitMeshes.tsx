@@ -20,7 +20,17 @@ import {
 } from 'three';
 import type { LevelDefinition } from '../world/levelTypes';
 import { wallLook } from './Architecture';
-import { KIT_LOOKS, propPieces, wallPieces, type Finish, type Piece, type Shape } from './kit';
+import {
+  borderPieces,
+  waterPieces,
+  KIT_LOOKS,
+  propPieces,
+  wallPieces,
+  type Finish,
+  type Piece,
+  type Shape,
+} from './kit';
+import { useFrame } from '@react-three/fiber';
 
 /** A pot's profile, base at 0 and rim at 1: tapered sides and a rolled rim. */
 function potGeometry(): BufferGeometry {
@@ -67,8 +77,41 @@ const GEOMETRIES: Record<Shape, () => BufferGeometry> = {
   capsule: () => new CapsuleGeometry(0.5, 1, 4, 10),
 };
 
+/** Seconds of wind, shared by every swaying kit material. */
+const windTime = { value: 0 };
+
+/**
+ * A material that bends in the wind by world height, after the instance is placed, so a flower's
+ * head moves with the top of its stem whatever their sizes.
+ */
+function swayMaterial(): MeshStandardMaterial {
+  const sway = new MeshStandardMaterial({ roughness: 0.8 });
+  sway.onBeforeCompile = (shader) => {
+    shader.uniforms.uWindTime = windTime;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\nuniform float uWindTime;`)
+      .replace(
+        '#include <project_vertex>',
+        `vec4 mvPosition = vec4( transformed, 1.0 );
+        #ifdef USE_INSTANCING
+          mvPosition = instanceMatrix * mvPosition;
+        #endif
+        float rise = max( mvPosition.y, 0.0 );
+        float gust = sin( uWindTime * 1.2 + mvPosition.x * 0.13 + mvPosition.z * 0.09 )
+          + 0.35 * sin( uWindTime * 2.7 + mvPosition.z * 0.31 );
+        mvPosition.x += gust * rise * rise * 0.006;
+        mvPosition.z += gust * rise * rise * 0.0025;
+        mvPosition = modelViewMatrix * mvPosition;
+        gl_Position = projectionMatrix * mvPosition;`,
+      );
+  };
+  return sway;
+}
+
 function material(finish: Finish): Material {
   switch (finish) {
+    case 'sway':
+      return swayMaterial();
     case 'metal':
       return new MeshStandardMaterial({ metalness: 0.6, roughness: 0.38 });
     case 'glass':
@@ -125,19 +168,21 @@ function KitBatch({ batch }: { batch: Batch }) {
     [geometry, surface],
   );
   const solid = batch.finish !== 'glass' && batch.finish !== 'glow';
+  // The giant border stands outside the field; its shadows would fall across play as dark wedges.
+  const casts = solid && batch.finish !== 'sway';
   return (
     <instancedMesh
       ref={mesh}
       args={[geometry, surface, batch.pieces.length]}
-      castShadow={solid}
+      castShadow={casts}
       receiveShadow={solid}
     />
   );
 }
 
 /** Every piece of a field's kit walls and props, grouped by shape and finish. */
-export function kitBatches(level: LevelDefinition): Batch[] {
-  const pieces: Piece[] = [];
+export function kitBatches(level: LevelDefinition, density = 1): Batch[] {
+  const pieces: Piece[] = [...borderPieces(level, density), ...waterPieces(level, density)];
   for (const wall of level.obstacles) {
     const look = wallLook(level, wall);
     if (KIT_LOOKS.includes(look)) pieces.push(...wallPieces(wall, look));
@@ -161,8 +206,11 @@ export function kitBatches(level: LevelDefinition): Batch[] {
  * The miniature-world kit in a field: walls drawn as giant everyday objects and the props that
  * dress the field (see kit.ts and docs-design/ART_DIRECTION.md).
  */
-export function KitMeshes({ level }: { level: LevelDefinition }) {
-  const batches = useMemo(() => kitBatches(level), [level]);
+export function KitMeshes({ level, density = 1 }: { level: LevelDefinition; density?: number }) {
+  const batches = useMemo(() => kitBatches(level, density), [level, density]);
+  useFrame(({ clock }) => {
+    windTime.value = clock.elapsedTime;
+  });
   return (
     <group>
       {batches.map((batch) => (

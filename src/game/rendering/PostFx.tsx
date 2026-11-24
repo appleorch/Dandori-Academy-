@@ -153,7 +153,14 @@ function hideOverlays(scene: Scene): Object3D[] {
  * on embers, shards and the Kiln, a tilt-shift blur at the top and bottom of the
  * screen that makes the field read as a miniature, and a gentle vignette.
  */
-export function PostFx({ ambientOcclusion }: { ambientOcclusion: boolean }) {
+export function PostFx({
+  ambientOcclusion,
+  tiltShift = true,
+}: {
+  ambientOcclusion: boolean;
+  /** The miniature blur at the top and bottom of the view; a setting. */
+  tiltShift?: boolean;
+}) {
   const { gl, scene, camera, size, viewport } = useThree();
 
   const { composer, tiltX, tiltY, bloom, ink } = useMemo(() => {
@@ -197,15 +204,17 @@ export function PostFx({ ambientOcclusion }: { ambientOcclusion: boolean }) {
     const tiltY = new ShaderPass(VerticalTiltShiftShader);
     tiltX.uniforms.r.value = FOCUS;
     tiltY.uniforms.r.value = FOCUS;
-    composer.addPass(tiltX);
-    composer.addPass(tiltY);
+    if (tiltShift) {
+      composer.addPass(tiltX);
+      composer.addPass(tiltY);
+    }
     const vignette = new ShaderPass(VignetteShader);
     vignette.uniforms.offset.value = 0.95;
     vignette.uniforms.darkness.value = 1.05;
     composer.addPass(vignette);
     composer.addPass(new OutputPass());
     return { composer, tiltX, tiltY, bloom, ink };
-  }, [gl, scene, camera, ambientOcclusion]);
+  }, [gl, scene, camera, ambientOcclusion, tiltShift]);
 
   useEffect(() => {
     composer.setPixelRatio(viewport.dpr);

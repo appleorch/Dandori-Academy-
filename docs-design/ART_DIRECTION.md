@@ -67,6 +67,22 @@ its setting's family (`src/game/rendering/kit.ts`).
 - **Materials read by colour, not by texture.** Textures add a little grain; a thing is
   recognisable from its silhouette and its flat colour alone.
 
+## Ground, foliage, water and weather
+
+- **Ground** is never one flat colour. It blends turf, bare soil and moss by a splat map
+  (`src/game/rendering/ground.ts`): soil wears along the paths from the Kiln to each treasure
+  (fainter when a field has many) and round the feet of walls and banks; moss sits in the shade on
+  the north side of walls. The ground stays flat: ambient occlusion shades any roll as dark wedges.
+- **The border** of meadow, marsh and dusk fields is giant grass (5 to 13 tall: a forest to a
+  Sproutling) with the odd giant flower, swaying in the wind. It casts no shadow onto the field.
+  Foliage density follows the graphics setting.
+- **Water** is darker away from its banks, foams along the shore (not where it meets more water or
+  a bridge) and rings round every wading Sproutling.
+- **Light tells time.** In the story the sun sets over the last 90 seconds of a day, warm and low,
+  with the sky's even light fading, so the player feels the day closing before reading the clock.
+- **Weather** belongs to a setting: mist on marsh and at dusk, light shafts in the Terrarium. It is
+  always faint; it never hides anything that plays.
+
 ## Silhouettes and readability
 
 - **Creatures** have one big readable shape, a head that faces where they will strike, and a
@@ -96,4 +112,6 @@ its setting's family (`src/game/rendering/kit.ts`).
 
 Lesson 1, **Many Hands**, and the first Growing Season field, **Seedbed**, are dressed fully with
 the kit, along with **Over the Wall** (brick garden walls) and **Pod Orchard** (hedgerows), and
-serve as the reference look. Before and after pictures are in `docs-design/art/`.
+serve as the reference look. Before and after pictures are in `docs-design/art/`, along with the
+marsh water and mist, the story sunset and the Terrarium light (`marsh-water-mist.jpg`,
+`story-sunset.jpg`, `terrarium-light.jpg`).

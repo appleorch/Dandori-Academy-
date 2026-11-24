@@ -1,3 +1,4 @@
+import { GRASS_BORDER_THEMES } from './kit';
 import { useFrame } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import {
@@ -390,7 +391,16 @@ const RIB_CURVE = Array.from({ length: 7 }, (_, i) => {
   });
 });
 
-export function Scenery({ level, sim }: { level: LevelDefinition; sim?: Simulation }) {
+export function Scenery({
+  level,
+  sim,
+  density = 1,
+}: {
+  level: LevelDefinition;
+  sim?: Simulation;
+  /** Share of the foliage drawn, by graphics level (see FOLIAGE_DENSITY in GameCanvas). */
+  density?: number;
+}) {
   const look: ThemeLook = themeOf(level.theme);
   const cave = look.stoneFloor;
   const glasshouse = level.theme === 'terrarium';
@@ -399,14 +409,22 @@ export function Scenery({ level, sim }: { level: LevelDefinition; sim?: Simulati
     const area = level.width * level.depth;
     const ruins = margins(level, rng, cave ? 0 : Math.round(area / 900));
     return {
-      grass: scatter(level, rng, Math.round(Math.min(9000, area * 1.6) * look.bladeDensity)),
-      flowers: cave ? [] : scatter(level, rng, Math.round(area / 30)),
+      grass: scatter(
+        level,
+        rng,
+        Math.round(Math.min(9000, area * 1.6) * look.bladeDensity * density),
+      ),
+      flowers: cave ? [] : scatter(level, rng, Math.round((area / 30) * density)),
       pebbles: scatter(level, rng, Math.round(area / (cave ? 25 : 45))),
       leaves: cave
         ? []
         : scatter(level, rng, Math.round(area / (level.theme === 'autumn' ? 8 : 40))),
       // The tree ring makes room for the giant objects dressing the field (see kit.ts).
-      trees: look.trees && !glasshouse ? clearOfProps(level, treeLine(level, rng)) : [],
+      // Settings edged with giant grass at insect scale have no tree ring (see kit.ts).
+      trees:
+        look.trees && !glasshouse && !GRASS_BORDER_THEMES.includes(level.theme)
+          ? clearOfProps(level, treeLine(level, rng))
+          : [],
       clovers: cave ? [] : margins(level, rng, Math.round(area / 90)),
       mushrooms: margins(level, rng, Math.round(area / (cave ? 110 : 220))),
       crystals: cave ? margins(level, rng, Math.round(area / 330)) : [],
@@ -417,7 +435,7 @@ export function Scenery({ level, sim }: { level: LevelDefinition; sim?: Simulati
       gears: cave ? [] : margins(level, rng, Math.round(area / (glasshouse ? 700 : 2400))),
       ribs: glasshouse ? perimeter(level, 12, 6) : [],
     };
-  }, [level, look, cave, glasshouse]);
+  }, [level, look, cave, glasshouse, density]);
 
   const grass = useMemo(grassMaterial, []);
   const assets = useMemo(() => {

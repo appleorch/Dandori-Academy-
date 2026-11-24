@@ -19,6 +19,7 @@ import { Architecture } from './Architecture';
 import { KitMeshes } from './KitMeshes';
 import { Beacons } from './Beacons';
 import { Atmosphere } from './Atmosphere';
+import { Weather } from './Weather';
 import { CaptainMesh } from './CaptainMesh';
 import { CarryableMeshes } from './CarryableMeshes';
 import { CursorFx } from './CursorFx';
@@ -65,6 +66,9 @@ const QUALITY: Record<GraphicsLevel, Quality> = {
   high: { shadows: true, shadowMapSize: 2048, postFx: true, ambientOcclusion: true, dpr: [1, 2] },
 };
 
+/** Share of the grass, flowers and giant border drawn at each graphics level. */
+const FOLIAGE_DENSITY: Record<GraphicsLevel, number> = { low: 0.45, medium: 0.75, high: 1 };
+
 interface GameCanvasProps {
   level: LevelDefinition;
   input: InputController;
@@ -94,6 +98,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   const quality = QUALITY[graphics];
   const zoomSpeed = useGameStore((state) => state.settings.zoomSpeed);
   const pauseOnBlur = useGameStore((state) => state.settings.pauseOnBlur);
+  const tiltShift = useGameStore((state) => state.settings.tiltShift);
   const bindings = useGameStore((state) => state.settings.bindings);
   const whistleToggle = useGameStore((state) => state.settings.whistleToggle);
   const fastToggle = useGameStore((state) => state.settings.fastToggle);
@@ -216,7 +221,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         <QualityTuner />
         {quality.shadows && <ShadowBudget />}
         {quality.postFx ? (
-          <PostFx ambientOcclusion={quality.ambientOcclusion} />
+          <PostFx ambientOcclusion={quality.ambientOcclusion} tiltShift={tiltShift} />
         ) : (
           <OverlayInMainPass />
         )}
@@ -237,14 +242,19 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         <group key={`world-${sim?.level.id ?? level.id}`}>
           <Terrain level={sim?.level ?? level} />
           <Architecture level={sim?.level ?? level} />
-          <KitMeshes level={sim?.level ?? level} />
-          <Scenery level={sim?.level ?? level} sim={sim ?? undefined} />
+          <KitMeshes level={sim?.level ?? level} density={FOLIAGE_DENSITY[graphics]} />
+          <Scenery
+            level={sim?.level ?? level}
+            sim={sim ?? undefined}
+            density={FOLIAGE_DENSITY[graphics]}
+          />
         </group>
         {sim && (
           <group key={`day-${sim.level.id}`}>
             <CameraRig sim={sim} input={input} fx={fx} />
             <SkyLight sim={sim} shadowMapSize={quality.shadowMapSize} />
             <Atmosphere sim={sim} />
+            <Weather sim={sim} />
             <CaptainMesh sim={sim} />
             <WorkerInstances sim={sim} />
             <CarryableMeshes sim={sim} />

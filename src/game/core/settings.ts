@@ -28,6 +28,8 @@ export interface Settings {
    * times were measured (see QualityTuner). Until then a slow device may have it lowered once.
    */
   graphicsTuned: boolean;
+  /** The tilt-shift blur at the top and bottom of the view (medium and high graphics). */
+  tiltShift: boolean;
   /** The language of the menus and the game's text. */
   locale: Locale;
   /** Mode chosen on the lesson list. */
@@ -100,6 +102,7 @@ export function newPlayerId(): string {
 export const DEFAULT_SETTINGS: Settings = {
   graphics: 'high',
   graphicsTuned: false,
+  tiltShift: true,
   locale: 'en',
   difficulty: 'normal',
   carrierCounts: true,
@@ -154,6 +157,7 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
     'seenIntro',
     'postRuns',
     'graphicsTuned',
+    'tiltShift',
     'aimAssist',
     'reducedMotion',
     'highContrast',

@@ -1,5 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useGameStore } from '../core/gameStore';
 import {
   Color,
   Fog,
@@ -26,12 +27,40 @@ interface SkyLightProps {
  * itself says how late it is. The sun's shadow box follows the captain, which keeps
  * shadows crisp on large maps.
  */
+/** In the story, the sun takes this long to set: the last stretch of every day. */
+export const STORY_SUNSET_SECONDS = 90;
+/** Where sunset begins in a setting's sky stops (see theme.ts). */
+const SUNSET_STOP = 0.85;
+/** The canvas's exposure at full day (GameCanvas sets the same). */
+const BASE_EXPOSURE = 0.92;
+
+/**
+ * How far through the day the sky is, 0 to 1. Normally the share of the day gone. In the story,
+ * sunset (and the dusk after it) fills exactly the last 90 seconds, since that is when the
+ * Sproutlings must be gathered in, and the rest of the day spreads over the time before it.
+ */
+export function dayPhase(
+  sim: Pick<Simulation, 'timeLeft'> & { level: { dayLength: number } },
+  story: boolean,
+): number {
+  const length = sim.level.dayLength;
+  if (length <= 0) return 0.35;
+  if (!story || length <= STORY_SUNSET_SECONDS * 2) return 1 - sim.timeLeft / length;
+  if (sim.timeLeft > STORY_SUNSET_SECONDS) {
+    const before = length - STORY_SUNSET_SECONDS;
+    return (SUNSET_STOP * (length - sim.timeLeft)) / before;
+  }
+  return SUNSET_STOP + (1 - SUNSET_STOP) * (1 - sim.timeLeft / STORY_SUNSET_SECONDS);
+}
+
 export function SkyLight({ sim, shadowMapSize }: SkyLightProps) {
   const sun = useRef<DirectionalLight>(null);
   const hemi = useRef<HemisphereLight>(null);
   const target = useMemo(() => new Object3D(), []);
   const { gl, scene } = useThree();
   const look = themeOf(sim.level.theme);
+  // Fixed for the day: the mode a day is played in never changes during it.
+  const [story] = useState(() => useGameStore.getState().playMode === 'campaign');
   const stops = useMemo(
     () =>
       look.sky.map((stop) => ({
@@ -54,6 +83,7 @@ export function SkyLight({ sim, shadowMapSize }: SkyLightProps) {
       scene.environment = null;
       scene.fog = null;
       scene.background = null;
+      gl.toneMappingExposure = BASE_EXPOSURE;
       environment.dispose();
       pmrem.dispose();
     };
@@ -61,7 +91,7 @@ export function SkyLight({ sim, shadowMapSize }: SkyLightProps) {
 
   useFrame(() => {
     if (!sun.current || !hemi.current) return;
-    const day = sim.level.dayLength > 0 ? 1 - sim.timeLeft / sim.level.dayLength : 0.35;
+    const day = dayPhase(sim, story);
     let index = 0;
     while (index < stops.length - 2 && day > stops[index + 1].at) index++;
     const from = stops[index];
@@ -74,12 +104,18 @@ export function SkyLight({ sim, shadowMapSize }: SkyLightProps) {
     hemi.current.intensity = from.skyPower + (to.skyPower - from.skyPower) * t;
     air.lerpColors(from.air, to.air, t);
     if (scene.fog instanceof Fog) scene.fog.color.copy(air);
+    // Evening draws in: the even light of the sky fades and the whole picture darkens a touch, so
+    // the orange of the low sun is what the eye reads (otherwise the green turf swamps it).
+    const dusk = Math.min(1, Math.max(0, (day - SUNSET_STOP) / (1 - SUNSET_STOP)));
+    scene.environmentIntensity = 0.25 - dusk * 0.15;
+    gl.toneMappingExposure = BASE_EXPOSURE - dusk * 0.2;
 
     const { x, z } = sim.captainTransform;
     target.position.set(x, 0, z);
     target.updateMatrixWorld();
     // The sun travels east to west and sinks toward the end of the day.
-    sun.current.position.set(x + 30 - day * 60, 38 - day * day * 22, z + 18);
+    // Low at the end of the day, so sunset throws long shadows.
+    sun.current.position.set(x + 30 - day * 60, 38 - day * day * 28, z + 18);
   });
 
   return (

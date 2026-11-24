@@ -1,5 +1,5 @@
 import { Rng } from '../core/rng';
-import type { PropKind, PropSpawn, Wall, WallLook } from '../world/levelTypes';
+import type { LevelDefinition, PropKind, PropSpawn, Wall, WallLook } from '../world/levelTypes';
 
 /**
  * The miniature-world kit: walls drawn as giant everyday objects, and props placed round a field
@@ -13,7 +13,8 @@ export type Shape =
   'box' | 'cylinder' | 'sphere' | 'ico' | 'cone' | 'pot' | 'cup' | 'torus' | 'capsule';
 
 /** How a piece's surface is drawn. */
-export type Finish = 'matte' | 'metal' | 'glass' | 'glow';
+/** `sway` bends in the wind, more the higher a part stands: giant grass and flower stems. */
+export type Finish = 'matte' | 'metal' | 'glass' | 'glow' | 'sway';
 
 export interface Piece {
   shape: Shape;
@@ -925,3 +926,169 @@ const PROPS: Partial<Record<PropKind, () => Piece[]>> = {
     return pieces;
   },
 };
+
+/** Settings whose field is edged with giant grass and flowers rather than a ring of trees. */
+export const GRASS_BORDER_THEMES: readonly LevelDefinition['theme'][] = ['meadow', 'marsh', 'dusk'];
+
+/** Each setting's giant border: blade colours, flower petals and centres. */
+const BORDER_LOOK: Partial<
+  Record<LevelDefinition['theme'], { blades: string[]; petals: string[]; centre: string }>
+> = {
+  meadow: {
+    blades: ['#4f8a34', '#5d9a3c', '#6aa646', '#3f7a2c'],
+    petals: ['#fbf6ea', '#f6d24a', '#f2a8c0'],
+    centre: '#e8b028',
+  },
+  marsh: {
+    blades: ['#5a7a3a', '#7a8a3a', '#9a9a4a', '#4a6a3a'],
+    petals: ['#d8c8f0', '#f6e6a0'],
+    centre: '#8a5a2a',
+  },
+  dusk: {
+    blades: ['#3f6a4a', '#4a5a6a', '#5a7a5a', '#36504a'],
+    petals: ['#e8d8ff', '#ffe6a8'],
+    centre: '#ffd27a',
+  },
+};
+
+/**
+ * The field's edge at insect scale: blades of grass taller than the walls, and flowers on stems
+ * among them, in two or three ragged rows just outside the field. `density` thins them for lower
+ * graphics. Spots near a prop are left clear, as the tree ring does.
+ */
+export function borderPieces(level: LevelDefinition, density = 1): Piece[] {
+  const look = BORDER_LOOK[level.theme];
+  if (!look || !GRASS_BORDER_THEMES.includes(level.theme)) return [];
+  const rng = new Rng(level.seed * 389 + 5);
+  const pieces: Piece[] = [];
+  const hw = level.width / 2;
+  const hd = level.depth / 2;
+  const props = level.props ?? [];
+  const clear = (x: number, z: number) =>
+    props.every((prop) => Math.hypot(x - prop.x, z - prop.z) > 9 * (prop.scale ?? 1));
+  const spacing = 1.5 / Math.max(0.25, density);
+  const blade = (x: number, z: number, row: number) => {
+    if (!clear(x, z)) return;
+    const height = rng.range(5, 13) * (1 - row * 0.12);
+    const lean = rng.range(-0.18, 0.18);
+    pieces.push({
+      shape: 'cone',
+      color: pick(rng, look.blades),
+      finish: 'sway',
+      x,
+      y: height / 2,
+      z,
+      sx: rng.range(0.7, 1.2),
+      sy: height,
+      sz: 0.22,
+      ry: rng.range(0, Math.PI),
+      rx: lean,
+      rz: rng.range(-0.18, 0.18),
+    });
+  };
+  const flower = (x: number, z: number) => {
+    if (!clear(x, z)) return;
+    const height = rng.range(7, 12);
+    const petals = pick(rng, look.petals);
+    pieces.push(
+      {
+        shape: 'cylinder',
+        color: '#4f7f36',
+        finish: 'sway',
+        x,
+        y: height / 2,
+        z,
+        sx: 0.32,
+        sy: height,
+        sz: 0.32,
+      },
+      {
+        shape: 'cylinder',
+        color: petals,
+        finish: 'sway',
+        x,
+        y: height + 0.05,
+        z,
+        sx: 3.2,
+        sy: 0.18,
+        sz: 3.2,
+        rx: rng.range(-0.3, 0.3),
+      },
+      {
+        shape: 'sphere',
+        color: look.centre,
+        finish: 'sway',
+        x,
+        y: height + 0.25,
+        z,
+        sx: 1.1,
+        sy: 0.5,
+        sz: 1.1,
+      },
+    );
+  };
+  for (let row = 0; row < 3; row++) {
+    const out = 2.5 + row * 2.2;
+    for (let x = -hw - out; x <= hw + out; x += spacing) {
+      blade(x + rng.range(-0.5, 0.5), -hd - out - rng.range(0, 1.5), row);
+      blade(x + rng.range(-0.5, 0.5), hd + out + rng.range(0, 1.5), row);
+    }
+    for (let z = -hd; z <= hd; z += spacing) {
+      blade(-hw - out - rng.range(0, 1.5), z + rng.range(-0.5, 0.5), row);
+      blade(hw + out + rng.range(0, 1.5), z + rng.range(-0.5, 0.5), row);
+    }
+  }
+  const flowerSpacing = 9 / Math.max(0.25, density);
+  for (let x = -hw; x <= hw; x += flowerSpacing) {
+    flower(x + rng.range(-2, 2), -hd - rng.range(3, 6));
+    flower(x + rng.range(-2, 2), hd + rng.range(3, 6));
+  }
+  for (let z = -hd + 4; z <= hd - 4; z += flowerSpacing) {
+    flower(-hw - rng.range(3, 6), z + rng.range(-2, 2));
+    flower(hw + rng.range(3, 6), z + rng.range(-2, 2));
+  }
+  return pieces;
+}
+
+/**
+ * Lily pads on the marsh's water, now and then with a flower, kept a little in from the banks.
+ * Art only: they float over anything sunk beneath them.
+ */
+export function waterPieces(level: LevelDefinition, density = 1): Piece[] {
+  if (level.theme !== 'marsh') return [];
+  const rng = new Rng(level.seed * 613 + 3);
+  const pieces: Piece[] = [];
+  for (const box of level.water ?? []) {
+    const count = Math.round(((box.w * box.d) / 22) * density);
+    for (let i = 0; i < count; i++) {
+      const inset = 0.9;
+      if (box.w <= inset * 2 || box.d <= inset * 2) break;
+      const x = box.x + rng.range(-box.w / 2 + inset, box.w / 2 - inset);
+      const z = box.z + rng.range(-box.d / 2 + inset, box.d / 2 - inset);
+      const size = rng.range(1.1, 2.3);
+      pieces.push({
+        shape: 'cylinder',
+        color: pick(rng, ['#4f8a3a', '#5e9a44', '#3f7a32']),
+        x,
+        y: 0.08,
+        z,
+        sx: size,
+        sy: 0.05,
+        sz: size,
+      });
+      if (rng.next() < 0.18) {
+        pieces.push({
+          shape: 'sphere',
+          color: pick(rng, ['#f2b8d0', '#fbf2e6']),
+          x,
+          y: 0.28,
+          z,
+          sx: 0.55,
+          sy: 0.4,
+          sz: 0.55,
+        });
+      }
+    }
+  }
+  return pieces;
+}

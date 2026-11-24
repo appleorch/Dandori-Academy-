@@ -86,6 +86,18 @@ ramp and a warm rim light (`src/game/rendering/toon.ts`); medium and high graphi
 drawn from the scene's depth (`PostFx.tsx`). Many Hands, Over the Wall, Seedbed and Pod Orchard are
 the dressed reference fields; before and after pictures are in `docs-design/art/`.
 
+**The ground and the weather.** The field's ground blends three covers by a splat map painted once
+per field (`src/game/rendering/ground.ts`): the setting's turf, bare soil worn along the paths from
+the Kiln to each treasure and round the feet of walls and banks of water, and moss in the shade on
+the north side of walls. Meadow, marsh and dusk fields are ringed by a border of giant grass blades
+and flowers that sway in the wind (marsh fields add lily pads on the water); the foliage density
+follows the graphics setting. Water has a shader of its own (`WaterAndBridges.tsx`): deeper colour
+away from the banks, foam along the shore and rings round every wading Sproutling. In the story the
+sun sets over the last 90 seconds of every day, when the squad must be gathered in, so the sky
+itself is a warning (`SkyLight.tsx`). Mist creeps over marsh and dusk fields, and light slants
+through the glass roof of the Terrarium (`Weather.tsx`). The miniature tilt-shift blur can be turned
+off under Settings, Comfort.
+
 ## Play without installing anything
 
 `docs/` holds a ready-to-serve build. With GitHub Pages enabled (Settings, Pages, Deploy from a
