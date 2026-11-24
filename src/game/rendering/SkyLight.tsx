@@ -61,7 +61,7 @@ export function SkyLight({ sim, shadowMapSize }: SkyLightProps) {
 
   useFrame(() => {
     if (!sun.current || !hemi.current) return;
-    const day = 1 - sim.timeLeft / sim.level.dayLength;
+    const day = sim.level.dayLength > 0 ? 1 - sim.timeLeft / sim.level.dayLength : 0.35;
     let index = 0;
     while (index < stops.length - 2 && day > stops[index + 1].at) index++;
     const from = stops[index];

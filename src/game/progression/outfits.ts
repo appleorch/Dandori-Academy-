@@ -1,6 +1,6 @@
 import { rankValue, type Rank } from '../dandori/scoring';
 import { bestRank, type SaveData } from '../save/saveManager';
-import { LEVELS } from '../world/level';
+import { CHALLENGE_LEVELS, LEVELS } from '../world/level';
 
 /** One look for the Warden. Purely cosmetic; earned, never bought. */
 export interface Outfit {
@@ -16,9 +16,9 @@ export interface Outfit {
   unlocked: (save: SaveData) => boolean;
 }
 
-/** Lessons with a challenge medal (or an old story rank) of at least `rank`. */
+/** Fields with a challenge medal (or a lesson with an old story rank) of at least `rank`. */
 function lessonsAtLeast(save: SaveData, rank: Rank): number {
-  return LEVELS.filter((level) => {
+  return [...LEVELS, ...CHALLENGE_LEVELS].filter((level) => {
     const earned = bestRank(save, level.id);
     return earned !== null && rankValue(earned) >= rankValue(rank);
   }).length;
@@ -40,7 +40,7 @@ export const OUTFITS: readonly Outfit[] = [
   {
     id: 'kindling',
     name: 'Kindling',
-    requirement: 'Earn Gold or better in challenges on five lessons.',
+    requirement: 'Earn Gold or better on five challenge fields.',
     suit: '#9a3a22',
     trim: '#ffb347',
     hat: '#f0703a',
@@ -50,7 +50,7 @@ export const OUTFITS: readonly Outfit[] = [
   {
     id: 'harvest',
     name: 'Harvest',
-    requirement: 'Earn Gold or better in challenges on twelve lessons.',
+    requirement: 'Earn Gold or better on twelve challenge fields.',
     suit: '#6a5a2a',
     trim: '#e2b05a',
     hat: '#c86a2a',
@@ -81,7 +81,7 @@ export const OUTFITS: readonly Outfit[] = [
   {
     id: 'ironclad',
     name: 'Ironclad',
-    requirement: 'Clear any lesson on Hard in the story.',
+    requirement: 'Clear any lesson on Hard in Time Attack.',
     suit: '#4a4e58',
     trim: '#c8ccd4',
     hat: '#6a6e78',
@@ -101,17 +101,17 @@ export const OUTFITS: readonly Outfit[] = [
   {
     id: 'platinum',
     name: 'Platinum',
-    requirement: 'Earn Platinum in a challenge on every lesson.',
+    requirement: 'Earn Platinum or better on thirty challenge fields.',
     suit: '#cfe8f0',
     trim: '#7fe3ff',
     hat: '#f4fbff',
     lamp: '#bff4ff',
-    unlocked: (save) => lessonsAtLeast(save, 'Platinum') >= LEVELS.length,
+    unlocked: (save) => lessonsAtLeast(save, 'Platinum') >= 30,
   },
   {
     id: 'diamond',
     name: 'Diamond',
-    requirement: 'Earn Diamond in challenges on five lessons.',
+    requirement: 'Earn Diamond on five challenge fields.',
     suit: '#eef6ff',
     trim: '#b48cff',
     hat: '#ffffff',

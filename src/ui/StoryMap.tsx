@@ -1,7 +1,8 @@
 import { useState, type KeyboardEvent } from 'react';
 import { DIFFICULTIES, HARD } from '../game/core/difficulty';
 import { useGameStore } from '../game/core/gameStore';
-import { storyCleared } from '../game/save/saveManager';
+import { bestClearTime, storyCleared } from '../game/save/saveManager';
+import { formatTime } from './format';
 import { CHAPTERS, chapterOf } from '../game/story/story';
 import { entranceTo, forDifficulty, LEVELS, MAIN_LEVELS } from '../game/world/level';
 import {
@@ -177,7 +178,7 @@ export function StoryMap() {
       <div className="panel wide map-wide">
         <MenuNav />
         <div className="lesson-head">
-          <h1>Story</h1>
+          <h1>Time Attack</h1>
           <span className="segmented" role="radiogroup" aria-label="Difficulty">
             {DIFFICULTIES.map((option) => (
               <button
@@ -195,12 +196,12 @@ export function StoryMap() {
         </div>
         <p className="map-status">
           <span>
-            Day <strong>{save.story.day + 1}</strong>
-          </span>
-          <span>
             <strong>{cleared}</strong> of {MAIN_LEVELS.length} lessons cleared
           </span>
-          <span>No score in the story: bring every Sunshard home to clear a lesson.</span>
+          <span>
+            The Academy’s lessons in order. Bring every Sunshard home to clear one; every clear is
+            timed against your best.
+          </span>
         </p>
         <div className="story-map">
           <svg
@@ -323,7 +324,7 @@ export function StoryMap() {
                 <OptionalTreasure level={selected} />
                 <p className="map-cleared">
                   {storyCleared(save, selected.id, difficulty)
-                    ? `Cleared${hard ? ' on Hard' : ''}. Play it again any day, or try it as a challenge.`
+                    ? `Cleared${hard ? ' on Hard' : ''}. Best time ${formatTime(bestClearTime(save, selected.id, difficulty) ?? 0)}: play it again to beat it.`
                     : 'Not cleared yet.'}
                 </p>
               </>
@@ -332,7 +333,7 @@ export function StoryMap() {
             <button
               type="button"
               disabled={locked !== null}
-              onClick={() => startDay(selected.id, 'story')}
+              onClick={() => startDay(selected.id, 'lessons')}
               autoFocus
             >
               {selected.id === next.id && save.story.day > 0 ? 'Continue' : 'Play this day'}

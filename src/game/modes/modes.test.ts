@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { initPhysics } from '../simulation/physics';
 import { Simulation } from '../simulation/Simulation';
 import {
+  CHALLENGE_LEVELS,
   LEVELS,
   rankedBonusTotal,
   shardCount,
@@ -23,7 +24,6 @@ import {
   type ChallengeFacts,
   type ChallengeId,
 } from './modes';
-import { EVERYTHING_TIMES, TRIAL_TIMES } from './paceTimes';
 
 beforeAll(async () => {
   await initPhysics();
@@ -56,7 +56,7 @@ function perfect(level: LevelDefinition, timeLeft: number): ChallengeFacts {
 
 describe('every challenge', () => {
   it.each(
-    LEVELS.flatMap((level) =>
+    [...LEVELS, ...CHALLENGE_LEVELS].flatMap((level) =>
       CHALLENGE_IDS.filter((mode) => challengeOpen(mode, level)).map(
         (mode) => [MODES[mode].name, level.name, mode, level] as const,
       ),
@@ -69,8 +69,8 @@ describe('every challenge', () => {
   });
 
   it('has its medal targets in order', () => {
-    for (const level of LEVELS) {
-      for (const mode of CHALLENGE_IDS) {
+    for (const level of [...LEVELS, ...CHALLENGE_LEVELS]) {
+      for (const mode of CHALLENGE_IDS.filter((id) => challengeOpen(id, level))) {
         const par = challengePar(mode, level);
         expect(par.diamondScore, `${mode} ${level.id}`).toBeGreaterThanOrEqual(par.parScore);
         expect(par.parScore).toBeGreaterThan(0);
@@ -149,7 +149,7 @@ describe('the rules', () => {
   });
 });
 
-/** Plays a lesson as a challenge's simulation would, to the end. */
+/** Plays a field as its challenge's simulation would, to the end. */
 function play(level: LevelDefinition, mode: ChallengeId) {
   const sim = new Simulation(level, {
     endsWhen: MODES[mode].endsWhen,
@@ -162,31 +162,56 @@ function play(level: LevelDefinition, mode: ChallengeId) {
   return result;
 }
 
-describe.each(LEVELS)('$name', (level) => {
-  it('takes the test player exactly its measured time to collect everything', () => {
-    const day = play(level, 'mission');
-    expect(day.ended).toBe('allCollected');
-    expect(day.facts.everything).toBe(true);
-    const time = EVERYTHING_TIMES[level.id];
-    expect(day.elapsed).toBeLessThanOrEqual(time);
-    expect(day.elapsed).toBeGreaterThan(time - 1);
-    // Its medals in the challenges that end that way are never Diamond.
-    for (const mode of ['mission', 'dandori'] as const) {
-      expect(scoreChallenge(mode, level, day.facts).rank).not.toBe('Diamond');
+describe('the challenge fields', () => {
+  it('give every challenge twelve fields of its own, in order', () => {
+    for (const mode of CHALLENGE_IDS) {
+      const fields = CHALLENGE_LEVELS.filter((level) => level.challenge?.mode === mode);
+      expect(fields.map((level) => level.challenge?.order)).toEqual(
+        Array.from({ length: 12 }, (_, i) => i + 1),
+      );
+      for (const level of fields) {
+        expect(challengeOpen(mode, level)).toBe(true);
+        for (const other of CHALLENGE_IDS) {
+          if (other !== mode) expect(challengeOpen(other, level)).toBe(false);
+        }
+      }
     }
-  }, 300_000);
+  });
 
-  it('offers a Lean Squad Trial only if the starting squad can finish it', () => {
-    const day = play(level, 'trial');
-    const time = TRIAL_TIMES[level.id];
-    if (time === undefined) {
-      expect(day.facts.everything).toBe(false);
-      expect(challengeOpen('trial', level)).toBe(false);
+  it('give a Lean Squad Trial no clock and no seed pods, and every other field a clock', () => {
+    for (const level of CHALLENGE_LEVELS) {
+      const trial = level.challenge?.mode === 'trial';
+      expect(level.untimed ?? false, level.id).toBe(trial);
+      if (trial) expect(level.pods, level.id).toEqual([]);
+      else expect(level.dayLength, level.id).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe.each(CHALLENGE_LEVELS)('$id', (level) => {
+  const field = level.challenge;
+  if (!field) throw new Error(`${level.id} is not a challenge field`);
+  const mode = field.mode;
+  it('is measured at the test player’s own result under its rules', () => {
+    const day = play(level, mode);
+    const score = scoreChallenge(mode, level, day.facts);
+    expect(score.rank).not.toBe('Copper');
+    if (mode === 'growing') {
+      // The headcount at sunset is Platinum, and Diamond asks for clearly more.
+      expect(day.ended).toBe('timeUp');
+      expect(day.facts.alive).toBe(field.pace);
+      expect(score.rank).toBe('Platinum');
+    } else if (mode === 'trial') {
+      // No clock: every Sunshard home, losing exactly as many as Platinum allows.
+      expect(day.ended).toBe('allCollected');
+      expect(day.facts.lost).toBe(field.pace);
+      expect(score.rank).toBe(field.pace === 0 ? 'Diamond' : 'Platinum');
     } else {
-      expect(day.facts.everything).toBe(true);
-      expect(day.elapsed).toBeLessThanOrEqual(time);
-      expect(day.elapsed).toBeGreaterThan(time - 1);
-      expect(scoreChallenge('trial', level, day.facts).rank).not.toBe('Diamond');
+      // The finishing time, rounded up to the next second, is Platinum's pace.
+      expect(day.ended).toBe('allCollected');
+      expect(day.elapsed).toBeLessThanOrEqual(field.pace);
+      expect(day.elapsed).toBeGreaterThan(field.pace - 1);
+      expect(score.rank).not.toBe('Diamond');
     }
   }, 300_000);
 });

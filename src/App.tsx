@@ -4,7 +4,9 @@ import { InputController } from './game/commands/input';
 import { useGameStore } from './game/core/gameStore';
 import { levelForMode } from './game/modes/battle';
 import { GameCanvas } from './game/rendering/GameCanvas';
-import { forDifficulty, LEVELS } from './game/world/level';
+import { forDifficulty, LEVELS, levelById } from './game/world/level';
+import { dayField } from './game/campaign/campaign';
+import { CampScreen } from './ui/CampScreen';
 import { PokerRoom } from './poker/PokerRoom';
 import { AchievementsScreen } from './ui/AchievementsScreen';
 import { Briefing } from './ui/Briefing';
@@ -36,17 +38,15 @@ export function App() {
   const levelId = useGameStore((state) => state.levelId);
   const playDifficulty = useGameStore((state) => state.playDifficulty);
   const playMode = useGameStore((state) => state.playMode);
+  // A story day's field depends on everything done on earlier days, read when the day starts.
+  const storyRun = playMode === 'campaign' ? runId : -1;
   // Kept while the day lasts: a new object here would start the day over.
   const level = useMemo(
     () =>
-      levelForMode(
-        forDifficulty(
-          LEVELS.find((candidate) => candidate.id === levelId) ?? LEVELS[0],
-          playDifficulty,
-        ),
-        playMode,
-      ),
-    [levelId, playDifficulty, playMode],
+      storyRun >= 0
+        ? dayField(useGameStore.getState().save.campaign).level
+        : levelForMode(forDifficulty(levelById(levelId) ?? LEVELS[0], playDifficulty), playMode),
+    [levelId, playDifficulty, playMode, storyRun],
   );
   const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
   const musicVolume = useGameStore((state) => state.settings.musicVolume);
@@ -106,6 +106,7 @@ export function App() {
   return (
     <>
       {phase === 'menu' && <MainMenu />}
+      {phase === 'camp' && <CampScreen />}
       {phase === 'map' && <StoryMap />}
       {phase === 'challenges' && <ChallengeSelect />}
       {phase === 'battles' && <BattleSelect />}

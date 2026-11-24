@@ -1,6 +1,14 @@
 import type { Difficulty } from '../game/core/difficulty';
-import { hardUnlocked, storyCleared, type SaveData } from '../game/save/saveManager';
-import { entranceTo, LEVELS, MAIN_LEVELS, type LevelDefinition } from '../game/world/level';
+import { hardUnlocked, modeRank, storyCleared, type SaveData } from '../game/save/saveManager';
+import type { ChallengeId } from '../game/modes/modes';
+import { rankValue } from '../game/dandori/scoring';
+import {
+  CHALLENGE_LEVELS,
+  entranceTo,
+  LEVELS,
+  MAIN_LEVELS,
+  type LevelDefinition,
+} from '../game/world/level';
 
 /**
  * Why a lesson cannot be played yet, or null if it can. The story opens lessons one by one;
@@ -35,7 +43,35 @@ export function nextStoryLesson(save: SaveData, lastPlayed: string): LevelDefini
   );
 }
 
-/** Lessons open to the challenges and battles: every one the story has opened. */
+/** Lessons open to the battles: every one Time Attack has opened. */
 export function openLessons(save: SaveData): LevelDefinition[] {
   return LEVELS.filter((level) => lockReason(save, level, 'normal') === null);
+}
+
+/** Whether a challenge field has a medal on it: Bronze or better (Copper is no medal). */
+export function hasMedal(save: SaveData, mode: ChallengeId, levelId: string): boolean {
+  const rank = modeRank(save, mode, levelId);
+  return rank !== null && rankValue(rank) >= rankValue('Bronze');
+}
+
+/** How many of a challenge's fields are open from the start. */
+export const CHALLENGE_FIELDS_OPEN = 3;
+
+/** A challenge's fields, in order. */
+export function challengeFieldsOf(mode: ChallengeId): LevelDefinition[] {
+  return CHALLENGE_LEVELS.filter((level) => level.challenge?.mode === mode);
+}
+
+/**
+ * Why a challenge field cannot be played yet, or null if it can. The first few of each
+ * challenge are open from the start; each one after opens with any medal on the one before.
+ */
+export function challengeLock(save: SaveData, level: LevelDefinition): string | null {
+  const field = level.challenge;
+  if (!field || field.order <= CHALLENGE_FIELDS_OPEN) return null;
+  const before = challengeFieldsOf(field.mode).find(
+    (other) => other.challenge?.order === field.order - 1,
+  );
+  if (!before || hasMedal(save, field.mode, before.id)) return null;
+  return `Win any medal on ${before.challenge?.order}. ${before.name} to open this field.`;
 }

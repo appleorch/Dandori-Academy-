@@ -10,9 +10,11 @@ import {
   type BoardMode,
 } from '../game/leaderboard/board';
 import { CHALLENGE_IDS, challengeOpen, isChallenge, MODES } from '../game/modes/modes';
+import { challengeFieldsOf } from './lessonAccess';
+import { fieldTitle } from './format';
 import { playedOnThisLesson, type RunEntry } from '../game/leaderboard/runCode';
 import { runKey, runsKey, type SaveData } from '../game/save/saveManager';
-import { LEVELS } from '../game/world/level';
+import { LEVELS, levelById } from '../game/world/level';
 import { MenuNav } from './MenuNav';
 
 /** The board is read at most this often while the screen is open. */
@@ -29,6 +31,12 @@ let cached: { entries: BoardEntry[]; at: number; partial: boolean } | null = nul
 
 function timeText(run: RunEntry): string {
   if (run.mode === 'growing') return `${run.alive} at sunset`;
+  // A Trial on its own field has no clock: what it is judged by is who was lost.
+  if (run.mode === 'trial' && levelById(run.level)?.untimed) {
+    return run.shards === run.shardsTotal
+      ? `${run.lost} lost`
+      : `${run.shards}/${run.shardsTotal} shards`;
+  }
   if (run.mode === 'mission' || run.mode === 'dandori' || run.mode === 'trial') {
     return run.everything
       ? `${run.time.toFixed(1)}s, all`
@@ -70,15 +78,20 @@ export function LeaderboardScreen() {
   const updateSettings = useGameStore((state) => state.updateSettings);
   const lastPlayed = useGameStore((state) => state.levelId);
   const queueRun = useGameStore((state) => state.queueRun);
-  const choices = useMemo(
+  const lessons = useMemo(
     () => LEVELS.filter((level) => !level.side || save.discovered.includes(level.id)),
     [save.discovered],
   );
-  const [levelId, setLevelId] = useState(
-    () => (choices.find((level) => level.id === lastPlayed) ?? choices[0]).id,
-  );
   const lastMode = useGameStore((state) => state.playMode);
   const [mode, setMode] = useState<BoardMode>(() => (isChallenge(lastMode) ? lastMode : 'hunt'));
+  // A challenge's board is per field; its runs on the lessons from 0.18.0 are kept as well.
+  const fields = mode === 'classic' ? [] : challengeFieldsOf(mode);
+  const choices = mode === 'classic' ? lessons : [...fields, ...lessons];
+  const [picked, setLevelId] = useState(
+    () => (choices.find((level) => level.id === lastPlayed) ?? choices[0]).id,
+  );
+  // Switching boards keeps the field if the new board has it, or starts at its first.
+  const levelId = choices.some((level) => level.id === picked) ? picked : choices[0].id;
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [load, setLoad] = useState<Load>(() =>
     cached ? { state: 'ready', ...cached } : { state: 'idle' },
@@ -109,7 +122,7 @@ export function LeaderboardScreen() {
 
   useEffect(() => refresh(false), [refresh]);
 
-  const level = LEVELS.find((candidate) => candidate.id === levelId) ?? LEVELS[0];
+  const level = levelById(levelId) ?? LEVELS[0];
   // Challenges are played on the Normal day; only the Classic board has Hard runs.
   const shownDifficulty: Difficulty = mode === 'classic' ? difficulty : 'normal';
   const board =
@@ -193,21 +206,37 @@ export function LeaderboardScreen() {
             </button>
           ))}
         </nav>
-        {mode === 'classic' && (
+        {mode === 'classic' ? (
           <p className="note">
-            Classic keeps the runs from before the challenges, when story days were scored. It is
+            Classic keeps the runs from before the challenges, when lesson days were scored. It is
             closed to new runs.
+          </p>
+        ) : (
+          <p className="note">
+            Each field has its own board. Runs from 0.18.0, when challenges were played on the
+            lessons, stay on their lessons’ boards, closed to new runs.
           </p>
         )}
         <div className="board-pick">
           <label>
-            Lesson
+            {mode === 'classic' ? 'Lesson' : 'Field'}
             <select value={levelId} onChange={(event) => setLevelId(event.target.value)}>
-              {choices.map((choice) => (
-                <option key={choice.id} value={choice.id}>
-                  {choice.side ? 'Below' : choice.stage}. {choice.name}
-                </option>
-              ))}
+              {fields.length > 0 && (
+                <optgroup label={`${boardName(mode)} fields`}>
+                  {fields.map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {fieldTitle(choice)}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label={mode === 'classic' ? 'Lessons' : 'Lessons (0.18.0, closed)'}>
+                {lessons.map((choice) => (
+                  <option key={choice.id} value={choice.id}>
+                    {choice.side ? `Below. ${choice.name}` : fieldTitle(choice)}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </label>
           {mode === 'classic' && (
@@ -240,9 +269,11 @@ export function LeaderboardScreen() {
           {load.state === 'ready' &&
             (board.length === 0 ? (
               <p className="note">
-                {offered
-                  ? 'No runs on this lesson yet. Be the first.'
-                  : `${boardName(mode)} is not offered on this lesson.`}
+                {offered && level.challenge
+                  ? 'No runs on this field yet. Be the first.'
+                  : offered
+                    ? 'No runs from 0.18.0 on this lesson.'
+                    : `${boardName(mode)} is not offered on this lesson.`}
               </p>
             ) : (
               <table className="board-table">

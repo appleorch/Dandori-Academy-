@@ -118,8 +118,10 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
       const store = useGameStore.getState();
       if (store.pokerOpen) return;
       if (event.code === 'Enter' && store.briefing) store.beginDay();
-      // R restarts from the pause menu or the results, never mid-play by accident.
-      if (event.code === 'KeyR' && (store.paused || store.phase === 'results')) {
+      // R restarts from the pause menu or the results, never mid-play by accident. A story day
+      // cannot be taken back: from its results R goes on to the next day, and mid-day not at all.
+      const story = store.playMode === 'campaign';
+      if (event.code === 'KeyR' && (store.phase === 'results' || (store.paused && !story))) {
         store.startDay(store.levelId);
       }
       if (event.code !== 'Escape' || store.briefing) return;

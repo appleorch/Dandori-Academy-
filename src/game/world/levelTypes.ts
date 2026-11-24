@@ -3,6 +3,18 @@ import type { Box, Ledge, Point } from '../navigation/NavGrid';
 import type { ShardVariant } from '../simulation/components';
 import type { Difficulty } from '../core/difficulty';
 import type { Squad, SproutKind } from '../workers/sprouts';
+import type { ChallengeId } from '../modes/modes';
+
+/**
+ * A field built for one challenge: which, its place in that challenge's list, and the test
+ * player's measured result there, which sets Platinum. That is seconds to finish for the timed
+ * challenges, Sproutlings at sunset for a Growing Season, and Sproutlings lost for a Trial.
+ */
+export interface ChallengeField {
+  mode: ChallengeId;
+  order: number;
+  pace: number;
+}
 
 /** A seed pod lying in the field. */
 export interface PodSpawn extends Point {
@@ -61,6 +73,15 @@ export interface TreasureSpawn extends Point {
 export interface BridgeSpawn extends Box {
   bank: Point;
   needs: number;
+  /** Already standing when the day begins: built on an earlier day of the story. */
+  built?: boolean;
+  /** Span-logs already laid at its bank on earlier days of the story. */
+  laid?: number;
+}
+
+/** A beacon; `lit` when it was lit on an earlier day of the story and still burns. */
+export interface BeaconSpawn extends Point {
+  lit?: boolean;
 }
 
 export interface EnemySpawn extends Point {
@@ -76,6 +97,8 @@ export interface GateSpawn extends Box {
   hp: number;
   /** Bramble by default; crystal gates are the Academy's own, grown over the old doorways. */
   style?: 'bramble' | 'crystal';
+  /** Health it has left, when worn down on an earlier day of the story; `hp` otherwise. */
+  left?: number;
 }
 
 /** A spot where a dewdrop falls every `period` seconds, starting `offset` seconds in. */
@@ -156,7 +179,7 @@ export interface LevelDefinition {
   /** Sapdrops: delivered to the Kiln, they speed up every haul for a while. */
   saps?: Point[];
   /** Beacons: cold until the Warden reaches them, then a second place to deliver hauls. */
-  beacons?: Point[];
+  beacons?: BeaconSpawn[];
   theme: LevelTheme;
   /** A small door in the rock. Something is going on behind it. */
   secret?: Point;
@@ -164,6 +187,10 @@ export interface LevelDefinition {
   descent?: Point & { to: string };
   /** A side lesson: not part of the numbered run, opened by finding its way down. */
   side?: boolean;
+  /** A challenge's own field; see `ChallengeField`. Lessons have none. */
+  challenge?: ChallengeField;
+  /** No clock: the day lasts until its goal is met, or the player calls it. `dayLength` is 0. */
+  untimed?: boolean;
 }
 
 /** A lesson as written, before its par score is derived. The theme defaults to its chapter's. */

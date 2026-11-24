@@ -12,6 +12,8 @@ import { LESSON_STORY } from '../game/story/story';
 import type { DayEnd } from '../game/simulation/Simulation';
 import { LEVELS, MAIN_LEVELS, type LevelDefinition } from '../game/world/level';
 import { formatTime } from './format';
+import { relicFor } from '../game/story/relics';
+import { SPROUT_KINDS, SPROUTS } from '../game/workers/sprouts';
 import { runStatus } from './LeaderboardScreen';
 import { ModeTargets } from './ModeTargets';
 import { SprocketPortrait } from './Portrait';
@@ -68,7 +70,7 @@ function TallyRow({
   );
 }
 
-/** One row of the story's count of the day: no points, just what happened. */
+/** One row of a Time Attack day's count: no points, just what happened. */
 function CountRow({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <tr className="tally">
@@ -135,7 +137,7 @@ function Verdict({ text, happy }: { text: string; happy: boolean }) {
   );
 }
 
-/** A story day: cleared or not, and an honest count of the day. No points. */
+/** A Time Attack day: cleared or not, the clear time against your best, and the day counted. */
 function StoryBody({ result, level }: { result: DayResult; level: LevelDefinition }) {
   const { tally } = result;
   const { twins, dewglass, glowcaps } = tally.optional;
@@ -170,9 +172,9 @@ function StoryBody({ result, level }: { result: DayResult; level: LevelDefinitio
             note={`Started with ${tally.sproutlings.start}, grew ${tally.sproutlings.grown}, lost ${tally.sproutlings.lost}`}
           />
           <CountRow
-            label="Story"
-            value={`Day ${result.storyDay}`}
-            note="Days spent in the story so far"
+            label="Academy pace"
+            value={formatTime(level.platinumTime)}
+            note={`The Academy’s test player clears it in this; ${formatTime(level.diamondTime)} is a record pace`}
           />
           {result.newRelics > 0 && (
             <CountRow
@@ -212,7 +214,7 @@ function ChallengeBody({ result, level }: { result: DayResult; level: LevelDefin
   if (!challenge || !isChallenge(result.mode)) return null;
   const targets = medalTargets(result.mode, level);
   const next = targets.find((target) => rankValue(target.rank) > rankValue(challenge.rank));
-  const gate = medalGate(result.mode);
+  const gate = medalGate(result.mode, level);
   const rows = challenge.rows;
   return (
     <>
@@ -305,6 +307,81 @@ function BattleBody({ result, level }: { result: DayResult; level: LevelDefiniti
   );
 }
 
+/** A story day: what came home, who made it back by sunset, and how the expedition stands. */
+function CampaignBody({ result, level }: { result: DayResult; level: LevelDefinition }) {
+  const report = result.campaign;
+  if (!report) return null;
+  const home = SPROUT_KINDS.reduce((sum, kind) => sum + report.survivors[kind], 0);
+  const stock = SPROUT_KINDS.reduce((sum, kind) => sum + report.stock[kind], 0);
+  const done = [
+    report.beasts > 0 && `${report.beasts} ${report.beasts === 1 ? 'beast' : 'beasts'} beaten`,
+    report.gates > 0 && `${report.gates} ${report.gates === 1 ? 'gate' : 'gates'} broken`,
+    report.bridges > 0 && `${report.bridges} ${report.bridges === 1 ? 'bridge' : 'bridges'} built`,
+    report.beacons > 0 && `${report.beacons} ${report.beacons === 1 ? 'beacon' : 'beacons'} lit`,
+  ].filter((part): part is string => Boolean(part));
+  return (
+    <>
+      <h1 className="rank stamp story-stamp">
+        {report.finishedToday ? 'The Clock is whole' : `Day ${report.day}`}
+      </h1>
+      {report.finishedToday && (
+        <Verdict
+          text={`Every part of the Great Clock is home after ${report.day} ${report.day === 1 ? 'day' : 'days'}. Listen: it is ticking again.`}
+          happy
+        />
+      )}
+      <table>
+        <tbody>
+          <tr>
+            <th scope="row">Clock parts home</th>
+            <td>
+              {report.partsHome} of {report.partsTotal}
+            </td>
+          </tr>
+          {report.newParts.map((id) => (
+            <tr key={id} className="met">
+              <th scope="row">New: {relicFor(level.id, id).name}</th>
+              <td>✓</td>
+            </tr>
+          ))}
+          <tr>
+            <th scope="row">Other relics found today</th>
+            <td>{report.relics}</td>
+          </tr>
+          <tr>
+            <th scope="row">Sproutlings home by sunset</th>
+            <td>{home}</td>
+          </tr>
+          {report.leftBehind > 0 && (
+            <tr className="missed">
+              <th scope="row">Left out at sunset</th>
+              <td>−{report.leftBehind}</td>
+            </tr>
+          )}
+          {report.lost > 0 && (
+            <tr className="missed">
+              <th scope="row">Lost during the day</th>
+              <td>−{report.lost}</td>
+            </tr>
+          )}
+          <tr>
+            <th scope="row">Grown today</th>
+            <td>+{report.grown}</td>
+          </tr>
+        </tbody>
+      </table>
+      {done.length > 0 && <p className="day-stats">{done.join(' · ')}. They stay that way.</p>}
+      <p className="day-stats">
+        The Kiln holds {stock} for tomorrow:{' '}
+        {SPROUT_KINDS.filter((kind) => report.stock[kind] > 0)
+          .map((kind) => `${report.stock[kind]} ${SPROUTS[kind].plural}`)
+          .join(', ') || 'nobody'}
+        .
+      </p>
+    </>
+  );
+}
+
 export function ResultsScreen({ level }: { level: LevelDefinition }) {
   const result = useGameStore((state) => state.result);
   const save = useGameStore((state) => state.save);
@@ -329,7 +406,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
   }, [result]);
   if (!result) return null;
   const mode = result.mode;
-  const story = mode === 'story';
+  const story = mode === 'lessons';
   const hard = level.difficulty === 'hard';
   const next =
     !story || level.side
@@ -344,20 +421,29 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
     : undefined;
 
   let body: ReactNode;
-  if (result.battle) body = <BattleBody result={result} level={level} />;
+  const campaign = result.campaign !== null;
+  if (campaign) body = <CampaignBody result={result} level={level} />;
+  else if (result.battle) body = <BattleBody result={result} level={level} />;
   else if (result.challenge) body = <ChallengeBody result={result} level={level} />;
   else body = <StoryBody result={result} level={level} />;
 
-  const eyebrow = story
-    ? `Story · ${level.stage <= MAIN_LEVELS.length && !level.side ? `Lesson ${level.stage}` : 'Below'}${hard ? ' · Hard' : ''}`
-    : `${MODES[mode].name}${result.battle ? ` against ${RIVAL_NAMES[rival]}` : ''}`;
+  const eyebrow = campaign
+    ? `Story · ${level.name}`
+    : story
+      ? `Time Attack · ${level.stage <= MAIN_LEVELS.length && !level.side ? `Lesson ${level.stage}` : 'Below'}${hard ? ' · Hard' : ''}`
+      : `${MODES[mode].name}${result.battle ? ` against ${RIVAL_NAMES[rival]}` : ''}`;
 
   return (
     <div className="screen overlay">
       <div className="panel results">
         <section className="results-main">
           <p className="eyebrow">
-            {eyebrow} · {HEADLINES[result.reason]}
+            {eyebrow} ·{' '}
+            {campaign && result.reason === 'timeUp'
+              ? 'The sun has set'
+              : campaign && result.reason === 'endedEarly'
+                ? 'You called it a day'
+                : HEADLINES[result.reason]}
           </p>
           {body}
           {result.bestChain >= 3 && <p className="day-stats">Longest chain: ×{result.bestChain}</p>}
@@ -374,7 +460,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
               </button>
             )}
             {next && nextUnlocked && result.tally.cleared && (
-              <button type="button" onClick={() => startDay(next.id, 'story')} data-primary>
+              <button type="button" onClick={() => startDay(next.id, 'lessons')} data-primary>
                 Next lesson: {next.name}
               </button>
             )}
@@ -384,19 +470,30 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
               onClick={() => startDay(level.id)}
               data-primary={!(next && nextUnlocked && result.tally.cleared) || undefined}
             >
-              {result.battle ? 'Rematch' : 'Try again'} <kbd>R</kbd>
+              {campaign
+                ? `Start day ${(result.campaign?.day ?? 0) + 1}`
+                : result.battle
+                  ? 'Rematch'
+                  : 'Try again'}{' '}
+              <kbd>R</kbd>
             </button>
             {below && (
               <button
                 type="button"
                 className="secondary"
-                onClick={() => startDay(below.id, 'story')}
+                onClick={() => startDay(below.id, 'lessons')}
               >
                 Go down to {below.name}
               </button>
             )}
             <button type="button" className="secondary" onClick={leaveDay}>
-              {story ? 'Story map' : result.battle ? 'All battles' : 'All challenges'}
+              {campaign
+                ? 'Base camp'
+                : story
+                  ? 'Lesson map'
+                  : result.battle
+                    ? 'All battles'
+                    : 'All challenges'}
             </button>
           </div>
         </section>
@@ -428,7 +525,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
               </ul>
             </div>
           )}
-          {!story && (
+          {!story && !campaign && (
             <ModeTargets level={level} mode={mode} rival={rival} earned={result.challenge?.rank} />
           )}
         </section>

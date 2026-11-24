@@ -79,7 +79,7 @@ export function BattleSelect() {
           ))}
         </div>
         {lessons.length === 0 ? (
-          <p className="note">No lesson the story has opened suits this race yet.</p>
+          <p className="note">No lesson Time Attack has opened suits this race yet.</p>
         ) : (
           <ol className="lessons">
             {lessons.map((level) => (

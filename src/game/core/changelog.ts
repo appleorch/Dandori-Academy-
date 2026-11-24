@@ -8,6 +8,18 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.19.0',
+    date: '2026-11-24',
+    changes: [
+      'A new Story, in the spirit of the first game of the genre: an open expedition into the Wild Quad beyond the Academy\u2019s east gate, to bring home the twelve parts of the stopped Great Clock. Go anywhere, in any order, over as many days as it takes. Everything you do stays done: relics brought home, beasts beaten, gates broken (or half broken), bridges built (or half built) and beacons lit are still that way the next day.',
+      'Sunset matters in the story: whoever is not in your squad, or near the Kiln or a lit beacon, when the sun goes down is lost. The Headmaster calls it a minute before. The Sproutlings who make it home wait in the Kiln for tomorrow, and new kinds are found as seed pods out in the Quad. Plan each day from the base camp, with a map of the Quad, the Kiln\u2019s stock and the Clock\u2019s parts.',
+      'The lesson run that was the story is now Time Attack: the same thirty lessons in order on the Academy map, every clear timed against your best and the Academy\u2019s own pace.',
+      'Every challenge has twelve fields of its own, built for its rule, instead of reusing the lessons: pod orchards and Mossback pastures for the Growing Season, hoards of twins, Dewglass and Lodestones for the Treasure Hunt, herds, packs and the great beasts for the Mission, routing puzzles of gates, bridges, beacons and ledges for the Dandori Challenge, and careful hazard puzzles for the Lean Squad Trial. The first three of each are open; each one after opens with a medal on the one before.',
+      'Each challenge follows its own rules. The Lean Squad Trial has no clock at all: the Kiln grows nothing, every Sunshard must come home, and medals go by how many Sproutlings you lose. A Growing Season\u2019s medals go by your headcount at sunset. Every field\u2019s Platinum is set by the Academy\u2019s test player playing it under that challenge\u2019s rules.',
+      'Runs from challenges played on lessons in 0.18.0 stay on their lessons\u2019 boards, closed to new runs. Achievements that counted lessons with medals now count challenge fields, and three new ones follow the Great Clock.',
+    ],
+  },
+  {
     version: '0.18.0',
     date: '2026-11-23',
     changes: [

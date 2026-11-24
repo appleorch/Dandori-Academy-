@@ -33,6 +33,7 @@ import {
 import { challengeFacts, liveChallenge, type LiveChallenge } from '../modes/facts';
 import type { BattleOutcome, RaceSnapshot, RivalLevel } from '../modes/battle';
 import { tallyDay, type DayTally } from '../dandori/tally';
+import { dayField, newCampaign, settleDay, type CampaignReport } from '../campaign/campaign';
 import { dayFeats } from '../progression/feats';
 import { GAME_VERSION } from './changelog';
 import type { SproutKind } from '../workers/sprouts';
@@ -61,6 +62,7 @@ function deviceDefaults(): Settings {
 /** Screens reachable from the main menu. */
 export type MenuScreen =
   | 'menu'
+  | 'camp'
   | 'map'
   | 'challenges'
   | 'battles'
@@ -72,7 +74,8 @@ export type MenuScreen =
 
 /** The screen a day of a mode is chosen from, and returned to. */
 export function screenFor(mode: ModeId): MenuScreen {
-  if (mode === 'story') return 'map';
+  if (mode === 'campaign') return 'camp';
+  if (mode === 'lessons') return 'map';
   return isBattle(mode) ? 'battles' : 'challenges';
 }
 export type GamePhase = MenuScreen | 'story' | 'playing' | 'results';
@@ -80,6 +83,10 @@ export type GamePhase = MenuScreen | 'story' | 'playing' | 'results';
 /** Low-frequency copy of simulation state for the HUD. */
 export interface HudSnapshot {
   timeLeft: number;
+  /** Seconds since the day began: the clock shown on a day with no clock of its own. */
+  elapsed: number;
+  /** Ids of the treasures home so far today. */
+  treasureIds: readonly string[];
   squad: number;
   idle: number;
   working: number;
@@ -152,6 +159,8 @@ export interface DayResult {
   /** The story's day count after this day, and relics recovered for the first time today. */
   storyDay: number;
   newRelics: number;
+  /** A story day: what it did to the expedition. */
+  campaign: CampaignReport | null;
 }
 
 interface GameStore {
@@ -219,6 +228,8 @@ interface GameStore {
   updateSettings: (patch: Partial<Settings>) => void;
   /** Replaces all progress, for loading a save file or erasing progress. */
   replaceSave: (save: SaveData) => void;
+  /** Gives up the story's expedition and starts it again from the first day. */
+  restartCampaign: () => void;
   /**
    * Publishes the HUD. `below` is set while the Warden is down a cave: the cave's name and the
    * surface clock, which stands still until they come back up.
@@ -267,6 +278,8 @@ function snapshot(sim: Simulation): HudSnapshot {
   return {
     twins: pendingTwins(sim),
     timeLeft: sim.timeLeft,
+    elapsed: sim.elapsed,
+    treasureIds: sim.stats.treasuresCollected.slice(),
     squad: counts.squad,
     idle: counts.idle,
     working: counts.working,
@@ -337,7 +350,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     storyKind: 'prologue',
     levelId: LEVELS[0].id,
     playDifficulty: 'normal',
-    playMode: 'story',
+    playMode: 'lessons',
     rival: 'normal',
     runId: 0,
     endRequested: false,
@@ -362,13 +375,17 @@ export const useGameStore = create<GameStore>((set, get) => {
         levelId,
         playMode: mode ?? state.playMode,
         rival: rival ?? state.rival,
-        // Hard is a story setting: challenges and battles are measured on the Normal day.
-        playDifficulty: (mode ?? state.playMode) === 'story' ? state.settings.difficulty : 'normal',
+        // Hard is a Time Attack setting: everything else is played on the Normal day.
+        playDifficulty:
+          (mode ?? state.playMode) === 'lessons' ? state.settings.difficulty : 'normal',
         runId: state.runId + 1,
         endRequested: false,
         paused: false,
-        // Challenges and battles always open on their rules; the story's briefings can be turned off.
-        briefing: state.settings.briefings || (mode ?? state.playMode) !== 'story',
+        // Challenges and battles always open on their rules; Time Attack's and the story's
+        // briefings can be turned off.
+        briefing:
+          state.settings.briefings ||
+          ((mode ?? state.playMode) !== 'lessons' && (mode ?? state.playMode) !== 'campaign'),
         race: null,
         hint: null,
         sprocket: null,
@@ -467,6 +484,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ settings });
     },
 
+    restartCampaign: () => {
+      const save = { ...get().save, campaign: newCampaign() };
+      persist(save);
+      set({ save });
+    },
+
     replaceSave: (save) => {
       const checked = unlockAchievements(save, null, new Date()).save;
       persist(checked);
@@ -516,6 +539,12 @@ export const useGameStore = create<GameStore>((set, get) => {
         grown: stats.grown,
         timeLeft: sim.timeLeft,
       });
+      // A story day is settled into the expedition: what it took out of the world, and who
+      // made it home by sunset.
+      const settled =
+        mode === 'campaign'
+          ? settleDay(get().save.campaign, dayField(get().save.campaign), sim)
+          : null;
       const facts = isChallenge(mode) ? challengeFacts(sim) : null;
       const challenge = isChallenge(mode) && facts ? scoreChallenge(mode, level, facts) : null;
       const now = new Date();
@@ -544,6 +573,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         splits: cleared ? stats.deliveryTimes : undefined,
         extraTreasures: haul?.relics ?? [],
         feats: dayFeats(sim, tally, haul),
+        campaign: settled?.state,
         run:
           isChallenge(mode) && facts && challenge
             ? (makeChallengeRun(
@@ -589,14 +619,14 @@ export const useGameStore = create<GameStore>((set, get) => {
             challenge.total > modeBest(previous, mode, level.id, level.difficulty),
           unlockedNext: save.stage > previous.stage && level.stage < LEVELS.length,
           firstClear:
-            mode === 'story' &&
+            mode === 'lessons' &&
             cleared &&
             !storyCleared(previous, level.id, 'normal') &&
             !storyCleared(previous, level.id, 'hard'),
           elapsed: sim.elapsed,
           clearTime: cleared ? sim.elapsed : null,
           previousBest:
-            mode === 'story' ? bestClearTime(previous, level.id, level.difficulty) : null,
+            mode === 'lessons' ? bestClearTime(previous, level.id, level.difficulty) : null,
           bestChain: stats.bestChain,
           caveRelics: haul?.relics.length ?? 0,
           run: day.run ?? null,
@@ -610,6 +640,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           battle: battle ?? null,
           storyDay: save.story.day,
           newRelics: relicKeys.filter((key) => !previous.treasuresCollected.includes(key)).length,
+          campaign: settled?.report ?? null,
         },
       });
     },

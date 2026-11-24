@@ -6,7 +6,7 @@ import { penaltyPerLoss } from '../core/difficulty';
 import { HAZARDS } from '../enemies/enemyKinds';
 import type { Point } from '../navigation/NavGrid';
 import type { SproutKind } from '../workers/sprouts';
-import { forDifficulty, LEVELS } from './level';
+import { CHALLENGE_LEVELS, forDifficulty, LEVELS } from './level';
 import { BOT_STYLES, playGreedy } from './testBot';
 
 /** Most of a kind's starting number that a shard only that kind can lift may need. */
@@ -72,7 +72,8 @@ describe.each(LEVELS)('$name on Hard', (base) => {
   );
 });
 
-describe.each(LEVELS)('$name', (level) => {
+// Every field, lessons and challenge fields alike, is checked for a sound layout.
+describe.each([...LEVELS, ...CHALLENGE_LEVELS])('$id', (level) => {
   it('has every spawn on walkable ground', () => {
     const sim = new Simulation(level);
     // Every spot must be reachable once the gates are broken and bridges built.
@@ -206,7 +207,8 @@ describe.each(LEVELS)('$name', (level) => {
     sim.dispose();
   });
 
-  it(
+  // Challenge fields are measured by their own rules (see modes.test.ts).
+  it.skipIf(level.challenge !== undefined)(
     'has a Platinum time set at a simple greedy player’s clear time',
     () => {
       const sim = new Simulation(level);
