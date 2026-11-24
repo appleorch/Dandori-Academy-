@@ -18,7 +18,9 @@ fields, ranks, and progression from one lesson to the next.
 ```sh
 npm install
 npm run dev        # play at http://localhost:5173
-npm test           # unit, integration, full-level and stress tests
+npm test           # unit, integration, layout and stress tests (well under a minute)
+npm run test:levels  # whole days played by the test player on every field (about ten minutes)
+npm run test:all   # both
 npm run typecheck
 npm run lint
 npm run build

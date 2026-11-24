@@ -11,11 +11,13 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
+    "test": "vitest run --exclude '**/*.levels.test.ts' --exclude '**/node_modules/**'",
     "build:docs": "tsc --noEmit && vite build --outDir docs --emptyOutDir",
     "balance": "VITE_BALANCE=1 vitest run src/game/world/balance.report.test.ts -u",
     "board:collect": "vite build --ssr scripts/collect-board.ts --outDir .board-build --emptyOutDir --logLevel warn && node .board-build/collect-board.js",
-    "paces": "VITE_PACES=1 vitest run src/game/modes/challengePace.report.test.ts"
+    "paces": "VITE_PACES=1 vitest run src/game/modes/challengePace.report.test.ts",
+    "test:levels": "vitest run levels.test",
+    "test:all": "vitest run"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

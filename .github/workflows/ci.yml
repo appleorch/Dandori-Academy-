@@ -1,0 +1,55 @@
+# Checks every push and pull request. The fast job runs the type check, lint, formatting, the
+# unit and layout tests (`npm test`, well under a minute) and the build. The whole-day runs of the
+# test player on every lesson, challenge field and story day (`npm run test:levels`) take about
+# ten minutes on one machine, so they run as four parallel jobs of about equal length.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+
+  levels:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: levels (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: lessons, Normal
+            args: src/game/world/lessons.levels.test.ts -t "Platinum time"
+          - name: lessons, Hard
+            args: src/game/world/lessons.levels.test.ts -t "on Hard"
+          - name: challenge fields
+            args: src/game/modes/challenges.levels.test.ts
+          - name: story
+            args: src/game/campaign/campaign.levels.test.ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx vitest run ${{ matrix.args }}
