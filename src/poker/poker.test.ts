@@ -4,6 +4,7 @@ import { decide, equity } from './ai';
 import { makeCard, shuffledDeck, type Card } from './cards';
 import { PokerGame } from './game';
 import { evaluate } from './hand';
+import { allInStreak, WALKOUT_SHOVES } from './walkout';
 
 /** Reads "As Kd 10h" into cards. */
 function hand(text: string): Card[] {
@@ -198,5 +199,43 @@ describe('the players', () => {
       // Rising blinds always force a winner.
       expect(game.champion).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+describe('the walk out', () => {
+  it('counts the Warden’s all-ins in a row, and anything else breaks the run', () => {
+    expect(allInStreak(0, 'All in 1500')).toBe(1);
+    expect(allInStreak(1, 'All in')).toBe(2);
+    expect(allInStreak(2, 'All in 300')).toBe(WALKOUT_SHOVES);
+    expect(allInStreak(2, 'Call 40')).toBe(0);
+    expect(allInStreak(2, 'Raise to 120')).toBe(0);
+    expect(allInStreak(2, 'Check')).toBe(0);
+    expect(allInStreak(2, 'Fold')).toBe(0);
+  });
+
+  it('sees a shove, and a call for every chip, as going all in at the table', () => {
+    const rng = new Rng(4);
+    const game = new PokerGame(names, 1500, () => rng.next());
+    let streak = 0;
+    let shoves = 0;
+    for (let hands = 0; hands < 40 && shoves < 3 && game.champion < 0; hands++) {
+      if (game.seats[0].out) break;
+      game.startHand();
+      while (!game.handOver) {
+        if (game.toAct === 0) {
+          const legal = game.legal();
+          // The Warden shoves when they can, and calls for everything when they cannot.
+          game.act(legal.canRaise ? { type: 'raise', to: legal.maxRaiseTo } : { type: 'call' });
+          streak = allInStreak(streak, game.seats[0].lastAction);
+          shoves++;
+          expect(streak).toBe(shoves);
+        } else if (game.toAct > 0) {
+          game.act({ type: 'call' });
+        } else {
+          game.advance();
+        }
+      }
+    }
+    expect(shoves).toBeGreaterThanOrEqual(1);
   });
 });

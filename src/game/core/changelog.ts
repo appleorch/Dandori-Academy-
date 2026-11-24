@@ -8,6 +8,15 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.19.1',
+    date: '2026-11-24',
+    changes: [
+      'The back room has a second door, behind the Warden\u2019s own chair, that nobody at the table ever turns round to look at. Push every chip in enough hands running and the Warden may get up and go to see where it leads, whatever the regulars have to say about it.',
+      'Whatever is through it has blocks to dig and build with, a sky that goes from day to night, and somebody small living there. What you build is kept for your next visit, and the way back to the table is the way you came in, with the hand where you left it.',
+      'A new secret achievement.',
+    ],
+  },
+  {
     version: '0.19.0',
     date: '2026-11-24',
     changes: [

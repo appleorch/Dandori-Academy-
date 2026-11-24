@@ -101,6 +101,7 @@ describe('secret achievements', () => {
       'back-room',
       'card-shark',
       'royal-flush',
+      'dark-door',
     ]);
     for (const achievement of secrets) expect(achievement.earned(emptySave(), null)).toBe(false);
   });

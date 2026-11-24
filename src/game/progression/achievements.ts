@@ -577,6 +577,11 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   secret('back-room', 'Five Knocks', 'Find where the Sproutlings go on Thursdays.'),
   secret('card-shark', 'Card Shark', 'Win every chip at the table in the back room.'),
   secret('royal-flush', 'Lucky Ember', 'Win a hand with a straight flush.'),
+  secret(
+    'dark-door',
+    'All the Way In',
+    'Go all in three times running in the back room, then keep going.',
+  ),
 ];
 
 export interface UnlockResult {
