@@ -8,7 +8,7 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
-    version: '0.19.2',
+    version: '0.20.1',
     date: '2026-11-24',
     changes: [
       'Plays offline once opened, and installs to a home screen or desktop like an app, with its own icon.',
@@ -16,6 +16,19 @@ export const CHANGELOG: readonly Release[] = [
       'A crash in the 3D view now shows Try again and Back instead of a blank screen. Errors are noted on your device only (Settings, Error log) so you can copy them into a bug report.',
       'The Academy\u2019s test player no longer gets stuck on a haul or a beast it cannot reach to throw at, such as a Span-log behind a closed gate. Four challenge fields and Rush Hour have new Platinum targets measured with it (Spark Hedge, Bridge Builders, Gatekeepers, Masterwork); their Academy boards start afresh.',
       'Behind the scenes: tests run in seconds (the whole-day test-player runs are separate), and every change is checked automatically, including playing every mode in a real browser.',
+    ],
+  },
+  {
+    version: '0.20.0',
+    date: '2026-11-24',
+    changes: [
+      'Gamepads: play the whole game on a controller. The left stick moves, the right stick aims (with aim assist that snaps onto a nearby job, which can be turned off), RT throws, LT whistles, A charges, B dismisses, X goes down or knocks, LB and RB step through the kinds, Y pulls out to the tactical view, View fast-forwards and Menu pauses. In menus the D-pad or left stick moves between buttons, A chooses and B goes back. Prompts on screen show the pad\u2019s buttons while a pad is in use.',
+      'Every control can be rebound, in Settings under Controls: two keys or mouse buttons and a gamepad button for each action. A key already in use is moved rather than shared, and you are told what lost it. Esc and the pad\u2019s Menu button always pause. Proctor Ashwick\u2019s tips name the keys and buttons you actually have.',
+      'Each kind of Sproutling now has its own head shape as well as its colour (Emberlings a flame tuft, Dewlings a droplet, Stonelings a square cap, Sparklings a zig-zag bolt), with matching icons on the HUD, so the kinds can be told apart in greyscale.',
+      'Colour palettes for red-green and blue-yellow colour blindness recolour the kinds, the rings that warn of an attack landing and the medal colours, chosen so every pair stays far apart for those players.',
+      'Comfort settings: text and menu size from 90% to 150%, reduced motion (no shake, punch or freeze-frames, calmer bursts, no pulsing menus; on by default if your system asks for less motion), a high-contrast HUD, whistle and fast-forward that toggle instead of being held, and a throw arc that always shows.',
+      'Briefings, the pause menu and the results are announced as dialogs to screen readers, and the results say the outcome in one sentence. Every menu can be reached with the keyboard or a pad, with a visible focus ring. Esc goes back from any menu screen to the main menu.',
+      'New keys: X steps back through the kinds, = and - zoom, and P pauses as well as Esc.',
     ],
   },
   {

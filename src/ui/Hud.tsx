@@ -9,6 +9,11 @@ import { SprocketPortrait } from './Portrait';
 import { isChallenge, medalTargets, MODES } from '../game/modes/modes';
 import { levelById, type LevelDefinition } from '../game/world/level';
 import { RacePanel } from './RacePanel';
+import { KindGlyph } from './KindGlyph';
+import { ActionPrompt } from './Glyph';
+import { keyLabel, type Action } from '../game/commands/bindings';
+
+const KIND_ACTIONS: readonly Action[] = ['kind1', 'kind2', 'kind3', 'kind4'];
 
 /** How long a remark of the Headmaster's stays up: it fades out over the end of this. */
 const SPROCKET_SECONDS = 5.6;
@@ -32,6 +37,7 @@ export function Hud({
   input?: InputController;
 }) {
   const hud = useGameStore((state) => state.hud);
+  const bindings = useGameStore((state) => state.settings.bindings);
   const mode = useGameStore((state) => state.playMode);
   const race = useGameStore((state) => state.race);
   const phase = useGameStore((state) => state.phase);
@@ -85,9 +91,15 @@ export function Hud({
               type="button"
               className={hud.selected === kind ? `kind ${kind} chosen` : `kind ${kind}`}
               onClick={() => input?.queueSelect(kind)}
-              title={`${SPROUTS[kind].plural}: ${SPROUTS[kind].knack}${touch ? '' : ` (key ${i + 1})`}`}
+              aria-label={`${hud.squadKinds[kind]} ${SPROUTS[kind].plural}${hud.selected === kind ? ', chosen to throw' : ''}`}
+              aria-pressed={hud.selected === kind}
+              title={`${SPROUTS[kind].plural}: ${SPROUTS[kind].knack}${
+                touch || !keyLabel(bindings, KIND_ACTIONS[i])
+                  ? ''
+                  : ` (${keyLabel(bindings, KIND_ACTIONS[i])})`
+              }`}
             >
-              <span className="dot" /> {hud.squadKinds[kind]}
+              <KindGlyph kind={kind} /> {hud.squadKinds[kind]}
               {hud.selected === kind && <small>{SPROUTS[kind].plural}</small>}
             </button>
           ) : null,
@@ -220,7 +232,7 @@ export function Hud({
         </div>
         {phase === 'playing' && (
           <button type="button" className="chip quit" onClick={pause}>
-            Pause {!touch && <kbd>Esc</kbd>}
+            Pause {!touch && <ActionPrompt action="pause" />}
           </button>
         )}
       </div>
@@ -278,7 +290,7 @@ export function Hud({
         <div className="callouts">
           {nearSecret && (
             <button type="button" className="chip knock" onClick={openPoker}>
-              Knock on the little door {!touch && <kbd>E</kbd>}
+              Knock on the little door {!touch && <ActionPrompt action="interact" />}
             </button>
           )}
           {below && (
@@ -287,7 +299,8 @@ export function Hud({
               className="chip knock descend"
               onClick={() => input?.queueInteract()}
             >
-              Go down to {below.name} (the day above waits) {!touch && <kbd>E</kbd>}
+              Go down to {below.name} (the day above waits){' '}
+              {!touch && <ActionPrompt action="interact" />}
             </button>
           )}
           {nearAscent && (
@@ -296,7 +309,7 @@ export function Hud({
               className="chip knock descend"
               onClick={() => input?.queueInteract()}
             >
-              Go back up {!touch && <kbd>E</kbd>}
+              Go back up {!touch && <ActionPrompt action="interact" />}
             </button>
           )}
           {hint ? (

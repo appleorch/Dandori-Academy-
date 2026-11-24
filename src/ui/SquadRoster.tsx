@@ -3,6 +3,11 @@ import { TWIN } from '../game/core/config';
 import { bonusParts, shardCount, type LevelDefinition } from '../game/world/level';
 import { twinRunes, twinStyle } from '../game/world/twins';
 import { SPROUT_KINDS, SPROUTS, type SproutKind } from '../game/workers/sprouts';
+import { KindGlyph } from './KindGlyph';
+import { ActionPrompt } from './Glyph';
+import type { Action } from '../game/commands/bindings';
+
+const KIND_KEYS: readonly Action[] = ['kind1', 'kind2', 'kind3', 'kind4'];
 
 /** Every kind of Sproutling the lesson starts with or can grow from its seed pods. */
 function kindsOf(level: LevelDefinition): { kind: SproutKind; count: number; grown: boolean }[] {
@@ -21,7 +26,7 @@ export function SquadRoster({ level }: { level: LevelDefinition }) {
     <ul className="roster" aria-label="Today's squad">
       {kinds.map(({ kind, count, grown }) => (
         <li key={kind} className={`kind ${kind}`}>
-          <span className="dot" />
+          <KindGlyph kind={kind} />
           <strong>
             {count > 0
               ? `${count} ${count === 1 ? SPROUTS[kind].name : SPROUTS[kind].plural}`
@@ -49,9 +54,9 @@ export function SproutlingGuide() {
       <ul className="roster">
         {SPROUT_KINDS.map((kind, i) => (
           <li key={kind} className={`kind ${kind}`}>
-            <span className="dot" />
+            <KindGlyph kind={kind} />
             <strong>
-              {SPROUTS[kind].name} <kbd>{i + 1}</kbd>
+              {SPROUTS[kind].name} <ActionPrompt action={KIND_KEYS[i]} />
             </strong>
             <small>{SPROUTS[kind].knack}</small>
           </li>

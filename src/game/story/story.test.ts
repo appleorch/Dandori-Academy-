@@ -5,7 +5,7 @@ import { ACHIEVEMENTS, grantAchievement } from '../progression/achievements';
 import { initPhysics } from '../simulation/physics';
 import { Simulation } from '../simulation/Simulation';
 import { LEVELS } from '../world/level';
-import { Coach } from './coach';
+import { Coach, PAD_CONTROLS, spokenKey } from './coach';
 import { chapterOf, CHAPTERS, EPILOGUE, LESSON_STORY, PROLOGUE } from './story';
 
 beforeAll(async () => {
@@ -66,6 +66,22 @@ describe('the coach', () => {
     // Nothing is said twice in a row, and advice never floods.
     expect(lines.length).toBeLessThan(5);
     sim.dispose();
+  });
+
+  it('names the controls the player actually has', () => {
+    const sim = new Simulation(LEVELS[0]);
+    const pad = new Coach(false, PAD_CONTROLS);
+    let line: string | null = null;
+    for (let i = 0; i < 60 * 4 && !line; i++) {
+      sim.step({ ...NO_INPUT, cursorX: sim.captainTransform.x, cursorZ: 0 });
+      line = pad.update(sim, 1 / 60);
+    }
+    expect(line).toContain('left stick');
+    expect(line).toContain('hold RT');
+    expect(line).not.toContain('mouse');
+    sim.dispose();
+    expect(spokenKey('Mouse2')).toBe('the right mouse button');
+    expect(spokenKey('KeyQ')).toBe('Q');
   });
 
   it('words its advice for touch screens', () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { bindKey, DEFAULT_BINDINGS } from '../commands/bindings';
 import {
   cleanWardenName,
   defaultWardenName,
@@ -37,6 +38,42 @@ describe('settings', () => {
     expect(parseSettings({ zoomSpeed: 0 }).zoomSpeed).toBe(0.25);
   });
 
+  it('reads the accessibility and control settings, clamping and defaulting', () => {
+    const parsed = parseSettings({
+      palette: 'tritanopia',
+      uiScale: 9,
+      reducedMotion: true,
+      highContrast: true,
+      whistleToggle: true,
+      fastToggle: 'yes',
+      alwaysShowArc: true,
+      aimAssist: false,
+    });
+    expect(parsed).toMatchObject({
+      palette: 'tritanopia',
+      uiScale: 1.5,
+      reducedMotion: true,
+      highContrast: true,
+      whistleToggle: true,
+      fastToggle: false,
+      alwaysShowArc: true,
+      aimAssist: false,
+    });
+    expect(parseSettings({ palette: 'sepia', uiScale: 0.1 })).toMatchObject({
+      palette: 'default',
+      uiScale: 0.9,
+    });
+    // Settings saved before controls could be rebound get the default controls.
+    expect(parseSettings({ graphics: 'low' }).bindings).toEqual(DEFAULT_BINDINGS);
+  });
+
+  it('never shares the default bindings with a parsed copy', () => {
+    const parsed = parseSettings(null);
+    expect(parsed.bindings).toEqual(DEFAULT_BINDINGS);
+    expect(parsed.bindings).not.toBe(DEFAULT_BINDINGS);
+    expect(parsed.bindings.keys).not.toBe(DEFAULT_BINDINGS.keys);
+  });
+
   it('round-trips through storage and survives corrupt data', () => {
     let stored: string | null = null;
     const storage = {
@@ -50,6 +87,9 @@ describe('settings', () => {
       carrierCounts: false,
       zoomSpeed: 2,
       graphics: 'low' as const,
+      palette: 'deuteranopia' as const,
+      uiScale: 1.25,
+      bindings: bindKey(DEFAULT_BINDINGS, 'throw', 1, 'KeyT').bindings,
     };
     expect(writeSettings(storage, custom)).toBe(true);
     expect(loadSettings(storage)).toEqual(custom);

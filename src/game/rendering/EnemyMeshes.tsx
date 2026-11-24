@@ -11,6 +11,7 @@ import {
 } from 'three';
 import type { Entity } from '../core/ecs';
 import { useGameStore } from '../core/gameStore';
+import { PALETTE_SETS } from './palette';
 import { HARD } from '../core/difficulty';
 import { isShielded } from '../enemies/combat';
 import { useOverlayLayer } from './overlay';
@@ -771,6 +772,7 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
   const chargeLength = spec.chargeSpeed * spec.chargeTime;
   const windup = spec.windup * (sim.hard ? HARD.windup : 1);
   const showHealth = useGameStore((state) => state.settings.healthBars);
+  const danger = useGameStore((state) => PALETTE_SETS[state.settings.palette].hazards.danger);
   const gait = useMemo<Gait>(() => ({ phase: 0, stride: 0 }), []);
   const jaw = useRef<Group>(null);
   const biteZone = useRef<Mesh>(null);
@@ -992,7 +994,7 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
           <mesh ref={lane} visible={false}>
             <planeGeometry args={[r * 2, chargeLength]} />
             <meshBasicMaterial
-              color="#ff5a3c"
+              color={danger}
               transparent
               opacity={0.28}
               depthTest={false}
@@ -1047,7 +1049,7 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
       <mesh ref={tether} visible={false}>
         <planeGeometry args={[0.08, 1]} />
         <meshBasicMaterial
-          color="#ff5a3c"
+          color={danger}
           transparent
           opacity={0.55}
           depthTest={false}
@@ -1056,7 +1058,7 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
         />
       </mesh>
       <group ref={alertIcon} position={[0, r * BAR_HEIGHT[enemy.kind] + 2, 0]} visible={false}>
-        <TextSprite y={0} getText={ALERT_TEXT} color="#ff5a3c" />
+        <TextSprite y={0} getText={ALERT_TEXT} color={danger} />
       </group>
       <group ref={barGroup} position={[0, r * BAR_HEIGHT[enemy.kind] + 1, 0]}>
         <sprite scale={[BAR_WIDTH + 0.12, 0.34, 1]}>

@@ -247,6 +247,21 @@ describe('choosing who to throw', () => {
     sim.dispose();
   });
 
+  it('cycles forward and back through the kinds in the squad, wrapping round', () => {
+    const sim = new Simulation(FIELD);
+    sim.step({ ...NO_INPUT, selectKind: 'ember', cursorX: 0, cursorZ: 0 });
+    expect(sim.selected).toBe('ember');
+    sim.step({ ...NO_INPUT, cycleBack: true, cursorX: 0, cursorZ: 0 });
+    expect(sim.selected).toBe('spark');
+    sim.step({ ...NO_INPUT, cycleBack: true, cursorX: 0, cursorZ: 0 });
+    expect(sim.selected).toBe('stone');
+    sim.step({ ...NO_INPUT, cycleKind: true, cursorX: 0, cursorZ: 0 });
+    expect(sim.selected).toBe('spark');
+    sim.step({ ...NO_INPUT, cycleKind: true, cursorX: 0, cursorZ: 0 });
+    expect(sim.selected).toBe('ember');
+    sim.dispose();
+  });
+
   it('lets a Sparkling be thrown farthest', () => {
     const sim = new Simulation(FIELD);
     sim.step({ ...NO_INPUT, selectKind: 'spark', cursorX: 20, cursorZ: 0 });

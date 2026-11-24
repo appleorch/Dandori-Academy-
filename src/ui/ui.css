@@ -150,27 +150,27 @@ tr.total td {
 }
 
 .rank-platinum {
-  color: #c9f1ff;
+  color: var(--rank-platinum, #c9f1ff);
 }
 
 .rank-gold {
-  color: #ffd257;
+  color: var(--rank-gold, #ffd257);
 }
 
 .rank-silver {
-  color: #d5dbe0;
+  color: var(--rank-silver, #d5dbe0);
 }
 
 .rank-bronze {
-  color: #d99562;
+  color: var(--rank-bronze, #d99562);
 }
 
 .rank-copper {
-  color: #c4734a;
+  color: var(--rank-copper, #c4734a);
 }
 
 .rank-diamond {
-  color: #f2fbff;
+  color: var(--rank-diamond, #f2fbff);
   text-shadow:
     0 0 8px rgba(160, 230, 255, 0.85),
     0 0 18px rgba(200, 160, 255, 0.5);
@@ -2044,6 +2044,28 @@ button.touch-button.map {
 
 /* ----- Squad by kind ----- */
 
+/* Each kind's head shape, in its palette's light tint for dark panels: readable by shape alone. */
+.kind-glyph {
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+  display: inline-block;
+  vertical-align: -0.18em;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.9));
+}
+.kind-glyph.ember {
+  color: var(--kind-ember-text, #ffb08a);
+}
+.kind-glyph.dew {
+  color: var(--kind-dew-text, #9ac8ff);
+}
+.kind-glyph.stone {
+  color: var(--kind-stone-text, #d8d8de);
+}
+.kind-glyph.spark {
+  color: var(--kind-spark-text, #ffe68a);
+}
+
 .chip.squad-kinds {
   gap: 4px;
   padding: 3px 5px;
@@ -2075,36 +2097,17 @@ button.kind.chosen {
   outline-offset: -2px;
 }
 
-button.kind .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
 button.kind.ember {
-  color: #ffb08a;
-}
-button.kind.ember .dot {
-  background: #e8432d;
+  color: var(--kind-ember-text, #ffb08a);
 }
 button.kind.dew {
-  color: #9ac8ff;
-}
-button.kind.dew .dot {
-  background: #3a8ae8;
+  color: var(--kind-dew-text, #9ac8ff);
 }
 button.kind.stone {
-  color: #d8d8de;
-}
-button.kind.stone .dot {
-  background: #8a8a92;
+  color: var(--kind-stone-text, #d8d8de);
 }
 button.kind.spark {
-  color: #ffe68a;
-}
-button.kind.spark .dot {
-  background: #f2c62a;
+  color: var(--kind-spark-text, #ffe68a);
 }
 
 button.touch-button.cycle {
@@ -2231,43 +2234,30 @@ button.touch-button.cycle {
 }
 .roster li {
   display: grid;
-  grid-template-columns: 12px auto;
+  grid-template-columns: 14px auto;
   column-gap: 8px;
   align-items: baseline;
 }
-.roster li .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
+.roster li .kind-glyph {
+  width: 14px;
+  height: 14px;
+  align-self: center;
 }
 .roster li small {
   grid-column: 2;
   opacity: 0.8;
 }
 .roster .ember strong {
-  color: #ffb08a;
-}
-.roster .ember .dot {
-  background: #e8432d;
+  color: var(--kind-ember-text, #ffb08a);
 }
 .roster .dew strong {
-  color: #9ac8ff;
-}
-.roster .dew .dot {
-  background: #3a8ae8;
+  color: var(--kind-dew-text, #9ac8ff);
 }
 .roster .stone strong {
-  color: #d8d8de;
-}
-.roster .stone .dot {
-  background: #8a8a92;
+  color: var(--kind-stone-text, #d8d8de);
 }
 .roster .spark strong {
-  color: #ffe68a;
-}
-.roster .spark .dot {
-  background: #f2c62a;
+  color: var(--kind-spark-text, #ffe68a);
 }
 .sprout-guide h2 {
   margin: 12px 0 4px;
@@ -2813,24 +2803,6 @@ svg.camp-map {
 .camp-stock li.none {
   opacity: 0.45;
 }
-.kind-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.kind-dot.ember {
-  background: #e8432d;
-}
-.kind-dot.dew {
-  background: #3a8ae8;
-}
-.kind-dot.stone {
-  background: #8a8a92;
-}
-.kind-dot.spark {
-  background: #f2c62a;
-}
 .camp-parts ol {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -2931,4 +2903,215 @@ button.mode-card.lessons {
   background: rgba(0, 0, 0, 0.7);
   border-radius: 6px;
   pointer-events: none;
+}
+
+/* ----- Accessibility: focus, motion, contrast ----- */
+
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* A gamepad moves focus without a keyboard, so the ring is shown whenever it is in charge. */
+.pad-nav :focus {
+  outline: 3px solid var(--accent) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.55);
+}
+
+/* Reduced motion, chosen in the settings: everything arrives at once, nothing pulses or slides. */
+.reduced-motion .hero-embers,
+.reduced-motion .urgent-vignette {
+  display: none;
+}
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* High contrast, chosen in the settings: solid panels with bright edges over the field. */
+.high-contrast {
+  --panel: rgba(0, 0, 0, 0.96);
+}
+.high-contrast .chip,
+.high-contrast .coach,
+.high-contrast .sprocket-banner,
+.high-contrast .daybar,
+.high-contrast .panel,
+.high-contrast .twin-timer {
+  background: #000;
+  border: 2px solid var(--ink);
+}
+.high-contrast .bossbar {
+  padding: 4px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: #000;
+}
+.high-contrast .setting-text small,
+.high-contrast .chip small,
+.high-contrast .day-stats {
+  opacity: 1;
+}
+.high-contrast kbd {
+  border-color: var(--ink);
+}
+
+/* ----- Controls: prompts, gamepad glyphs and rebinding ----- */
+
+kbd.pad-glyph {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 0.4em;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 246, 220, 0.16);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  vertical-align: middle;
+}
+kbd.pad-glyph.face {
+  width: 1.6em;
+  padding: 0;
+  color: #10140f;
+}
+kbd.pad-glyph.face-a {
+  background: #6cc64a;
+}
+kbd.pad-glyph.face-b {
+  background: #e8553e;
+}
+kbd.pad-glyph.face-x {
+  background: #4a8cf0;
+}
+kbd.pad-glyph.face-y {
+  background: #f2c62a;
+}
+kbd.pad-glyph.dpad {
+  border-radius: 4px;
+}
+.glyphs {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.settings h3 {
+  margin: 10px 0 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.setting:has(.segmented) {
+  flex-wrap: wrap;
+}
+.setting-note {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.setting-note:empty {
+  display: none;
+}
+.palette-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.palette-preview .kind-glyph {
+  width: 18px;
+  height: 18px;
+}
+.swatch.danger {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid var(--danger, #ff5a3c);
+}
+
+.controls-settings {
+  display: grid;
+  gap: 8px;
+}
+.controls-settings h3 {
+  margin-top: 10px;
+}
+table.bindings {
+  table-layout: fixed;
+  font-size: 0.85rem;
+}
+table.bindings col.key-col {
+  width: 26%;
+}
+table.bindings col.pad-col {
+  width: 16%;
+}
+table.bindings th[scope='row'] {
+  padding-right: 8px;
+}
+table.bindings th.binding-group {
+  padding-top: 10px;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+table.bindings td {
+  padding: 2px 0 2px 4px;
+  text-align: center;
+}
+button.binding {
+  margin: 0;
+  padding: 5px 6px;
+  min-height: 2.1em;
+  border: 1px solid rgba(255, 246, 220, 0.3);
+  background: rgba(255, 246, 220, 0.06);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+button.binding:hover,
+button.binding:focus-visible {
+  background: rgba(255, 179, 71, 0.2);
+}
+button.binding.waiting {
+  background: var(--accent);
+  color: #2a1a08;
+}
+.binding-warnings {
+  margin: 0;
+  padding-left: 18px;
+  color: #ffb08a;
+  font-size: 0.85rem;
+}
+@media (max-width: 560px) {
+  table.bindings th[scope='row'] {
+    font-size: 0.78rem;
+  }
+  button.binding {
+    padding: 5px 2px;
+    font-size: 0.72rem;
+  }
 }

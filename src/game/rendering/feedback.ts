@@ -104,6 +104,17 @@ const WEIGHT: Partial<Record<SimEventType, readonly [number, number]>> = {
   stomp: [0.06, 0.25],
 };
 
+/** A burst for reduced motion: fewer particles, thrown less far, that settle sooner. */
+function calmed(style: BurstStyle): BurstStyle {
+  return {
+    ...style,
+    count: Math.max(1, Math.ceil(style.count * 0.35)),
+    speed: style.speed * 0.5,
+    lift: style.lift * 0.5,
+    life: style.life * 0.8,
+  };
+}
+
 /** How far to the side a sound must be before it sits fully in one ear. */
 const PAN_RANGE = 18;
 /** Sounds fade with distance from the Warden, down to this floor. */
@@ -123,6 +134,11 @@ export class Feedback {
   punch = 0;
   /** Seconds the simulation holds still, so a big hit lands with weight. */
   hitstop = 0;
+  /**
+   * Reduced motion (a setting): no shake, punch or hit-stop, and smaller, calmer bursts.
+   * Sounds and popups are unchanged.
+   */
+  calm = false;
   /** Height of the ground at a point, so effects on raised terraces sit on them. */
   ground: (x: number, z: number) => number = () => 0;
   /** Where the listener stands: the Warden. Sounds are panned and faded from here. */
@@ -137,7 +153,7 @@ export class Feedback {
       gain: Math.max(QUIETEST, 1 - distance / HEARING_RANGE),
       pitch: event.amount,
     });
-    const weight = WEIGHT[event.type];
+    const weight = this.calm ? undefined : WEIGHT[event.type];
     if (weight) {
       this.hitstop = Math.max(this.hitstop, weight[0]);
       this.punch = Math.max(this.punch, weight[1]);
@@ -145,9 +161,10 @@ export class Feedback {
     const reaction = REACTIONS[event.type];
     if (reaction?.burst) {
       const lift = this.ground(event.x, event.z);
-      this.particles.burst(event.x, reaction.height + lift, event.z, reaction.burst);
+      const burst = this.calm ? calmed(reaction.burst) : reaction.burst;
+      this.particles.burst(event.x, reaction.height + lift, event.z, burst);
     }
-    if (reaction?.shake) this.shake = Math.max(this.shake, reaction.shake);
+    if (reaction?.shake && !this.calm) this.shake = Math.max(this.shake, reaction.shake);
     if (event.type === 'deliver') this.popup(`+${event.amount}`, event.x, event.z);
     if (event.type === 'chain') {
       this.popup(

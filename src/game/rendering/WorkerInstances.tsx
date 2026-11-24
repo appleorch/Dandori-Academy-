@@ -10,12 +10,15 @@ import {
   type MeshBasicMaterial,
 } from 'three';
 import { WORKER } from '../core/config';
+import { useGameStore } from '../core/gameStore';
 import type { Entity } from '../core/ecs';
 import type { Worker, WorkerState } from '../simulation/components';
-import type { SproutKind } from '../workers/sprouts';
+import { SPROUT_KINDS, type SproutKind } from '../workers/sprouts';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
 import { inDanger } from './danger';
+import { PALETTE_SETS } from './palette';
+import { crownGeometries } from './sproutCrowns';
 import { gameTextures } from './textures';
 
 /*
@@ -26,8 +29,9 @@ import { gameTextures } from './textures';
  *         ├─ legs ── feet       (pedal with speed)
  *         ├─ arms               (swing, lift a haul, flail on an enemy)
  *         ├─ basket, basket rim (woven, on the back)
+ *         ├─ cap                (Stonelings: a square cap on the head)
  *         └─ stalk ─┬─ leaves   (on a damped spring: they lag and bob)
- *                   └─ ember
+ *                   └─ crown    (flame tuft, droplet or zig-zag bolt, by kind)
  *
  * Animation is driven from what the simulation says each worker is doing, plus a little
  * remembered state per worker (speed, turn, spring, landing) kept here, never in the sim.
@@ -49,26 +53,39 @@ const BASKET_PROFILE: readonly (readonly [number, number])[] = [
   [0.15, 0.2],
   [0.155, 0.22],
 ];
-/** Each kind's body colour while in the squad, while working, and while idle (paler). */
-const BODIES: Record<SproutKind, readonly [Color, Color, Color]> = {
-  ember: [new Color('#e8432d'), new Color('#b8301f'), new Color('#d9a79c')],
-  dew: [new Color('#3a8ae8'), new Color('#2a68b8'), new Color('#a8c4e0')],
-  stone: [new Color('#8a8a92'), new Color('#6a6a72'), new Color('#c4c4c8')],
-  spark: [new Color('#f2c62a'), new Color('#c89a1a'), new Color('#ecdca0')],
-};
-/** The glow on each kind's head-sprout, lit (working or in the squad) and cold (idle). */
-const CROWNS: Record<SproutKind, readonly [Color, Color]> = {
-  ember: [new Color('#ffb02e'), new Color('#8fa3ad')],
-  dew: [new Color('#9ae0ff'), new Color('#7a98a8')],
-  stone: [new Color('#d8d4c8'), new Color('#9a9890')],
-  spark: [new Color('#fff27a'), new Color('#a8a070')],
-};
-/** How each kind's crown sits: offset up the stalk, and its scale. */
-const CROWN_SHAPE: Record<SproutKind, { y: number; size: number }> = {
-  ember: { y: 0.32, size: 1 },
-  dew: { y: 0.3, size: 1 },
-  stone: { y: 0.3, size: 1 },
-  spark: { y: 0.32, size: 1 },
+/** Each kind's colours, from the player's palette (see palette.ts). */
+interface KindTints {
+  /** Body while in the squad, while working, and while idle (paler). */
+  bodies: readonly [Color, Color, Color];
+  /** The head ornament, lit (working or in the squad) and cold (idle). */
+  crowns: readonly [Color, Color];
+}
+type Tints = Record<SproutKind, KindTints>;
+
+function tintsFor(palette: keyof typeof PALETTE_SETS): Tints {
+  const set = PALETTE_SETS[palette].kinds;
+  const tints = {} as Tints;
+  for (const kind of SPROUT_KINDS) {
+    const c = set[kind];
+    tints[kind] = {
+      bodies: [new Color(c.body), new Color(c.work), new Color(c.idle)],
+      crowns: [new Color(c.crown), new Color(c.crownCold)],
+    };
+  }
+  return tints;
+}
+/**
+ * How each kind's crown sits: on the stalk's tip or flat on the head (the Stoneling's cap),
+ * how high, its scale, and how fast it turns.
+ */
+const CROWN_SHAPE: Record<
+  SproutKind,
+  { on: 'stalk' | 'head'; y: number; size: number; spin: number; glow: number }
+> = {
+  ember: { on: 'stalk', y: 0.13, size: 1.35, spin: 1.5, glow: 1.8 },
+  dew: { on: 'stalk', y: 0.12, size: 1.2, spin: 1, glow: 1.9 },
+  stone: { on: 'head', y: 0.66, size: 1.05, spin: 0, glow: 1.3 },
+  spark: { on: 'stalk', y: 0.13, size: 1.45, spin: 0, glow: 1.6 },
 };
 /** Stonelings are a size bigger. */
 const BULK: Record<SproutKind, number> = { ember: 1, dew: 1, stone: 1.18, spark: 0.95 };
@@ -132,8 +149,8 @@ interface Drop {
   life: number;
 }
 
-function bodyColor(state: WorkerState, kind: SproutKind): Color {
-  const [squad, working, idle] = BODIES[kind];
+function bodyColor(state: WorkerState, kind: SproutKind, tints: Tints): Color {
+  const [squad, working, idle] = tints[kind].bodies;
   if (state === 'follow' || state === 'thrown' || state === 'rush') return squad;
   return state === 'idle' ? idle : working;
 }
@@ -215,6 +232,9 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
     [],
   );
   const weave = gameTextures().weave;
+  const crownShapes = useMemo(() => crownGeometries(), []);
+  const palette = useGameStore((state) => state.settings.palette);
+  const tints = useMemo(() => tintsFor(palette), [palette]);
 
   useFrame(({ clock }, frameDelta) => {
     const m = {
@@ -400,7 +420,9 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       const body = dummy.matrix.clone();
       mesh.body.setMatrixAt(index, body);
       const color =
-        worker.peril === 'fire' && Math.sin(time * 20) > 0 ? FIRE : bodyColor(state, worker.kind);
+        worker.peril === 'fire' && Math.sin(time * 20) > 0
+          ? FIRE
+          : bodyColor(state, worker.kind, tints);
       mesh.body.setColorAt(
         index,
         threatened && Math.sin(time * 30) > 0 ? tint.copy(color).lerp(DANGER, 0.7) : color,
@@ -517,6 +539,9 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
             : kind === 'spark'
               ? 0.8 + Math.abs(Math.sin(time * 31 + entity * 2.3)) * 0.4
               : 1;
+      // A bolt sways rather than spins, so its zig-zag always shows.
+      const turn =
+        kind === 'spark' ? Math.sin(time * 9 + entity) * 0.35 : time * shape.spin + entity;
       place(
         crown,
         slot,
@@ -524,15 +549,16 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
         shape.y,
         0,
         0,
-        time * (kind === 'spark' ? 6 : 2) + entity,
+        turn,
         0,
         flicker * shape.size,
-        flicker * shape.size * (kind === 'ember' ? 1.25 : 1),
+        flicker * shape.size * (kind === 'ember' ? 1.15 : 1),
         flicker * shape.size,
-        stalk,
+        shape.on === 'stalk' ? stalk : body,
       );
-      const [hot, cold] = CROWNS[kind];
-      crown.setColorAt(slot, flame.copy(lit ? hot : cold).multiplyScalar(lit ? 2.2 : 0.9));
+      const [hot, cold] = tints[kind].crowns;
+      // Lit, it glows; not so much that the bloom hides its outline.
+      crown.setColorAt(slot, flame.copy(lit ? hot : cold).multiplyScalar(lit ? shape.glow : 0.9));
       // On fire: flames lick up from the body until it is whistled out or lost.
       if (worker.peril === 'fire') {
         for (let k = 0; k < 3; k++) {
@@ -710,20 +736,32 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
         <sphereGeometry args={[0.1, 8, 4]} />
         <meshStandardMaterial color="#6ab04a" roughness={0.6} />
       </instancedMesh>
-      <instancedMesh ref={refs.ember} args={[undefined, undefined, MAX]} frustumCulled={false}>
-        <coneGeometry args={[0.1, 0.24, 6]} />
+      <instancedMesh
+        ref={refs.ember}
+        args={[crownShapes.ember, undefined, MAX]}
+        frustumCulled={false}
+      >
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
-      <instancedMesh ref={refs.droplet} args={[undefined, undefined, MAX]} frustumCulled={false}>
-        <sphereGeometry args={[0.1, 10, 8]} />
-        <meshBasicMaterial toneMapped={false} transparent opacity={0.85} />
+      <instancedMesh
+        ref={refs.droplet}
+        args={[crownShapes.dew, undefined, MAX]}
+        frustumCulled={false}
+      >
+        <meshBasicMaterial toneMapped={false} transparent opacity={0.9} />
       </instancedMesh>
-      <instancedMesh ref={refs.pebble} args={[undefined, undefined, MAX]} frustumCulled={false}>
-        <dodecahedronGeometry args={[0.11, 0]} />
+      <instancedMesh
+        ref={refs.pebble}
+        args={[crownShapes.stone, undefined, MAX]}
+        frustumCulled={false}
+      >
         <meshStandardMaterial roughness={0.9} flatShading />
       </instancedMesh>
-      <instancedMesh ref={refs.spark} args={[undefined, undefined, MAX]} frustumCulled={false}>
-        <octahedronGeometry args={[0.11, 0]} />
+      <instancedMesh
+        ref={refs.spark}
+        args={[crownShapes.spark, undefined, MAX]}
+        frustumCulled={false}
+      >
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
       <instancedMesh ref={refs.blaze} args={[undefined, undefined, MAX * 3]} frustumCulled={false}>

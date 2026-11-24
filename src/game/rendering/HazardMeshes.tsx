@@ -7,6 +7,7 @@ import { HAZARDS, type HazardKind } from '../enemies/enemyKinds';
 import type { Hazard } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
+import { PALETTE_SETS, type HazardColours } from './palette';
 
 interface HazardMeshProps {
   sim: Simulation;
@@ -14,17 +15,19 @@ interface HazardMeshProps {
   hazard: Hazard;
 }
 
+/** What each hazard looks like: its projectile, if any, and which warning colour rings its landing. */
 const LOOK: Record<
   HazardKind,
-  { body: string; ring: string; size: number } | { body: null; ring: string; size: 0 }
+  | { body: string; ring: keyof HazardColours; size: number }
+  | { body: null; ring: keyof HazardColours; size: 0 }
 > = {
-  glob: { body: '#7d9c38', ring: '#ff5a3c', size: 0.45 },
-  pebble: { body: '#8a8378', ring: '#ff5a3c', size: 0.4 },
-  drip: { body: '#cfeaff', ring: '#5ab8ff', size: 0.35 },
-  slam: { body: null, ring: '#ff3a2a', size: 0 },
-  stomp: { body: null, ring: '#ffb02a', size: 0 },
-  flame: { body: null, ring: '#ff7a1a', size: 0 },
-  arc: { body: null, ring: '#ffe84a', size: 0 },
+  glob: { body: '#7d9c38', ring: 'danger', size: 0.45 },
+  pebble: { body: '#8a8378', ring: 'danger', size: 0.4 },
+  drip: { body: '#cfeaff', ring: 'drip', size: 0.35 },
+  slam: { body: null, ring: 'danger', size: 0 },
+  stomp: { body: null, ring: 'stomp', size: 0 },
+  flame: { body: null, ring: 'flame', size: 0 },
+  arc: { body: null, ring: 'arc', size: 0 },
 };
 
 /**
@@ -36,6 +39,8 @@ function HazardMesh({ sim, entity, hazard }: HazardMeshProps) {
   const fill = useRef<Mesh>(null);
   const marker = useRef<Group>(null);
   const look = LOOK[hazard.kind];
+  const palette = useGameStore((state) => state.settings.palette);
+  const ring = PALETTE_SETS[palette].hazards[look.ring];
 
   useFrame(({ clock }) => {
     const at = sim.transforms.get(entity);
@@ -90,7 +95,7 @@ function HazardMesh({ sim, entity, hazard }: HazardMeshProps) {
         <mesh>
           <ringGeometry args={[hazard.radius - 0.14, hazard.radius, 48]} />
           <meshBasicMaterial
-            color={look.ring}
+            color={ring}
             transparent
             opacity={0.9}
             depthTest={false}
@@ -100,7 +105,7 @@ function HazardMesh({ sim, entity, hazard }: HazardMeshProps) {
         <mesh ref={fill}>
           <circleGeometry args={[1, 40]} />
           <meshBasicMaterial
-            color={look.ring}
+            color={ring}
             transparent
             opacity={0.25}
             depthTest={false}

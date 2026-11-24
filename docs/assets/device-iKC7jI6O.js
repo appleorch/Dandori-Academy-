@@ -1,0 +1,1 @@
+import{r as e}from"./react-Bgt6jEwn.js";var t=e((e,t)=>({device:`keyboard`,padConnected:!1,setDevice:n=>{t().device!==n&&e({device:n})},setPadConnected:n=>{t().padConnected!==n&&e({padConnected:n})}}));function n(e){t.getState().setDevice(e)}export{t as n,n as t};

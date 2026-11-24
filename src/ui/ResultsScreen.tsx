@@ -17,6 +17,7 @@ import { SPROUT_KINDS, SPROUTS } from '../game/workers/sprouts';
 import { runStatus } from './runStatus';
 import { ModeTargets } from './ModeTargets';
 import { SprocketPortrait } from './Portrait';
+import { ActionPrompt } from './Glyph';
 
 const HEADLINES: Record<DayEnd, string> = {
   allCollected: 'Every Sunshard is home',
@@ -122,6 +123,24 @@ function stingerFor(result: DayResult): SoundName {
     return rankValue(rank) < rankValue('Bronze') ? 'fail' : STINGERS[rank];
   }
   return result.tally.cleared ? 'rankGold' : 'fail';
+}
+
+/** The outcome of a day in one sentence, for screen readers. */
+function resultSummary(result: DayResult): string {
+  if (result.campaign) {
+    const report = result.campaign;
+    return `Day ${report.day} over. Clock parts home: ${report.partsHome} of ${report.partsTotal}.`;
+  }
+  if (result.battle) {
+    const word = { won: 'You won', lost: 'You lost', drawn: 'A draw' }[result.battle.outcome];
+    return `${word}: ${result.battle.you} to ${result.battle.rival} ${result.battle.unit}.`;
+  }
+  if (result.challenge) {
+    return `${result.challenge.rank} medal, ${result.challenge.total} points.`;
+  }
+  return result.tally.cleared
+    ? `Cleared${result.clearTime !== null ? ` in ${formatTime(result.clearTime)}` : ''}.`
+    : 'Not cleared yet.';
 }
 
 /** The Headmaster has his say. */
@@ -433,17 +452,28 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
       ? `Time Attack · ${level.stage <= MAIN_LEVELS.length && !level.side ? `Lesson ${level.stage}` : 'Below'}${hard ? ' · Hard' : ''}`
       : `${MODES[mode].name}${result.battle ? ` against ${RIVAL_NAMES[rival]}` : ''}`;
 
+  const headline =
+    campaign && result.reason === 'timeUp'
+      ? 'The sun has set'
+      : campaign && result.reason === 'endedEarly'
+        ? 'You called it a day'
+        : HEADLINES[result.reason];
+
   return (
     <div className="screen overlay">
-      <div className="panel results">
+      <div
+        className="panel results"
+        role="dialog"
+        aria-labelledby="results-eyebrow"
+        aria-describedby="results-summary"
+      >
         <section className="results-main">
-          <p className="eyebrow">
-            {eyebrow} ·{' '}
-            {campaign && result.reason === 'timeUp'
-              ? 'The sun has set'
-              : campaign && result.reason === 'endedEarly'
-                ? 'You called it a day'
-                : HEADLINES[result.reason]}
+          <p className="eyebrow" id="results-eyebrow">
+            {eyebrow} · {headline}
+          </p>
+          {/* Read out once by screen readers: the outcome in one sentence, before the details. */}
+          <p className="sr-only" id="results-summary" role="status">
+            {resultSummary(result)}
           </p>
           {body}
           {result.bestChain >= 3 && <p className="day-stats">Longest chain: ×{result.bestChain}</p>}
@@ -475,7 +505,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
                 : result.battle
                   ? 'Rematch'
                   : 'Try again'}{' '}
-              <kbd>R</kbd>
+              <ActionPrompt action="restart" />
             </button>
             {below && (
               <button
