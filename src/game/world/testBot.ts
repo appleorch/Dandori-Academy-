@@ -155,6 +155,31 @@ function reachable(sim: Simulation, entity: Entity, wading = false): boolean {
   return hasRoute(sim, sim.carryables.require(entity), sim.transforms.require(entity), wading);
 }
 
+/** Farthest the Warden ever stands from a job to throw at it (the widest style's throw). */
+const THROW_REACH = 7.5;
+const REACH_RINGS = [2, 4, 6, THROW_REACH];
+const REACH_ANGLES = 12;
+
+/**
+ * Whether the Warden can get within throwing reach of (x, z): the spot itself, or some spot
+ * around it, can be walked to. A job behind a closed gate, or across water with no way over,
+ * fails this until the way opens; one at the top of a cliff passes, as it is thrown up to.
+ */
+function throwable(sim: Simulation, x: number, z: number): boolean {
+  const dist = sim.squadField.dist;
+  if (Number.isFinite(dist[sim.nav.cellIndexAt(x, z)])) return true;
+  for (const ring of REACH_RINGS) {
+    for (let i = 0; i < REACH_ANGLES; i++) {
+      const angle = (i / REACH_ANGLES) * Math.PI * 2;
+      const px = x + Math.sin(angle) * ring;
+      const pz = z + Math.cos(angle) * ring;
+      if (!sim.nav.isWalkable(px, pz)) continue;
+      if (Number.isFinite(dist[sim.nav.cellIndexAt(px, pz)])) return true;
+    }
+  }
+  return false;
+}
+
 /**
  * How far away a job looks. Across open ground a player judges by eye, in a straight
  * line; in tunnels the only honest measure is the walk, and a spot that cannot be
@@ -255,7 +280,9 @@ function chooseJob(
       needed > 0 &&
       squadStrength(sim, kind) >= needed &&
       !guarded(sim, at.x, at.z) &&
-      reachable(sim, entity, kind === 'dew')
+      reachable(sim, entity, kind === 'dew') &&
+      // A haul in the water is thrown to from a bank (see bankSpot); others need the Warden near.
+      (kind === 'dew' || throwable(sim, at.x, at.z))
     ) {
       hauls.push(entity);
     }
@@ -277,6 +304,9 @@ function chooseJob(
         if (squadOf(sim, 'stone') === 0) return false;
       }
       const at = sim.transforms.require(entity);
+      // A beast across water with no way over yet, or behind a closed gate, waits.
+      const spot = reachSpot(sim, enemy, at);
+      if (!throwable(sim, spot.x, spot.z)) return false;
       const kind = requiredKind(sim, at.x, at.z);
       return kind === null || squadOf(sim, kind) >= Math.min(FULL_SQUAD, squad);
     })

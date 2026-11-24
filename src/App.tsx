@@ -6,6 +6,8 @@ import { levelForMode } from './game/modes/battle';
 import { forDifficulty, LEVELS, levelById } from './game/world/level';
 import { dayField } from './game/campaign/campaign';
 import { CampScreen } from './ui/CampScreen';
+import { SaveRecoveryNotice } from './ui/SaveRecoveryNotice';
+import { CanvasErrorBoundary } from './ui/CanvasErrorBoundary';
 import { Briefing } from './ui/Briefing';
 import { Hud } from './ui/Hud';
 import { BattleSelect } from './ui/BattleSelect';
@@ -127,6 +129,7 @@ export function App() {
 
   return (
     <>
+      <SaveRecoveryNotice />
       {phase === 'menu' && <MainMenu />}
       {phase === 'camp' && <CampScreen />}
       {phase === 'map' && <StoryMap />}
@@ -142,9 +145,11 @@ export function App() {
       {phase === 'story' && <StoryScreen />}
       {inGame && (
         <div className="game">
-          <Suspense fallback={<ScreenLoading />}>
-            <GameCanvas key={runId} level={level} input={input} />
-          </Suspense>
+          <CanvasErrorBoundary onLeave={() => useGameStore.getState().leaveDay()}>
+            <Suspense fallback={<ScreenLoading />}>
+              <GameCanvas key={runId} level={level} input={input} />
+            </Suspense>
+          </CanvasErrorBoundary>
           <Hud level={level} touch={touch} input={input} />
           {touch && phase === 'playing' && !paused && !briefing && <TouchControls input={input} />}
           {phase === 'playing' && briefing && <Briefing level={level} />}

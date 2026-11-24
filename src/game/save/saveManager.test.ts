@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BACKUP_PREFIX,
+  loadSaveChecked,
+  migrateSave,
   bestRank,
   hardUnlocked,
   modeBest,
@@ -246,5 +249,45 @@ describe('the board outbox', () => {
     const loaded = loadSave(storage);
     expect(loaded.outbox).toEqual(queued.outbox);
     expect(loaded.posted).toEqual([]);
+  });
+});
+
+/** A storage that keeps every key, like the browser's. */
+function keyedStorage(save?: string): SaveStorage & { items: Map<string, string> } {
+  const items = new Map<string, string>();
+  if (save !== undefined) items.set('dandori-academy-save', save);
+  return {
+    items,
+    getItem: (key) => items.get(key) ?? null,
+    setItem: (key, value) => void items.set(key, value),
+  };
+}
+
+describe('unreadable saves', () => {
+  it('starts fresh but keeps the unreadable data under a backup key, untouched', () => {
+    const storage = keyedStorage('{not json');
+    const loaded = loadSaveChecked(storage, new Date('2026-11-24T10:00:00Z'));
+    expect(loaded.save).toEqual(emptySave());
+    expect(loaded.backupKey).toBe(`${BACKUP_PREFIX}2026-11-24T10:00:00.000Z`);
+    expect(storage.items.get(loaded.backupKey ?? '')).toBe('{not json');
+  });
+
+  it('keeps a save from a version this build cannot read, and no backup for a missing save', () => {
+    expect(loadSaveChecked(keyedStorage('{"version":"99"}')).backupKey).not.toBeNull();
+    expect(loadSaveChecked(keyedStorage()).backupKey).toBeNull();
+    expect(loadSaveChecked(keyedStorage(JSON.stringify(emptySave()))).backupKey).toBeNull();
+  });
+});
+
+describe('save migrations', () => {
+  it('runs each step from a save’s version up to the current one', () => {
+    const steps = {
+      '0': (raw: Record<string, unknown>) => ({ ...raw, version: '0.5', touched: 1 }),
+      '0.5': (raw: Record<string, unknown>) => ({ ...raw, version: '1' }),
+    };
+    const migrated = migrateSave({ version: '0', stage: 3 }, steps);
+    expect(migrated).toEqual({ version: '1', stage: 3, touched: 1 });
+    expect(migrateSave({ version: 'unknown' }, steps)).toBeNull();
+    expect(migrateSave({ version: '1', stage: 2 }, steps)).toEqual({ version: '1', stage: 2 });
   });
 });

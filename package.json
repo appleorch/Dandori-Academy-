@@ -1,7 +1,7 @@
 {
   "name": "dandori-academy",
   "private": true,
-  "version": "0.19.1",
+  "version": "0.19.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,7 +17,8 @@
     "board:collect": "vite build --ssr scripts/collect-board.ts --outDir .board-build --emptyOutDir --logLevel warn && node .board-build/collect-board.js",
     "paces": "VITE_PACES=1 vitest run src/game/modes/challengePace.report.test.ts",
     "test:levels": "vitest run levels.test",
-    "test:all": "vitest run"
+    "test:all": "vitest run",
+    "e2e": "vite build && playwright test"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.187.0",

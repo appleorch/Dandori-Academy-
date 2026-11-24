@@ -422,15 +422,74 @@ function parseBattles(value: unknown): Record<string, BattleRecord> {
   return battles;
 }
 
-/** Reads the save, falling back to a fresh one if it is missing, corrupt or from another version. */
-export function loadSave(storage: SaveStorage): SaveData {
-  try {
-    const raw = storage.getItem(STORAGE_KEY);
-    if (raw === null) return emptySave();
-    return parseSave(JSON.parse(raw)) ?? emptySave();
-  } catch {
-    return emptySave();
+/**
+ * Steps that bring a stored save up to date, keyed by the version they upgrade from. Each takes
+ * the raw JSON of that version and returns the raw JSON of the next. `parseSave` then fills in
+ * any field added within the current version. Add a step here whenever SAVE_VERSION changes.
+ */
+export const SAVE_MIGRATIONS: Readonly<
+  Record<string, (raw: Record<string, unknown>) => Record<string, unknown>>
+> = {};
+
+/** Runs the migration steps on raw JSON until it reaches SAVE_VERSION; null if it cannot. */
+export function migrateSave(
+  value: unknown,
+  migrations: typeof SAVE_MIGRATIONS = SAVE_MIGRATIONS,
+): Record<string, unknown> | null {
+  if (!isRecord(value)) return null;
+  let raw = value;
+  for (let guard = 0; raw.version !== SAVE_VERSION; guard++) {
+    const step = typeof raw.version === 'string' ? migrations[raw.version] : undefined;
+    if (!step || guard > 100) return null;
+    raw = step(raw);
   }
+  return raw;
+}
+
+/** What loading found: the save to play with, and a copy of stored data that could not be read. */
+export interface LoadedSave {
+  save: SaveData;
+  /**
+   * Set when progress was stored but could not be read: the storage key it was copied to,
+   * so it is never overwritten and can be recovered or sent with a bug report.
+   */
+  backupKey: string | null;
+}
+
+/** Where unreadable save data is kept, by when it was found. */
+export const BACKUP_PREFIX = 'dandori-academy-save-unreadable-';
+
+/**
+ * Reads the save. A missing save starts fresh. A save that is stored but cannot be read (corrupt,
+ * or from a version this build cannot migrate) also starts fresh, but its data is first copied
+ * to a backup key, so playing on never destroys it.
+ */
+export function loadSaveChecked(storage: SaveStorage, now: Date = new Date()): LoadedSave {
+  let raw: string | null;
+  try {
+    raw = storage.getItem(STORAGE_KEY);
+  } catch {
+    return { save: emptySave(), backupKey: null };
+  }
+  if (raw === null) return { save: emptySave(), backupKey: null };
+  try {
+    const save = parseSave(migrateSave(JSON.parse(raw)));
+    if (save) return { save, backupKey: null };
+  } catch {
+    // Not JSON: kept below like any other unreadable save.
+  }
+  const backupKey = `${BACKUP_PREFIX}${now.toISOString()}`;
+  try {
+    storage.setItem(backupKey, raw);
+  } catch {
+    return { save: emptySave(), backupKey: null };
+  }
+  return { save: emptySave(), backupKey };
+}
+
+/** Reads the save, falling back to a fresh one if it is missing or unreadable (see loadSaveChecked). */
+export function loadSave(storage: SaveStorage): SaveData {
+  return loadSaveChecked(storage).save;
 }
 
 /** Writes the save. Returns false when storage is unavailable or full. */

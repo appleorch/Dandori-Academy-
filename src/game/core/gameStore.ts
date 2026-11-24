@@ -7,7 +7,7 @@ import {
   storyCleared,
   discover,
   emptySave,
-  loadSave,
+  loadSaveChecked,
   markPosted,
   queueForBoard,
   runKey,
@@ -228,6 +228,9 @@ interface GameStore {
   updateSettings: (patch: Partial<Settings>) => void;
   /** Replaces all progress, for loading a save file or erasing progress. */
   replaceSave: (save: SaveData) => void;
+  /** Where unreadable save data found at start-up was kept, until the player dismisses the notice. */
+  saveBackup: string | null;
+  dismissSaveBackup: () => void;
   /** Gives up the story's expedition and starts it again from the first day. */
   restartCampaign: () => void;
   /**
@@ -337,7 +340,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     if (storage) writeSave(storage, save);
   };
   // Grant anything an older save already qualifies for, such as rank milestones.
-  const initial = unlockAchievements(storage ? loadSave(storage) : emptySave(), null, new Date());
+  const stored = storage ? loadSaveChecked(storage) : { save: emptySave(), backupKey: null };
+  const initial = unlockAchievements(stored.save, null, new Date());
   if (initial.unlocked.length > 0) persist(initial.save);
   const loaded = storage ? loadSettings(storage, deviceDefaults()) : deviceDefaults();
   // Every browser gets its own player id for the board, made once and kept with the settings.
@@ -483,6 +487,9 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (storage) writeSettings(storage, settings);
       set({ settings });
     },
+
+    saveBackup: stored.backupKey,
+    dismissSaveBackup: () => set({ saveBackup: null }),
 
     restartCampaign: () => {
       const save = { ...get().save, campaign: newCampaign() };

@@ -10,6 +10,7 @@ import {
 import {
   bonusParts,
   forDifficulty,
+  defineLevel,
   levelById,
   shardCount,
   sproutlingsPossible,
@@ -139,6 +140,23 @@ export function lessonOf(levelId: string, difficulty: Difficulty): LevelDefiniti
   return base ? forDifficulty(base, difficulty) : null;
 }
 
+/**
+ * Lesson Platinum times as they were when the lessons' boards closed to new runs (0.19.0), for
+ * lessons whose time has been re-measured since. Runs on a lesson (the Classic board, and the
+ * challenges as they were played on lessons) were ranked against these, so they are checked
+ * against them for good.
+ */
+const CLOSED_PLATINUM: Readonly<Record<string, number>> = { 'rush-hour': 294 };
+
+/** A lesson as its board knows it: with the Platinum time it had when the board closed. */
+function boardLesson(levelId: string, difficulty: Difficulty): LevelDefinition | null {
+  const base = levelById(levelId);
+  if (!base) return null;
+  const closed = CLOSED_PLATINUM[levelId];
+  const asClosed = closed === undefined ? base : defineLevel({ ...base, platinumTime: closed });
+  return forDifficulty(asClosed, difficulty);
+}
+
 const prints = new Map<string, string>();
 /** Fingerprint of a lesson as shipped in this build, on a difficulty. */
 export function lessonPrint(levelId: string, difficulty: Difficulty): string | null {
@@ -154,7 +172,7 @@ export function lessonPrint(levelId: string, difficulty: Difficulty): string | n
 
 /** Fingerprint a lesson had in 0.17.0 (its whole definition, with that version's par). */
 export function legacyPrint(levelId: string, difficulty: Difficulty): string | null {
-  const level = lessonOf(levelId, difficulty);
+  const level = boardLesson(levelId, difficulty);
   return level ? fingerprint(legacyPar(level)) : null;
 }
 
@@ -231,7 +249,10 @@ const isCount = (value: unknown): value is number =>
  * against the clock and against what is humanly possible.
  */
 export function checkRun(run: RunEntry): string | null {
-  const level = lessonOf(run.level, run.difficulty);
+  // A challenge field is checked as it is now; a lesson as it was when its board closed.
+  const level = levelById(run.level)?.challenge
+    ? lessonOf(run.level, run.difficulty)
+    : boardLesson(run.level, run.difficulty);
   if (!level) return 'unknown lesson';
   if (!playedOnThisLesson(run)) return 'played on another version of this lesson';
   if (run.mode !== undefined) return checkChallengeRun(run, run.mode, level);

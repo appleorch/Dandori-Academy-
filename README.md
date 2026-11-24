@@ -21,6 +21,7 @@ npm run dev        # play at http://localhost:5173
 npm test           # unit, integration, layout and stress tests (well under a minute)
 npm run test:levels  # whole days played by the test player on every field (about ten minutes)
 npm run test:all   # both
+npm run e2e        # builds, then plays the build in a browser (Playwright): every mode, offline
 npm run typecheck
 npm run lint
 npm run build
@@ -35,6 +36,24 @@ settled, the first day's frame times are measured once and the graphics lowered 
 under about 25 fps (`src/game/rendering/QualityTuner.tsx`); it never raises a level and never
 overrides one the player chose. `src/game/simulation/performance.test.ts` keeps ten seconds of the
 Wild Quad with a full field of 100 Sproutlings within a time budget.
+
+**Quality checks.** CI (`.github/workflows/ci.yml`) runs the type check, lint, formatting, `npm
+test` and the build on every push, the whole-day level runs as four parallel jobs, and the
+end-to-end tests (`e2e/`), which play every mode in the production build and start a day with the
+network off. Where Chromium is preinstalled (as in Claude's cloud sessions), set `PW_CHROMIUM` to
+its path to use it; otherwise run `npx playwright install chromium` once.
+
+**Offline and install.** The built game is a progressive web app (`public/manifest.webmanifest`,
+`public/sw.js`): once opened it plays offline and can be installed to a home screen or desktop.
+Hashed build files are cached for good; the page itself is always fetched fresh when online, so a
+new build is picked up at once. The leaderboard is never cached.
+
+**When things go wrong.** A crash in the 3D view shows a Try again / Back panel instead of a blank
+screen (`src/ui/CanvasErrorBoundary.tsx`). Errors are kept in a small log on the device (Settings,
+Error log), which the player can copy into a bug report; nothing is ever sent. If the stored
+progress cannot be read at start-up, it is copied to a backup key before a new save starts, and
+the player is offered it as a download (`loadSaveChecked` in `src/game/save/saveManager.ts`).
+Save format changes go through `SAVE_MIGRATIONS`, one step per version.
 
 ## Play without installing anything
 

@@ -15,11 +15,11 @@ On Normal it must clear each lesson by the Platinum time (which is set from its 
 | 8 | Growing Pains | 400s | 121s | 143s | 142.4s | 1.00 | 9 | Gold | 360s | 5/5 | 10 | Gold | 1 |
 | 9 | Switchbacks | 390s | 242s | 285s | 284.3s | 1.00 | 0 | Platinum | 351s | 8/8 | 9 | Gold | 1 |
 | 10 | Final Exam | 560s | 308s | 363s | 362.0s | 1.00 | 9 | Platinum | 504s | 11/11 | 15 | Gold | 1 |
-| 11 | Bramble Gate | 260s | 107s | 127s | 126.3s | 0.99 | 3 | Platinum | 234s | 7/7 | 4 | Gold | 1 |
+| 11 | Bramble Gate | 260s | 107s | 127s | 126.8s | 1.00 | 3 | Platinum | 234s | 7/7 | 4 | Gold | 1 |
 | 12 | Drip Line | 300s | 138s | 163s | 163.0s | 1.00 | 6 | Platinum | 270s | 8/8 | 10 | Gold | 1 |
 | 13 | Gravelmaw's Pit | 300s | 100s | 118s | 117.1s | 0.99 | 6 | Platinum | 270s | 6/6 | 8 | Gold | 1 |
 | 14 | Three Roots | 320s | 115s | 136s | 135.1s | 0.99 | 0 | Platinum | 288s | 7/7 | 9 | Gold | 1 |
-| 15 | Rush Hour | 520s | 249s | 294s | 294.0s | 1.00 | 3 | Platinum | 468s | 10/10 | 17 | Gold | 1 |
+| 15 | Rush Hour | 520s | 259s | 305s | 304.1s | 1.00 | 4 | Platinum | 468s | 10/10 | 17 | Gold | 1 |
 | 16 | The Bellwether | 420s | 162s | 191s | 190.4s | 1.00 | 9 | Gold | 378s | 7/7 | 11 | Gold | 1 |
 | 17 | Crossroads | 300s | 153s | 180s | 179.3s | 1.00 | 4 | Platinum | 270s | 10/10 | 4 | Gold | 1 |
 | 18 | The Span | 760s | 430s | 507s | 506.9s | 1.00 | 10 | Gold | 684s | 10/10 | 14 | Gold | 2 |

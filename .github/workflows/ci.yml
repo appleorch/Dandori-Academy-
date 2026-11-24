@@ -1,7 +1,8 @@
 # Checks every push and pull request. The fast job runs the type check, lint, formatting, the
 # unit and layout tests (`npm test`, well under a minute) and the build. The whole-day runs of the
 # test player on every lesson, challenge field and story day (`npm run test:levels`) take about
-# ten minutes on one machine, so they run as four parallel jobs of about equal length.
+# ten minutes on one machine, so they run as four parallel jobs of about equal length. The e2e
+# job plays the production build in a real browser: every mode, and a day started offline.
 name: CI
 
 on:
@@ -53,3 +54,16 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npx vitest run ${{ matrix.args }}
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e

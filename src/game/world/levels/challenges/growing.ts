@@ -317,7 +317,7 @@ const FIELDS: FieldSpec[] = [
     width: 66,
     depth: 44,
     dayLength: 60,
-    pace: 28,
+    pace: 21,
     seed: 109,
     startingWorkers: 10,
     squad: { ember: 6, spark: 4 },

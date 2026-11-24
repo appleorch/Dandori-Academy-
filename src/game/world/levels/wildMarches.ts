@@ -202,7 +202,7 @@ const RUSH_HOUR: LevelSpec = {
   width: 90,
   depth: 50,
   dayLength: 520,
-  platinumTime: 294,
+  platinumTime: 305,
   seed: 15,
   startingWorkers: 18,
   squad: { ember: 9, dew: 3, stone: 3, spark: 3 },

@@ -8,6 +8,17 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.19.2',
+    date: '2026-11-24',
+    changes: [
+      'Plays offline once opened, and installs to a home screen or desktop like an app, with its own icon.',
+      'If your saved progress ever cannot be read, it is kept safe instead of being replaced, and offered to you as a download. Future changes to the save format upgrade old saves step by step.',
+      'A crash in the 3D view now shows Try again and Back instead of a blank screen. Errors are noted on your device only (Settings, Error log) so you can copy them into a bug report.',
+      'The Academy\u2019s test player no longer gets stuck on a haul or a beast it cannot reach to throw at, such as a Span-log behind a closed gate. Four challenge fields and Rush Hour have new Platinum targets measured with it (Spark Hedge, Bridge Builders, Gatekeepers, Masterwork); their Academy boards start afresh.',
+      'Behind the scenes: tests run in seconds (the whole-day test-player runs are separate), and every change is checked automatically, including playing every mode in a real browser.',
+    ],
+  },
+  {
     version: '0.19.1',
     date: '2026-11-24',
     changes: [
