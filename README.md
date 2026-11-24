@@ -42,20 +42,32 @@ it after changes with `npm run build:docs`.
 
 ## How to play
 
-| Input               | Action                                               |
-| ------------------- | ---------------------------------------------------- |
-| WASD / arrows       | Move the Warden                                      |
-| Left mouse (hold)   | Throw squad members at the cursor                    |
-| Right mouse / Space | Whistle: call every worker in the circle back to you |
-| F / middle mouse    | Charge: send the whole squad running to the cursor   |
-| Q                   | Dismiss the squad                                    |
-| Shift (hold)        | Fast-forward the day at three times speed            |
-| 1 2 3 4 / C         | Choose which kind of Sproutling to throw / next kind |
-| E                   | Knock, go down a way down, or come back up           |
-| Tab (hold)          | Look at your idle Sproutlings                        |
-| V                   | Tactical view over the whole course                  |
-| Esc                 | Pause (resume, restart with R, settings, quit)       |
-| Mouse wheel         | Zoom                                                 |
+Every key, mouse button and gamepad button can be rebound in Settings, under Controls (two keys
+or mouse buttons and one pad button per action; see `src/game/commands/bindings.ts`). These are
+the defaults:
+
+| Keyboard and mouse   | Gamepad           | Action                                               |
+| -------------------- | ----------------- | ---------------------------------------------------- |
+| WASD / arrows        | Left stick        | Move the Warden                                      |
+| Mouse pointer        | Right stick       | Aim the cursor (sticks snap onto nearby jobs)        |
+| Left mouse (hold)    | RT (hold)         | Throw squad members at the cursor                    |
+| Right mouse / Space  | LT (hold)         | Whistle: call every worker in the circle back to you |
+| F / middle mouse     | A                 | Charge: send the whole squad running to the cursor   |
+| Q                    | B                 | Dismiss the squad                                    |
+| C / X                | RB / LB           | Next / previous kind of Sproutling to throw          |
+| 1 2 3 4              |                   | Choose a kind of Sproutling directly                 |
+| E                    | X                 | Knock, go down a way down, or come back up           |
+| Shift (hold)         | View (hold)       | Fast-forward the day at three times speed            |
+| Tab (hold)           | D-pad left (hold) | Look at your idle Sproutlings                        |
+| V                    | Y                 | Tactical view over the whole course                  |
+| Mouse wheel, = and - | D-pad up / down   | Zoom                                                 |
+| Esc / P              | Menu              | Pause (resume, restart with R, settings, quit)       |
+| F3                   |                   | Performance overlay (see Run it)                     |
+
+Esc and the pad's Menu button always pause, whatever else is bound. In the menus, Tab and
+Shift+Tab move between buttons and Esc goes back; on a pad the D-pad or left stick moves, A
+chooses and B goes back. While a pad is in use, prompts on screen (Pause, Begin the day, Go
+down) show its buttons, and Proctor Ashwick's tips name the controls you actually have.
 
 On a phone or tablet the game shows touch controls instead:
 
@@ -71,7 +83,10 @@ On a phone or tablet the game shows touch controls instead:
 
 - **Sproutlings** are your workers, grown by the Kiln in four kinds (`src/game/workers/sprouts.ts`).
   Thrown next to a job, they start it by themselves. Idle ones (pale) pick up any work within a
-  few steps. Only the selected kind is thrown: press 1 to 4, C, or tap a kind's chip.
+  few steps. Only the selected kind is thrown: press 1 to 4, C or X (RB or LB), or tap a kind's
+  chip. Each kind has its own head shape as well as its colour, so they can be told apart
+  without colour: a flame tuft, a droplet, a square cap and a zig-zag bolt, with the same
+  shapes on the HUD.
   - **Emberlings** (red): fireproof, and hit hardest of the light kinds. Only they can work by a
     **flame vent**, which bursts on a beat after its ring glows.
   - **Dewlings** (blue): the only kind that wades. They fetch shards sunk in ponds, carry a haul
@@ -372,6 +387,16 @@ The Leaderboard tab needs no server of its own, and posting is automatic
   enemy health bars, pause when the window loses focus, advice from Ashwick, briefings, sound
   and music volume, and zoom speed. They apply immediately and
   are remembered per browser.
+- **Accessibility and comfort** (in Settings): colour palettes for red-green and blue-yellow
+  colour blindness (they recolour the kinds, attack warning rings and medal colours; a test
+  simulates both kinds of colour blindness and keeps every pair far apart,
+  `src/game/rendering/palette.test.ts`), text and menu size from 90% to 150%, reduced motion
+  (no camera shake, punch or freeze-frames, calmer bursts, no pulsing menus; on by default
+  when the system asks for less motion), a high-contrast HUD, whistle and fast-forward that
+  toggle instead of being held, a throw arc that always shows, and aim assist for sticks.
+- **Controls** (in Settings): every action with two keyboard or mouse slots and a gamepad
+  button. Choose a slot and press the new key or button; Esc cancels and Backspace clears. A
+  key already used elsewhere is moved, not shared, and the page says what lost it.
 - **Save files**: progress saves to the browser after every day. Settings & save offers
   _Download save file_ and _Load save file_, which shows what the file contains and asks before
   replacing current progress. _Erase all progress_ also asks first. Files use the binary
@@ -399,7 +424,8 @@ src/
     navigation/   nav grid, steering and obstacle sliding
     pathfinding/  A*, flow fields, min-heap
     captain/      captain movement and damage
-    commands/     input state and DOM input controller
+    commands/     input state, the input controller (keyboard, mouse, gamepad, touch),
+                  rebindable bindings and stick aim assist
     workers/      worker state machine, squad and task assignment
     flocking/     spatial-hash separation
     throwing/     throw system
@@ -417,7 +443,8 @@ src/
     rendering/    React Three Fiber scene: terrain, architecture, scenery, the instanced
                   Emberling rig, the Warden, relic models (models/), particles and feedback
   poker/          a card game: rules engine, players and its own 3D room
-  ui/             menus, HUD, briefing, journal, pause, results, achievements and settings
+  ui/             menus, HUD, briefing, journal, pause, results, achievements, settings
+                  (with rebinding) and gamepad menu navigation
 ```
 
 The simulation is plain TypeScript with no rendering or DOM dependencies. It advances in

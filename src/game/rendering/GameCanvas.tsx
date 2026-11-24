@@ -5,6 +5,7 @@ import { audio } from '../audio/audioManager';
 import { useGameStore } from '../core/gameStore';
 import { CameraRig } from '../camera/CameraRig';
 import type { InputController } from '../commands/input';
+import { RESERVED_KEY } from '../commands/bindings';
 import { Battle, RIVAL_NAMES } from '../modes/battle';
 import { isBattle, MODES } from '../modes/modes';
 import { Expedition } from '../simulation/expedition';
@@ -91,6 +92,11 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   const quality = QUALITY[graphics];
   const zoomSpeed = useGameStore((state) => state.settings.zoomSpeed);
   const pauseOnBlur = useGameStore((state) => state.settings.pauseOnBlur);
+  const bindings = useGameStore((state) => state.settings.bindings);
+  const whistleToggle = useGameStore((state) => state.settings.whistleToggle);
+  const fastToggle = useGameStore((state) => state.settings.fastToggle);
+  const aimAssist = useGameStore((state) => state.settings.aimAssist);
+  const reducedMotion = useGameStore((state) => state.settings.reducedMotion);
 
   useEffect(() => {
     if (!ready) return;
@@ -122,26 +128,40 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
 
   useEffect(() => {
     input.zoomSpeed = zoomSpeed;
-  }, [input, zoomSpeed]);
+    input.bindings = bindings;
+    input.whistleToggle = whistleToggle;
+    input.fastToggle = fastToggle;
+    input.aimAssist = aimAssist;
+  }, [input, zoomSpeed, bindings, whistleToggle, fastToggle, aimAssist]);
+
+  useEffect(() => {
+    fx.calm = reducedMotion;
+  }, [fx, reducedMotion]);
 
   // The whistle never outlives the day it was blown in.
   useEffect(() => {
     if (!playing) audio.setWhistle(false);
   }, [playing]);
 
-  // Escape toggles the pause menu.
+  // The pause key (and Escape, always) toggles the pause menu.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       const store = useGameStore.getState();
-      if (store.pokerOpen) return;
+      if (store.pokerOpen || event.repeat) return;
+      const keys = store.settings.bindings.keys;
       if (event.code === 'Enter' && store.briefing) store.beginDay();
-      // R restarts from the pause menu or the results, never mid-play by accident. A story day
-      // cannot be taken back: from its results R goes on to the next day, and mid-day not at all.
+      // Restart works from the pause menu or the results, never mid-play by accident. A story
+      // day cannot be taken back: from its results it goes on to the next day, mid-day not at all.
       const story = store.playMode === 'campaign';
-      if (event.code === 'KeyR' && (store.phase === 'results' || (store.paused && !story))) {
+      if (
+        keys.restart.includes(event.code) &&
+        (store.phase === 'results' || (store.paused && !story))
+      ) {
         store.startDay(store.levelId);
+        return;
       }
-      if (event.code !== 'Escape' || store.briefing) return;
+      const pauseKey = event.code === RESERVED_KEY || keys.pause.includes(event.code);
+      if (!pauseKey || store.briefing) return;
       if (store.paused) store.resume();
       else store.pause();
     };

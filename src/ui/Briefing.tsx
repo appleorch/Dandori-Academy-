@@ -8,6 +8,8 @@ import { OptionalTreasure, SquadRoster } from './SquadRoster';
 import { fieldTitle } from './format';
 import { CAMPAIGN_INTRO } from '../game/story/story';
 import { currentSection, sectionProgress } from '../game/campaign/campaign';
+import { MenuPrompt } from './Glyph';
+import { PAD } from '../game/commands/bindings';
 
 /**
  * Shown over the waiting field before a day starts: where the story has got to, what
@@ -27,9 +29,9 @@ export function Briefing({ level }: { level: LevelDefinition }) {
     const progress = sectionProgress(campaign);
     return (
       <div className="screen overlay briefing">
-        <div className="panel">
+        <div className="panel" role="dialog" aria-labelledby="briefing-title">
           <p className="eyebrow">Story · Day {campaign.day + 1}</p>
-          <h1>{section.name}</h1>
+          <h1 id="briefing-title">{section.name}</h1>
           {campaign.day === 0 && (
             <figure className="speech">
               <AshwickPortrait />
@@ -47,7 +49,7 @@ export function Briefing({ level }: { level: LevelDefinition }) {
           <SquadRoster level={level} />
           <ModeTargets level={level} mode={mode} />
           <button type="button" onClick={beginDay} autoFocus>
-            Begin the day <kbd>Enter</kbd>
+            Begin the day <MenuPrompt keyName="Enter" button={PAD.a} />
           </button>
           <button type="button" className="secondary" onClick={leaveDay}>
             Back to base camp
@@ -59,12 +61,12 @@ export function Briefing({ level }: { level: LevelDefinition }) {
 
   return (
     <div className="screen overlay briefing">
-      <div className="panel">
+      <div className="panel" role="dialog" aria-labelledby="briefing-title">
         <p className="eyebrow">
           {mode === 'lessons' ? `${chapter.label} · ${chapter.title}` : MODES[mode].name}
           {level.difficulty === 'hard' ? ' · Hard' : ''}
         </p>
-        <h1>{fieldTitle(level)}</h1>
+        <h1 id="briefing-title">{fieldTitle(level)}</h1>
         {story && (
           <figure className="speech">
             <AshwickPortrait />
@@ -79,7 +81,7 @@ export function Briefing({ level }: { level: LevelDefinition }) {
         <SquadRoster level={level} />
         <ModeTargets level={level} mode={mode} rival={rival} />
         <button type="button" onClick={beginDay} autoFocus>
-          Begin the day <kbd>Enter</kbd>
+          Begin the day <MenuPrompt keyName="Enter" button={PAD.a} />
         </button>
         <button type="button" className="secondary" onClick={leaveDay}>
           Back

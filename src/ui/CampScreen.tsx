@@ -11,6 +11,7 @@ import { relicFor } from '../game/story/relics';
 import { SPROUT_KINDS, SPROUTS } from '../game/workers/sprouts';
 import type { Box } from '../game/navigation/NavGrid';
 import { MenuNav } from './MenuNav';
+import { KindGlyph } from './KindGlyph';
 
 /** Map scale: pixels per world unit. */
 const SCALE = 4;
@@ -154,8 +155,7 @@ export function CampScreen() {
               <ul>
                 {SPROUT_KINDS.map((kind) => (
                   <li key={kind} className={state.stock[kind] > 0 ? kind : `${kind} none`}>
-                    <span className={`dot kind-dot ${kind}`} /> {state.stock[kind]}{' '}
-                    {SPROUTS[kind].plural}
+                    <KindGlyph kind={kind} /> {state.stock[kind]} {SPROUTS[kind].plural}
                   </li>
                 ))}
               </ul>

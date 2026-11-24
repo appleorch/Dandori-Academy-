@@ -4,8 +4,10 @@ import { Vector3 } from 'three';
 import { audio } from '../audio/audioManager';
 import type { Intensity } from '../audio/music';
 import type { InputController } from '../commands/input';
+import { assistAim, jobSpots } from '../commands/aimAssist';
+import { connectedPads } from '../commands/gamepad';
 import { FixedClock } from '../core/clock';
-import { SIM_DT } from '../core/config';
+import { CAPTAIN, SIM_DT } from '../core/config';
 import { useGameStore } from '../core/gameStore';
 import { splitKey } from '../save/saveManager';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
@@ -13,7 +15,9 @@ import type { Battle, BattleOutcome } from '../modes/battle';
 import type { Expedition } from '../simulation/expedition';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
-import { Coach } from '../story/coach';
+import { Coach, spokenKey, type CoachControls } from '../story/coach';
+import { padName } from '../commands/bindings';
+import { useInputDevice } from '../commands/device';
 import { Headmaster } from '../story/headmaster';
 import { relicFor } from '../story/relics';
 import type { Feedback } from './feedback';
@@ -33,6 +37,24 @@ const STRIDE = 1.5;
 /** How close the Warden must stand to the little door to knock. */
 const SECRET_RANGE = 2.6;
 const probe = new Vector3();
+
+/** Ashwick names the controls the player has bound, on whatever they are holding right now. */
+const liveControls: CoachControls = {
+  pad: () => useInputDevice.getState().device === 'pad',
+  name: (action) => {
+    const bindings = useGameStore.getState().settings.bindings;
+    if (useInputDevice.getState().device === 'pad') {
+      const button = bindings.pad[action];
+      if (button !== null) return padName(button);
+    }
+    const code = bindings.keys[action].find((slot) => slot !== null);
+    return code ? spokenKey(code) : 'its key (none is bound: see Settings)';
+  },
+  toggled: (action) => {
+    const settings = useGameStore.getState().settings;
+    return action === 'whistle' ? settings.whistleToggle : settings.fastToggle;
+  },
+};
 
 interface GameLoopProps {
   expedition: Expedition;
@@ -71,7 +93,10 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
   const [clock] = useState(() => new FixedClock(SIM_DT, 5 * FAST_FORWARD));
   const [coach] = useState(
     () =>
-      new Coach(typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches),
+      new Coach(
+        typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
+        liveControls,
+      ),
   );
   const [headmaster] = useState(() => new Headmaster(surface));
   const frame = useRef(0);
@@ -92,6 +117,14 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
 
   useFrame(({ camera }, delta) => {
     const sim = expedition.active;
+    const store = useGameStore.getState();
+    // Presses count only while the day runs: any made while it is stopped are thrown away, not
+    // saved up, and toggles let go.
+    const live = store.phase === 'playing' && !store.paused && !store.briefing && !surface.ended;
+    if (!live) input.clearPresses();
+    input.live = live;
+    input.pollPads(connectedPads(), delta);
+    input.update(delta);
     probe.set(input.pointerX, input.pointerY, 0.5).unproject(camera).sub(camera.position);
     // Where the pointer meets the ground: first the flat floor, then the height found there,
     // twice, which settles onto a terrace top or a ramp.
@@ -105,19 +138,28 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
       t = (lift - camera.position.y) / probe.y;
     }
     // Dragging the on-screen whistle button aims relative to the captain instead.
+    // So does a gamepad's right stick, which snaps onto a job close to its line (aim assist).
     const aim = input.aimOffset;
-    const cursorX = aim ? sim.captainTransform.x + aim.x : camera.position.x + probe.x * t;
-    const cursorZ = aim ? sim.captainTransform.z + aim.z : camera.position.z + probe.z * t;
+    let cursorX = aim ? sim.captainTransform.x + aim.x : camera.position.x + probe.x * t;
+    let cursorZ = aim ? sim.captainTransform.z + aim.z : camera.position.z + probe.z * t;
+    if (input.padOwnsAim && input.aimAssist && live) {
+      const from = sim.captainTransform;
+      const snapped = assistAim(
+        from,
+        { x: cursorX, z: cursorZ },
+        jobSpots(sim),
+        CAPTAIN.cursorRange,
+      );
+      cursorX = snapped.x;
+      cursorZ = snapped.z;
+    }
 
-    const store = useGameStore.getState();
     if (store.endRequested) {
       useGameStore.setState({ endRequested: false });
       if (!surface.ended) surface.endNow();
     }
     if (store.paused || store.briefing) {
       audio.setWhistle(false);
-      // Any press made while the game was stopped is thrown away, not saved up.
-      input.takeInteract();
       return;
     }
     const fast = input.fast && !sim.ended;

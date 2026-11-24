@@ -1,3 +1,4 @@
+import { DEFAULT_BINDINGS, keyName, padName, type Action } from '../commands/bindings';
 import { BEACON } from '../core/config';
 import { damageTaken, isShielded } from '../enemies/combat';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
@@ -20,11 +21,68 @@ interface Rule {
   test: (sim: Simulation, coach: Coach) => string | null;
 }
 
+/**
+ * How the coach names the player's controls, read each time a line is said, so advice follows
+ * their bindings and whichever of keyboard or gamepad they are using right now.
+ */
+export interface CoachControls {
+  /** Whether the player is on a gamepad. */
+  pad: () => boolean;
+  /** The key, mouse button or pad button for an action, as said aloud: "the right mouse button", "LT". */
+  name: (action: Action) => string;
+  /** Whether an action is pressed once to turn on and off, rather than held (see the settings). */
+  toggled: (action: 'whistle' | 'fastForward') => boolean;
+}
+
+/** An action's control as said in a sentence: mouse buttons get "the ... button". */
+export function spokenKey(code: string): string {
+  const name = keyName(code);
+  return code.startsWith('Mouse') ? `the ${name.toLowerCase()} button` : name;
+}
+
+/** The default controls on a keyboard and mouse. */
+export const KEYBOARD_CONTROLS: CoachControls = {
+  pad: () => false,
+  name: (action) => {
+    const code = DEFAULT_BINDINGS.keys[action].find((slot) => slot !== null);
+    return code ? spokenKey(code) : 'its key';
+  },
+  toggled: () => false,
+};
+
+/** The default controls on a gamepad. */
+export const PAD_CONTROLS: CoachControls = {
+  pad: () => true,
+  name: (action) => {
+    const button = DEFAULT_BINDINGS.pad[action];
+    return button === null ? 'its button' : padName(button);
+  },
+  toggled: () => false,
+};
+
+/** "Hold X" or, for a control the player toggles, "Press X". */
+function hold(coach: Coach, action: 'whistle' | 'fastForward'): string {
+  return `${coach.controls.toggled(action) ? 'press' : 'hold'} ${coach.controls.name(action)}`;
+}
+
+/** How to move: a stick, or the four movement keys run together like "WASD". */
+function moveWith(coach: Coach): string {
+  if (coach.controls.pad()) return 'the left stick';
+  const keys = (['moveUp', 'moveLeft', 'moveDown', 'moveRight'] as const).map((action) =>
+    coach.controls.name(action),
+  );
+  return keys.every((key) => key.length === 1) ? keys.join('') : keys.join(', ');
+}
+
 const SHOW_SECONDS = 6;
 /** Quiet time between two lines, so advice never becomes chatter. */
 const GAP_SECONDS = 4;
 const IDLE_PATIENCE = 6;
 const BUSY_PATIENCE = 9;
+
+function capital(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 function bossOf(sim: Simulation) {
   for (const [entity, enemy] of sim.enemies.entries()) {
@@ -47,7 +105,9 @@ const RULES: readonly Rule[] = [
       sim.level.stage === 1 && sim.elapsed > 1
         ? coach.touch
           ? 'Touch a Sunshard and hold: your Sproutlings are thrown at it one after another.'
-          : 'Move with WASD. Point at a Sunshard and hold the left mouse button to throw Sproutlings at it.'
+          : coach.controls.pad()
+            ? `Move with ${moveWith(coach)}. Aim at a Sunshard with the right stick and hold ${coach.controls.name('throw')} to throw Sproutlings at it.`
+            : `Move with ${moveWith(coach)}. Point at a Sunshard and hold ${coach.controls.name('throw')} to throw Sproutlings at it.`
         : null,
   },
   {
@@ -83,7 +143,7 @@ const RULES: readonly Rule[] = [
           if (Math.hypot(where.x - at.x, where.z - at.z) < enemy.radius + 4) {
             return coach.touch
               ? 'They are dazed! Hold Whistle and drag it over them before it strikes.'
-              : 'They are dazed! Whistle them clear before it strikes: hold the right mouse button over them.';
+              : `They are dazed! Whistle them clear before it strikes: ${hold(coach, 'whistle')} over them.`;
           }
         }
       }
@@ -174,7 +234,7 @@ const RULES: readonly Rule[] = [
       const { idle } = sim.countWorkers();
       return coach.touch
         ? `${idle} Sproutlings are standing idle. Hold Whistle over them to call them back.`
-        : `${idle} Sproutlings are standing idle. Hold the right mouse button over them to call them back.`;
+        : `${idle} Sproutlings are standing idle. ${capital(hold(coach, 'whistle'))} over them to call them back.`;
     },
   },
   {
@@ -194,7 +254,7 @@ const RULES: readonly Rule[] = [
       sim.level.stage >= 2 && coach.busyFor > BUSY_PATIENCE
         ? coach.touch
           ? 'Everyone is busy. Scout the next job, or hold the fast-forward button to hurry the day along.'
-          : 'Everyone is busy. Scout the next job, or hold Shift to hurry the day along.'
+          : `Everyone is busy. Scout the next job, or ${hold(coach, 'fastForward')} to hurry the day along.`
         : null,
   },
   {
@@ -203,7 +263,7 @@ const RULES: readonly Rule[] = [
     limit: 1,
     test: (sim, coach) =>
       !coach.touch && sim.level.stage >= 4 && coach.idleFor > 3 && sim.level.width > 55
-        ? 'Lost track of someone? Hold Tab to look at your idle Sproutlings.'
+        ? `Lost track of someone? Hold ${coach.controls.name('peek')} to look at your idle Sproutlings.`
         : null,
   },
   {
@@ -229,7 +289,10 @@ export class Coach {
   private quietFor = GAP_SECONDS;
   private readonly said = new Map<string, { count: number; last: number }>();
 
-  constructor(readonly touch: boolean) {}
+  constructor(
+    readonly touch: boolean,
+    readonly controls: CoachControls = KEYBOARD_CONTROLS,
+  ) {}
 
   /** Advances the coach by `dt` seconds of play and returns the line to show, if any. */
   update(sim: Simulation, dt: number): string | null {

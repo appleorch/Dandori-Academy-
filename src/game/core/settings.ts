@@ -1,3 +1,4 @@
+import { copyBindings, DEFAULT_BINDINGS, parseBindings, type Bindings } from '../commands/bindings';
 import { DIFFICULTIES, type Difficulty } from './difficulty';
 
 /**
@@ -6,6 +7,17 @@ import { DIFFICULTIES, type Difficulty } from './difficulty';
  */
 export const GRAPHICS_LEVELS = ['low', 'medium', 'high'] as const;
 export type GraphicsLevel = (typeof GRAPHICS_LEVELS)[number];
+
+/**
+ * Colour palettes for the four kinds, hazard rings and medal ranks. The two colour-blind ones
+ * keep every pair apart for players with red-green (deuteranopia) or blue-yellow (tritanopia)
+ * colour blindness; see rendering/palette.ts.
+ */
+export const PALETTES = ['default', 'deuteranopia', 'tritanopia'] as const;
+export type PaletteName = (typeof PALETTES)[number];
+
+export const UI_SCALE_MIN = 0.9;
+export const UI_SCALE_MAX = 1.5;
 
 /** Player preferences. Stored per browser, separate from progress. */
 export interface Settings {
@@ -42,6 +54,23 @@ export interface Settings {
   wardenName: string;
   /** A random id that tells this player's runs apart on the board, made once per browser. */
   playerId: string;
+  /** Keys, mouse buttons and gamepad buttons for every action. */
+  bindings: Bindings;
+  /** Sticks snap the cursor onto the nearest job in a small cone. */
+  aimAssist: boolean;
+  /** Colours for the kinds, hazard rings and ranks. */
+  palette: PaletteName;
+  /** Size of menus and the HUD, from UI_SCALE_MIN to UI_SCALE_MAX. */
+  uiScale: number;
+  /** No camera shake, punch or hit-stop, calmer particles and no pulsing menus. */
+  reducedMotion: boolean;
+  /** Solid, outlined HUD panels for reading over busy ground. */
+  highContrast: boolean;
+  /** Press once to whistle (or fast-forward) and again to stop, instead of holding. */
+  whistleToggle: boolean;
+  fastToggle: boolean;
+  /** Show the throw arc even while whistling or with nobody in the squad. */
+  alwaysShowArc: boolean;
 }
 
 /** Longest Warden name the board shows. */
@@ -83,6 +112,15 @@ export const DEFAULT_SETTINGS: Settings = {
   postRuns: true,
   wardenName: '',
   playerId: '',
+  bindings: DEFAULT_BINDINGS,
+  aimAssist: true,
+  palette: 'default',
+  uiScale: 1,
+  reducedMotion: false,
+  highContrast: false,
+  whistleToggle: false,
+  fastToggle: false,
+  alwaysShowArc: false,
 };
 
 export const ZOOM_SPEED_MIN = 0.25;
@@ -94,7 +132,7 @@ export type SettingsStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
 /** Builds settings from untrusted data, keeping each valid field and defaulting the rest. */
 export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTINGS): Settings {
-  const settings = { ...defaults };
+  const settings = { ...defaults, bindings: copyBindings(defaults.bindings) };
   if (typeof value !== 'object' || value === null) return settings;
   const raw = value as Record<string, unknown>;
   settings.difficulty = DIFFICULTIES.find((mode) => mode === raw.difficulty) ?? settings.difficulty;
@@ -112,6 +150,12 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
     'seenIntro',
     'postRuns',
     'graphicsTuned',
+    'aimAssist',
+    'reducedMotion',
+    'highContrast',
+    'whistleToggle',
+    'fastToggle',
+    'alwaysShowArc',
   ] as const) {
     if (typeof raw[key] === 'boolean') settings[key] = raw[key];
   }
@@ -120,6 +164,11 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
     settings.wardenName = cleanWardenName(raw.wardenName) ?? '';
   if (typeof raw.playerId === 'string' && /^[0-9a-f]{16}$/.test(raw.playerId)) {
     settings.playerId = raw.playerId;
+  }
+  if (raw.bindings !== undefined) settings.bindings = parseBindings(raw.bindings);
+  settings.palette = PALETTES.find((palette) => palette === raw.palette) ?? settings.palette;
+  if (typeof raw.uiScale === 'number' && Number.isFinite(raw.uiScale)) {
+    settings.uiScale = Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, raw.uiScale));
   }
   if (typeof raw.zoomSpeed === 'number' && Number.isFinite(raw.zoomSpeed)) {
     settings.zoomSpeed = Math.min(ZOOM_SPEED_MAX, Math.max(ZOOM_SPEED_MIN, raw.zoomSpeed));
@@ -139,9 +188,9 @@ export function loadSettings(
 ): Settings {
   try {
     const raw = storage.getItem(STORAGE_KEY);
-    return raw === null ? { ...defaults } : parseSettings(JSON.parse(raw), defaults);
+    return raw === null ? parseSettings(null, defaults) : parseSettings(JSON.parse(raw), defaults);
   } catch {
-    return { ...defaults };
+    return parseSettings(null, defaults);
   }
 }
 

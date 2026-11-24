@@ -18,6 +18,9 @@ import { ResultsScreen } from './ui/ResultsScreen';
 import { StoryScreen } from './ui/StoryScreen';
 import { TouchControls } from './ui/TouchControls';
 import { useTouchDevice } from './ui/useTouchDevice';
+import { usePadNavigation } from './ui/usePadNavigation';
+import { useInputDevice } from './game/commands/device';
+import { applyPalette } from './game/rendering/palette';
 
 // Screens and scenes that are not needed to reach the main menu load when first opened. The 3D
 // scene (three.js and the renderer) is the biggest: it loads when a day starts.
@@ -70,6 +73,11 @@ export function App() {
         : levelForMode(forDifficulty(levelById(levelId) ?? LEVELS[0], playDifficulty), playMode),
     [levelId, playDifficulty, playMode, storyRun],
   );
+  const palette = useGameStore((state) => state.settings.palette);
+  const uiScale = useGameStore((state) => state.settings.uiScale);
+  const reducedMotion = useGameStore((state) => state.settings.reducedMotion);
+  const highContrast = useGameStore((state) => state.settings.highContrast);
+  const device = useInputDevice((state) => state.device);
   const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
   const musicVolume = useGameStore((state) => state.settings.musicVolume);
   const touch = useTouchDevice();
@@ -78,6 +86,20 @@ export function App() {
   const { theme } = level;
 
   useEffect(() => audio.setVolumes(sfxVolume, musicVolume), [sfxVolume, musicVolume]);
+  // Accessibility settings reach every screen through the page root: the palette's colours,
+  // the text size (the stylesheet sizes text in rem), and classes for motion and contrast.
+  useEffect(() => {
+    const root = document.documentElement;
+    applyPalette(palette, root);
+    root.style.fontSize = `${Math.round(uiScale * 100)}%`;
+    root.classList.toggle('reduced-motion', reducedMotion);
+    root.classList.toggle('high-contrast', highContrast);
+  }, [palette, uiScale, reducedMotion, highContrast]);
+  // Focus rings show while a gamepad is driving the menus.
+  useEffect(() => {
+    document.documentElement.classList.toggle('pad-nav', device === 'pad');
+  }, [device]);
+  usePadNavigation();
   // New personal bests go to the Academy board by themselves.
   useBoardPoster();
 

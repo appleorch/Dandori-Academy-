@@ -5,6 +5,7 @@ import { isBattle } from '../game/modes/modes';
 import { ModeTargets } from './ModeTargets';
 import { SettingsPanel } from './SettingsPanel';
 import { fieldTitle } from './format';
+import { ActionPrompt } from './Glyph';
 
 /** Shown over a paused day: resume, restart, change settings or leave the lesson. */
 export function PauseMenu({ level }: { level: LevelDefinition }) {
@@ -17,8 +18,10 @@ export function PauseMenu({ level }: { level: LevelDefinition }) {
 
   return (
     <div className="screen overlay">
-      <div className="panel">
-        <p className="eyebrow">Paused</p>
+      <div className="panel" role="dialog" aria-labelledby="pause-title">
+        <p className="eyebrow" id="pause-title">
+          Paused
+        </p>
         {view === 'main' ? (
           <>
             <h1>{fieldTitle(level)}</h1>
@@ -41,7 +44,7 @@ export function PauseMenu({ level }: { level: LevelDefinition }) {
             )}
             {mode !== 'campaign' && (
               <button type="button" className="secondary" onClick={() => startDay(level.id)}>
-                Restart <kbd>R</kbd>
+                Restart <ActionPrompt action="restart" />
               </button>
             )}
             <button type="button" className="secondary" onClick={() => setView('settings')}>

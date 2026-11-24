@@ -51,8 +51,14 @@ import {
 /** Phones and tablets start at medium graphics; they can raise it in Settings. */
 function deviceDefaults(): Settings {
   try {
-    if (window.matchMedia('(pointer: coarse)').matches)
-      return { ...DEFAULT_SETTINGS, graphics: 'medium' };
+    return {
+      ...DEFAULT_SETTINGS,
+      graphics: window.matchMedia('(pointer: coarse)').matches
+        ? 'medium'
+        : DEFAULT_SETTINGS.graphics,
+      // A player who asked their system for less motion starts with it here too.
+      reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    };
   } catch {
     // No window (tests): use the plain defaults.
   }
