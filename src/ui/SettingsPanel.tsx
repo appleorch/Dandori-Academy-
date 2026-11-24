@@ -103,7 +103,7 @@ export function SettingsPanel() {
               role="radio"
               aria-checked={settings.graphics === level}
               className={settings.graphics === level ? 'segment active' : 'segment'}
-              onClick={() => updateSettings({ graphics: level })}
+              onClick={() => updateSettings({ graphics: level, graphicsTuned: true })}
             >
               {level[0].toUpperCase() + level.slice(1)}
             </button>

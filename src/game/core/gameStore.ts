@@ -646,3 +646,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
   };
 });
+
+// Development builds only: lets browser checks start any day directly.
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as { __store?: typeof useGameStore }).__store = useGameStore;
+}

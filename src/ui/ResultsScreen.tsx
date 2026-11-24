@@ -14,7 +14,7 @@ import { LEVELS, MAIN_LEVELS, type LevelDefinition } from '../game/world/level';
 import { formatTime } from './format';
 import { relicFor } from '../game/story/relics';
 import { SPROUT_KINDS, SPROUTS } from '../game/workers/sprouts';
-import { runStatus } from './LeaderboardScreen';
+import { runStatus } from './runStatus';
 import { ModeTargets } from './ModeTargets';
 import { SprocketPortrait } from './Portrait';
 

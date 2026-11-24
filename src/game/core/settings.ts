@@ -10,6 +10,11 @@ export type GraphicsLevel = (typeof GRAPHICS_LEVELS)[number];
 /** Player preferences. Stored per browser, separate from progress. */
 export interface Settings {
   graphics: GraphicsLevel;
+  /**
+   * Whether the graphics level is settled: the player picked one, or the first day's frame
+   * times were measured (see QualityTuner). Until then a slow device may have it lowered once.
+   */
+  graphicsTuned: boolean;
   /** Mode chosen on the lesson list. */
   difficulty: Difficulty;
   carrierCounts: boolean;
@@ -62,6 +67,7 @@ export function newPlayerId(): string {
 
 export const DEFAULT_SETTINGS: Settings = {
   graphics: 'high',
+  graphicsTuned: false,
   difficulty: 'normal',
   carrierCounts: true,
   healthBars: true,
@@ -105,6 +111,7 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
     'briefings',
     'seenIntro',
     'postRuns',
+    'graphicsTuned',
   ] as const) {
     if (typeof raw[key] === 'boolean') settings[key] = raw[key];
   }

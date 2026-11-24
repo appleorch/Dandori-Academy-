@@ -12,8 +12,9 @@ import {
 import { CHALLENGE_IDS, challengeOpen, isChallenge, MODES } from '../game/modes/modes';
 import { challengeFieldsOf } from './lessonAccess';
 import { fieldTitle } from './format';
-import { playedOnThisLesson, type RunEntry } from '../game/leaderboard/runCode';
-import { runKey, runsKey, type SaveData } from '../game/save/saveManager';
+import type { RunEntry } from '../game/leaderboard/runCode';
+import { runStatus } from './runStatus';
+import { runsKey } from '../game/save/saveManager';
 import { LEVELS, levelById } from '../game/world/level';
 import { MenuNav } from './MenuNav';
 
@@ -55,17 +56,6 @@ function boardName(mode: BoardMode): string {
 function dateText(iso: string): string {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString();
-}
-
-/** Where one of the player's own runs stands with the board. */
-export function runStatus(save: SaveData, run: RunEntry, postRuns: boolean): string {
-  const key = runKey(run);
-  if (save.posted.includes(key)) return 'Posted';
-  if (save.outbox.some((queued) => runKey(queued) === key)) {
-    return postRuns ? 'Posting…' : 'Waiting (posting is off)';
-  }
-  if (!playedOnThisLesson(run)) return 'Older version';
-  return 'Not posted';
 }
 
 /**

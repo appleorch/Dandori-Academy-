@@ -9,6 +9,7 @@ import { Battle, RIVAL_NAMES } from '../modes/battle';
 import { isBattle, MODES } from '../modes/modes';
 import { Expedition } from '../simulation/expedition';
 import { Simulation } from '../simulation/Simulation';
+import { initPhysics, physicsReady } from '../simulation/physics';
 import { heightAt } from '../world/heightMap';
 import type { GraphicsLevel } from '../core/settings';
 import type { LevelDefinition } from '../world/level';
@@ -33,6 +34,9 @@ import { SkyLight } from './SkyLight';
 import { Terrain } from './Terrain';
 import { WaterAndBridges } from './WaterAndBridges';
 import { WorkerInstances } from './WorkerInstances';
+import { PerfProbe, ShadowBudget } from './perf';
+import { QualityTuner } from './QualityTuner';
+import { PerfOverlay } from '../../ui/PerfOverlay';
 
 /**
  * Owns one day's simulation and renders it. Remount (change `key`) to start a new day.
@@ -70,6 +74,18 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   const [battle, setBattle] = useState<Battle | null>(null);
   const [fx] = useState(() => new Feedback());
   const playing = useGameStore((state) => state.phase === 'playing' && !state.paused);
+  // Rapier loads on demand; the field is drawn meanwhile and the day starts once it is ready.
+  const [ready, setReady] = useState(physicsReady);
+  useEffect(() => {
+    if (ready) return;
+    let live = true;
+    void initPhysics().then(() => {
+      if (live) setReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [ready]);
 
   const graphics = useGameStore((state) => state.settings.graphics);
   const quality = QUALITY[graphics];
@@ -77,6 +93,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   const pauseOnBlur = useGameStore((state) => state.settings.pauseOnBlur);
 
   useEffect(() => {
+    if (!ready) return;
     // The mode and rival are fixed when the day starts; the scene is rebuilt for every new day.
     const { playMode, rival } = useGameStore.getState();
     const rules = MODES[playMode];
@@ -95,7 +112,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
       created.dispose();
       race?.dispose();
     };
-  }, [level]);
+  }, [level, ready]);
 
   // Effects sit on raised ground of whichever place is being played.
   useEffect(() => {
@@ -148,61 +165,79 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   }, [pauseOnBlur]);
 
   return (
-    <Canvas
-      key={graphics}
-      shadows={quality.shadows ? 'soft' : false}
-      dpr={quality.dpr}
-      gl={{
-        antialias: !quality.postFx,
-        toneMapping: ACESFilmicToneMapping,
-        toneMappingExposure: 0.92,
-      }}
-      camera={{
-        fov: 42,
-        near: 1,
-        far: 320,
-        // High above the Warden, so the day opens with a swoop down to the field.
-        position: [level.captain.x, 70, level.captain.z + 44],
-      }}
-    >
-      {quality.postFx ? (
-        <PostFx ambientOcclusion={quality.ambientOcclusion} />
-      ) : (
-        <OverlayInMainPass />
+    <>
+      <PerfOverlay />
+      {!ready && (
+        <div className="loading-kiln" role="status">
+          <span className="loading-kiln-glow" aria-hidden="true" />
+          Stoking the Kiln…
+        </div>
       )}
-      {expedition && sim && (
-        <GameLoop expedition={expedition} battle={battle} input={input} fx={fx} onSwitch={setSim} />
-      )}
-      {/*
+      <Canvas
+        key={graphics}
+        shadows={quality.shadows ? 'soft' : false}
+        dpr={quality.dpr}
+        gl={{
+          antialias: !quality.postFx,
+          toneMapping: ACESFilmicToneMapping,
+          toneMappingExposure: 0.92,
+        }}
+        camera={{
+          fov: 42,
+          near: 1,
+          far: 320,
+          // High above the Warden, so the day opens with a swoop down to the field.
+          position: [level.captain.x, 70, level.captain.z + 44],
+        }}
+      >
+        <PerfProbe />
+        <QualityTuner />
+        {quality.shadows && <ShadowBudget />}
+        {quality.postFx ? (
+          <PostFx ambientOcclusion={quality.ambientOcclusion} />
+        ) : (
+          <OverlayInMainPass />
+        )}
+        {expedition && sim && (
+          <GameLoop
+            expedition={expedition}
+            battle={battle}
+            input={input}
+            fx={fx}
+            onSwitch={setSim}
+          />
+        )}
+        {/*
         Everything that belongs to one place is rebuilt when the Warden goes down or up. The two
         groups are siblings, so their keys carry different prefixes: equal keys would make React
         mix up the two and leave the old place's ground behind.
       */}
-      <group key={`world-${sim?.level.id ?? level.id}`}>
-        <Terrain level={sim?.level ?? level} />
-        <Architecture level={sim?.level ?? level} />
-        <Scenery level={sim?.level ?? level} sim={sim ?? undefined} />
-      </group>
-      {sim && (
-        <group key={`day-${sim.level.id}`}>
-          <CameraRig sim={sim} input={input} fx={fx} />
-          <SkyLight sim={sim} shadowMapSize={quality.shadowMapSize} />
-          <Atmosphere sim={sim} />
-          <CaptainMesh sim={sim} />
-          <WorkerInstances sim={sim} />
-          <CarryableMeshes sim={sim} />
-          <EnemyMeshes sim={sim} />
-          <WaterAndBridges sim={sim} />
-          <Beacons sim={sim} />
-          <Minimap sim={sim} />
-          {battle && <Minimap sim={battle.rival} rival={RIVAL_NAMES[battle.rivalLevel]} />}
-          <HazardMeshes sim={sim} />
-          <AimArc sim={sim} />
-          <CursorFx sim={sim} />
-          <ParticleField particles={fx.particles} />
-          <Popups fx={fx} />
+        <group key={`world-${sim?.level.id ?? level.id}`}>
+          <Terrain level={sim?.level ?? level} />
+          <Architecture level={sim?.level ?? level} />
+          <Scenery level={sim?.level ?? level} sim={sim ?? undefined} />
         </group>
-      )}
-    </Canvas>
+        {sim && (
+          <group key={`day-${sim.level.id}`}>
+            <CameraRig sim={sim} input={input} fx={fx} />
+            <SkyLight sim={sim} shadowMapSize={quality.shadowMapSize} />
+            <Atmosphere sim={sim} />
+            <CaptainMesh sim={sim} />
+            <WorkerInstances sim={sim} />
+            <CarryableMeshes sim={sim} />
+            <EnemyMeshes sim={sim} />
+            <WaterAndBridges sim={sim} />
+            <Beacons sim={sim} />
+            <Minimap sim={sim} />
+            {battle && <Minimap sim={battle.rival} rival={RIVAL_NAMES[battle.rivalLevel]} />}
+            <HazardMeshes sim={sim} />
+            <AimArc sim={sim} />
+            <CursorFx sim={sim} />
+            <ParticleField particles={fx.particles} />
+            <Popups fx={fx} />
+          </group>
+        )}
+      </Canvas>
+    </>
   );
 }

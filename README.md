@@ -24,6 +24,16 @@ npm run lint
 npm run build
 ```
 
+**Performance.** Press **F3** during a day for frame rate, frame time, draw calls and triangles
+per frame, and the simulation's time per frame. The first screen loads only the menus (about
+190 KB gzipped); the 3D scene and the physics engine (Rapier, whose WASM is inlined in its ~1.7 MB
+chunk) load in idle time once the menus are up, and the libraries sit in chunks of their own so a
+new game build leaves them cached (`vite.config.ts`). On a device that has never had its graphics
+settled, the first day's frame times are measured once and the graphics lowered if the day runs
+under about 25 fps (`src/game/rendering/QualityTuner.tsx`); it never raises a level and never
+overrides one the player chose. `src/game/simulation/performance.test.ts` keeps ten seconds of the
+Wild Quad with a full field of 100 Sproutlings within a time budget.
+
 ## Play without installing anything
 
 `docs/` holds a ready-to-serve build. With GitHub Pages enabled (Settings, Pages, Deploy from a

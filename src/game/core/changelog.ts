@@ -8,6 +8,16 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.19.1',
+    date: '2026-11-24',
+    changes: [
+      'Much faster to start: the first screen now loads about a tenth of what it did (190 KB instead of 2.2 MB, gzipped). The 3D scene and the physics engine load quietly in the background while you are on the menus, and a glowing Kiln shows if a day is ready before they are.',
+      'Smoother on high graphics: ambient occlusion now works from the depth the scene already drew instead of drawing the whole scene a second time, and tiny parts no longer cast shadows nobody can see. The largest fields draw about half as much per frame.',
+      'Press F3 during a day for a performance readout: frame rate, frame time, draw calls, triangles and the simulation\u2019s time.',
+      'On a slow device, the first day measures how smoothly it runs and lowers the graphics once if it needs to, and says so. It never raises them, and never overrides a level you chose.',
+    ],
+  },
+  {
     version: '0.19.0',
     date: '2026-11-24',
     changes: [

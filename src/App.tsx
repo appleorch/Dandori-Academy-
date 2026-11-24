@@ -1,19 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { audio } from './game/audio/audioManager';
 import { InputController } from './game/commands/input';
 import { useGameStore } from './game/core/gameStore';
 import { levelForMode } from './game/modes/battle';
-import { GameCanvas } from './game/rendering/GameCanvas';
 import { forDifficulty, LEVELS, levelById } from './game/world/level';
 import { dayField } from './game/campaign/campaign';
 import { CampScreen } from './ui/CampScreen';
-import { PokerRoom } from './poker/PokerRoom';
-import { AchievementsScreen } from './ui/AchievementsScreen';
 import { Briefing } from './ui/Briefing';
-import { FieldGuide } from './ui/FieldGuide';
 import { Hud } from './ui/Hud';
-import { JournalScreen } from './ui/JournalScreen';
-import { LeaderboardScreen } from './ui/LeaderboardScreen';
 import { BattleSelect } from './ui/BattleSelect';
 import { ChallengeSelect } from './ui/ChallengeSelect';
 import { MainMenu } from './ui/MainMenu';
@@ -21,10 +15,38 @@ import { StoryMap } from './ui/StoryMap';
 import { useBoardPoster } from './ui/useBoardPoster';
 import { PauseMenu } from './ui/PauseMenu';
 import { ResultsScreen } from './ui/ResultsScreen';
-import { SettingsScreen } from './ui/SettingsScreen';
 import { StoryScreen } from './ui/StoryScreen';
 import { TouchControls } from './ui/TouchControls';
 import { useTouchDevice } from './ui/useTouchDevice';
+
+// Screens and scenes that are not needed to reach the main menu load when first opened. The 3D
+// scene (three.js and the renderer) is the biggest: it loads when a day starts.
+const GameCanvas = lazy(() =>
+  import('./game/rendering/GameCanvas').then((m) => ({ default: m.GameCanvas })),
+);
+const PokerRoom = lazy(() => import('./poker/PokerRoom').then((m) => ({ default: m.PokerRoom })));
+const AchievementsScreen = lazy(() =>
+  import('./ui/AchievementsScreen').then((m) => ({ default: m.AchievementsScreen })),
+);
+const FieldGuide = lazy(() => import('./ui/FieldGuide').then((m) => ({ default: m.FieldGuide })));
+const JournalScreen = lazy(() =>
+  import('./ui/JournalScreen').then((m) => ({ default: m.JournalScreen })),
+);
+const LeaderboardScreen = lazy(() =>
+  import('./ui/LeaderboardScreen').then((m) => ({ default: m.LeaderboardScreen })),
+);
+const SettingsScreen = lazy(() =>
+  import('./ui/SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
+);
+/** Shown while a lazily loaded screen arrives; it fades in late, so quick loads never flash it. */
+function ScreenLoading() {
+  return (
+    <div className="loading-kiln" role="status">
+      <span className="loading-kiln-glow" aria-hidden="true" />
+      Loading…
+    </div>
+  );
+}
 
 /** Typing this anywhere outside a day opens the back room. */
 const PASSWORD = 'allin';
@@ -110,15 +132,19 @@ export function App() {
       {phase === 'map' && <StoryMap />}
       {phase === 'challenges' && <ChallengeSelect />}
       {phase === 'battles' && <BattleSelect />}
-      {phase === 'achievements' && <AchievementsScreen />}
-      {phase === 'settings' && <SettingsScreen />}
-      {phase === 'journal' && <JournalScreen />}
-      {phase === 'leaderboard' && <LeaderboardScreen />}
-      {phase === 'guide' && <FieldGuide />}
+      <Suspense fallback={<ScreenLoading />}>
+        {phase === 'achievements' && <AchievementsScreen />}
+        {phase === 'settings' && <SettingsScreen />}
+        {phase === 'journal' && <JournalScreen />}
+        {phase === 'leaderboard' && <LeaderboardScreen />}
+        {phase === 'guide' && <FieldGuide />}
+      </Suspense>
       {phase === 'story' && <StoryScreen />}
       {inGame && (
         <div className="game">
-          <GameCanvas key={runId} level={level} input={input} />
+          <Suspense fallback={<ScreenLoading />}>
+            <GameCanvas key={runId} level={level} input={input} />
+          </Suspense>
           <Hud level={level} touch={touch} input={input} />
           {touch && phase === 'playing' && !paused && !briefing && <TouchControls input={input} />}
           {phase === 'playing' && briefing && <Briefing level={level} />}
@@ -126,7 +152,11 @@ export function App() {
           {phase === 'results' && <ResultsScreen level={level} />}
         </div>
       )}
-      {pokerOpen && <PokerRoom />}
+      {pokerOpen && (
+        <Suspense fallback={<ScreenLoading />}>
+          <PokerRoom />
+        </Suspense>
+      )}
     </>
   );
 }

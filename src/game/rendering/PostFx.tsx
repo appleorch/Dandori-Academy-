@@ -1,6 +1,13 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
-import { Vector2, type Object3D, type Scene } from 'three';
+import {
+  DepthTexture,
+  HalfFloatType,
+  Vector2,
+  WebGLRenderTarget,
+  type Object3D,
+  type Scene,
+} from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
@@ -41,16 +48,35 @@ export function PostFx({ ambientOcclusion }: { ambientOcclusion: boolean }) {
   const { gl, scene, camera, size, viewport } = useThree();
 
   const { composer, tiltX, tiltY, bloom } = useMemo(() => {
-    const composer = new EffectComposer(gl);
+    // With ambient occlusion the composer's buffers keep their depth, so the occlusion pass can
+    // work from the depth the scene already wrote instead of drawing the whole scene again.
+    const composer = ambientOcclusion
+      ? new EffectComposer(
+          gl,
+          new WebGLRenderTarget(1, 1, {
+            type: HalfFloatType,
+            depthTexture: new DepthTexture(1, 1),
+          }),
+        )
+      : new EffectComposer(gl);
     composer.addPass(new RenderPass(scene, camera));
     if (ambientOcclusion) {
-      const gtao = new GTAOPass(scene, camera, 1, 1);
+      const gtao = new GTAOPass(scene, camera, 1, 1, {
+        depthTexture: composer.renderTarget1.depthTexture ?? undefined,
+      });
       gtao.updateGtaoMaterial({ radius: 0.9, distanceExponent: 1.6, thickness: 1.2, scale: 1.1 });
       gtao.blendIntensity = 0.85;
       // Labels, particles and other see-through overlays must not cast ambient
       // occlusion: hide them while the pass renders its depth and normals.
       const render = gtao.render.bind(gtao);
       gtao.render = (...args: Parameters<GTAOPass['render']>) => {
+        // The scene was drawn into whichever buffer is the read buffer this frame: use its depth.
+        const depth = args[2].depthTexture;
+        if (depth) {
+          gtao.gtaoMaterial.uniforms.tDepth.value = depth;
+          gtao.pdMaterial.uniforms.tDepth.value = depth;
+          gtao.depthRenderMaterial.uniforms.tDepth.value = depth;
+        }
         const hidden = hideOverlays(scene);
         render(...args);
         for (const object of hidden) object.visible = true;

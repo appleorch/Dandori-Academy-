@@ -2872,3 +2872,63 @@ button.mode-card.campaign {
 button.mode-card.lessons {
   border-color: rgba(120, 170, 255, 0.6);
 }
+
+/* ----- 0.20: loading ----- */
+
+.loading-kiln {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  color: var(--ink);
+  font-weight: 600;
+  pointer-events: none;
+  /* Never flashes for a quick load: it only fades in after a moment. */
+  opacity: 0;
+  animation: loading-in 0.3s ease-out 0.35s forwards;
+}
+.loading-kiln-glow {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffd27a 0%, #ff8a3a 45%, rgba(255, 90, 30, 0) 72%);
+  animation: kiln-breathe 1.2s ease-in-out infinite alternate;
+}
+@keyframes loading-in {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes kiln-breathe {
+  from {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-kiln-glow {
+    animation: none;
+  }
+}
+.perf-overlay {
+  position: absolute;
+  left: 10px;
+  bottom: 60px;
+  z-index: 6;
+  margin: 0;
+  padding: 8px 10px;
+  font:
+    12px/1.4 ui-monospace,
+    monospace;
+  color: #c8ffb0;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 6px;
+  pointer-events: none;
+}

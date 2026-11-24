@@ -14,9 +14,17 @@ for (const gesture of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown
   window.addEventListener(gesture, () => audio.unlock());
 }
 
-await initPhysics();
 createRoot(root).render(
   <StrictMode>
     <App />
   </StrictMode>,
 );
+
+// The physics engine and the 3D scene are large and only needed in a day: fetch them once the
+// menus are up, so the first day still starts at once.
+const preload = (): void => {
+  void initPhysics();
+  void import('./game/rendering/GameCanvas');
+};
+if ('requestIdleCallback' in window) window.requestIdleCallback(preload, { timeout: 4000 });
+else setTimeout(preload, 1500);

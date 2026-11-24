@@ -1,13 +1,34 @@
-import RAPIER from '@dimforge/rapier3d-compat';
+import type * as RAPIER from '@dimforge/rapier3d-compat';
 import { CAPTAIN } from '../core/config';
 import type { Box, Point } from '../navigation/NavGrid';
 
 const WALL_HALF_HEIGHT = 2;
 const BORDER = 1;
 
-/** Loads the Rapier WASM module. Must resolve before a PhysicsWorld is created. */
-export async function initPhysics(): Promise<void> {
-  await RAPIER.init();
+/** The Rapier module once loaded. It is large (its WASM is inlined), so it is fetched on demand. */
+let loaded: typeof RAPIER | null = null;
+let loading: Promise<void> | null = null;
+
+/**
+ * Loads the Rapier WASM module, once; later calls return the same promise. Must resolve before
+ * a PhysicsWorld is created. The menus call it in idle time so a day can start at once.
+ */
+export function initPhysics(): Promise<void> {
+  loading ??= import('@dimforge/rapier3d-compat').then(async (module) => {
+    await module.init();
+    loaded = module;
+  });
+  return loading;
+}
+
+/** Whether Rapier is loaded and a PhysicsWorld can be made. */
+export function physicsReady(): boolean {
+  return loaded !== null;
+}
+
+function rapier(): typeof RAPIER {
+  if (!loaded) throw new Error('initPhysics() must resolve before physics is used');
+  return loaded;
 }
 
 /**
@@ -22,7 +43,7 @@ export class PhysicsWorld {
   private readonly walls = new Map<Box, RAPIER.Collider>();
 
   constructor(width: number, depth: number, obstacles: readonly Box[], start: Point, dt: number) {
-    this.world = new RAPIER.World({ x: 0, y: 0, z: 0 });
+    this.world = new (rapier().World)({ x: 0, y: 0, z: 0 });
     this.world.timestep = dt;
     const hw = width / 2;
     const hd = depth / 2;
@@ -35,10 +56,10 @@ export class PhysicsWorld {
     ];
     for (const box of walls) this.addWall(box);
     this.body = this.world.createRigidBody(
-      RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(start.x, 1, start.z),
+      rapier().RigidBodyDesc.kinematicPositionBased().setTranslation(start.x, 1, start.z),
     );
     this.collider = this.world.createCollider(
-      RAPIER.ColliderDesc.capsule(0.5, CAPTAIN.radius),
+      rapier().ColliderDesc.capsule(0.5, CAPTAIN.radius),
       this.body,
     );
     this.controller = this.world.createCharacterController(0.02);
@@ -48,11 +69,9 @@ export class PhysicsWorld {
   /** Adds a solid box the captain cannot walk through. */
   addWall(box: Box): void {
     const collider = this.world.createCollider(
-      RAPIER.ColliderDesc.cuboid(box.w / 2, WALL_HALF_HEIGHT, box.d / 2).setTranslation(
-        box.x,
-        WALL_HALF_HEIGHT,
-        box.z,
-      ),
+      rapier()
+        .ColliderDesc.cuboid(box.w / 2, WALL_HALF_HEIGHT, box.d / 2)
+        .setTranslation(box.x, WALL_HALF_HEIGHT, box.z),
     );
     this.walls.set(box, collider);
   }

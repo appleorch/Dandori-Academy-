@@ -17,6 +17,7 @@ import { Coach } from '../story/coach';
 import { Headmaster } from '../story/headmaster';
 import { relicFor } from '../story/relics';
 import type { Feedback } from './feedback';
+import { recordSteps } from './perf';
 
 const HUD_INTERVAL_FRAMES = 6;
 /** A chime sounds when this much of the day is left, and the music picks up. */
@@ -131,6 +132,7 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
     fx.listenerX = sim.captainTransform.x;
     fx.listenerZ = sim.captainTransform.z;
     let switched = false;
+    const stepStart = performance.now();
     for (let i = 0; i < steps && !sim.ended; i++) {
       sim.step(input.sample(cursorX, cursorZ));
       // The rival keeps pace step by step, and the battle is called the moment it is won.
@@ -153,6 +155,7 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
         }
       }
     }
+    recordSteps(performance.now() - stepStart, steps);
     fx.update(delta);
     if (switched) {
       audio.play('doorOpen');
