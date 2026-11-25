@@ -16,6 +16,7 @@ const LANDING_EVENT: Record<HazardKind, SimEventType> = {
   stomp: 'slam',
   flame: 'flare',
   arc: 'zap',
+  wave: 'splash',
 };
 
 /** How a hazard that lands on a Sproutling finishes it. */
@@ -27,6 +28,7 @@ const DEATH_BY: Record<HazardKind, DeathCause> = {
   stomp: 'crushed',
   flame: 'fire',
   arc: 'shock',
+  wave: 'water',
 };
 
 /** Resolves a hazard where it lands: kills up to its limit, stuns the rest, hurts the captain. */

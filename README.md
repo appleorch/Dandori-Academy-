@@ -212,6 +212,18 @@ On a phone or tablet the game shows touch controls instead:
   one-way edge: anything can step down off it, nothing climbs back. Heights only change how the
   world looks; the rules are worked out on the flat nav grid, where a ledge is a cell that can
   only be entered in its drop direction.
+- **Bosses are set pieces.** The first time a boss is roused on a field, the day waits for a
+  three-second intro (a camera swoop, its name and title, a roar and a sting; click, whistle or
+  the interact key skips it), shown once per field per save (`bossIntros`). Every boss fights in
+  three phases, marked on its health bar: the Gravelmaw throws pebbles after its slams, then
+  burrows and comes up under the crowd; the Lanternroot spits in pairs, then sprouts Bogspitters
+  and regrows its knots sooner; the Bellwether charges twice, then stomps; the Snuffer puts out
+  beacons and calls Skitters. Two new bosses have Mission fields of their own: **the Galewing**
+  (The High Wind) circles out of walking reach and dives on a ring it marks, then lies open on
+  the ground, and **the Mire Lord** (The Mire) swims, spits waves of pond water that only
+  Dewlings swim through, and later rears a wave round itself. Each boss drops a named relic of
+  its own (`BOSS_RELICS`), its music is played in its own key and quickens with each phase, and
+  the boss lessons' arenas are dressed with the art kit.
 - **Beasts with a rule of their own** (`src/game/enemies/beasts.ts`), each asking a new question:
   the **Pollen Moth** flies out of walking reach (only throws hit it) and carries Sproutlings
   off unless hit hard enough to let go; the **Burrow Grub** moves unseen under a ripple and

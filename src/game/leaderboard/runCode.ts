@@ -148,7 +148,15 @@ export function lessonOf(levelId: string, difficulty: Difficulty): LevelDefiniti
  * challenges as they were played on lessons) were ranked against these, so they are checked
  * against them for good.
  */
-const CLOSED_PLATINUM: Readonly<Record<string, number>> = { 'rush-hour': 294 };
+const CLOSED_PLATINUM: Readonly<Record<string, number>> = {
+  'rush-hour': 294,
+  // Re-measured in 0.25.0, when the bosses gained a third phase.
+  'gravelmaws-pit': 118,
+  'three-roots': 136,
+  'graduation-day': 563,
+  'restoration-day': 666,
+  'the-root-cellar': 149,
+};
 
 /** A lesson as its board knows it: with the Platinum time it had when the board closed. */
 function boardLesson(levelId: string, difficulty: Difficulty): LevelDefinition | null {

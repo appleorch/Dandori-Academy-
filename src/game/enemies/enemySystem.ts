@@ -18,6 +18,8 @@ import { beastBrain, flightHeight, nearWater, onBeastDefeated } from './beasts';
 import { ENEMY, ENEMY_SPECS, HAZARDS, type EnemySpec } from './enemyKinds';
 
 const dir = { x: 0, z: 0 };
+/** The parent given to kin a boss calls to its side, which leave no carcass. */
+const BROOD = -2;
 
 /** Telegraph time, shorter on Hard. */
 function windupOf(sim: Simulation, spec: EnemySpec): number {
@@ -40,7 +42,7 @@ function walk(
   dt: number,
 ): void {
   // A Pike Newt swims: it moves on the ground that includes the water.
-  const nav = enemy.kind === 'newt' ? sim.wadeNav : sim.nav;
+  const nav = enemy.kind === 'newt' || enemy.kind === 'mirelord' ? sim.wadeNav : sim.nav;
   steerTo(nav, enemy.mover, at, x, z, dt, dir);
   moveAgent(nav, at, dir.x * speed * dt, dir.z * speed * dt);
   if (dir.x !== 0 || dir.z !== 0) at.facing = Math.atan2(dir.x, dir.z);
@@ -58,7 +60,8 @@ function pickPrey(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform)
     if (dist >= bestDist) return;
     if (Math.hypot(prey.x - enemy.homeX, prey.z - enemy.homeZ) > spec.territory) return;
     // A Pike Newt hunts only in the water or on its banks.
-    if (enemy.kind === 'newt' && !nearWater(sim, prey.x, prey.z)) return;
+    if ((enemy.kind === 'newt' || enemy.kind === 'mirelord') && !nearWater(sim, prey.x, prey.z))
+      return;
     best = prey;
     bestDist = dist;
   };
@@ -101,7 +104,8 @@ function wander(sim: Simulation, enemy: Enemy, at: Transform, dt: number): void 
   enemy.wanderTimer -= dt;
   if (enemy.wanderTimer <= 0) {
     enemy.wanderTimer = sim.rng.range(2, 5);
-    const spot = (enemy.kind === 'newt' ? sim.wadeNav : sim.nav).nearestWalkable(
+    const swims = enemy.kind === 'newt' || enemy.kind === 'mirelord';
+    const spot = (swims ? sim.wadeNav : sim.nav).nearestWalkable(
       enemy.homeX + sim.rng.range(-ENEMY.wanderRange, ENEMY.wanderRange),
       enemy.homeZ + sim.rng.range(-ENEMY.wanderRange, ENEMY.wanderRange),
     );
@@ -244,7 +248,12 @@ function wither(sim: Simulation, enemy: Enemy, at: Transform): void {
   enemy.hp = 0;
   enemy.state = 'recover';
   const core = sim.enemies.get(enemy.parent);
-  enemy.timer = core && core.phase > 0 ? ENEMY.knotRegrowLate : ENEMY.knotRegrow;
+  enemy.timer =
+    core && core.phase > 1
+      ? ENEMY.knotRegrowLast
+      : core && core.phase > 0
+        ? ENEMY.knotRegrowLate
+        : ENEMY.knotRegrow;
   const siblings = [...sim.enemies.entries()].filter(([, other]) => other.parent === enemy.parent);
   if (siblings.every(([, other]) => other.hp <= 0)) {
     // Every knot is down: the core is open for a while, then they all come back together.
@@ -266,7 +275,8 @@ function defeat(sim: Simulation, entity: Entity, enemy: Enemy, at: Transform): v
     if (enemy.reveals === 'sap') spawnSap(sim, ground, entity);
     sim.emit('dug', ground.x, ground.z);
   } else {
-    if (spec.carcassYield > 0) spawnCarcass(sim, ground.x, ground.z, enemy.kind);
+    if (spec.carcassYield > 0 && enemy.parent !== BROOD)
+      spawnCarcass(sim, ground.x, ground.z, enemy.kind);
     dropDewdrop(sim, ground);
     sim.stats.enemiesDefeated++;
     if (spec.boss) sim.stats.bossesDefeated.push(enemy.kind);
@@ -364,13 +374,20 @@ function strike(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform): 
       return;
     }
     at.facing = Math.atan2(target.x - at.x, target.z - at.z);
-    spawnHazard(sim, 'glob', at, sim.nav.nearestWalkable(target.x, target.z));
+    // The Mire Lord spits pond water rather than a glob.
+    const spit = enemy.kind === 'mirelord' ? 'wave' : 'glob';
+    spawnHazard(sim, spit, at, sim.wadeNav.nearestWalkable(target.x, target.z));
     if (enemy.kind === 'lanternroot' && enemy.phase > 0) {
       const second = sim.nav.nearestWalkable(
         target.x + sim.rng.range(-2, 2),
         target.z + sim.rng.range(-2, 2),
       );
       spawnHazard(sim, 'glob', at, second, HAZARDS.glob.flight, ENEMY.secondGlobDelay);
+    }
+    // The Mire Lord's later spits come with a wave that floors the bank round it.
+    if (enemy.kind === 'mirelord' && enemy.phase > 0) {
+      spawnHazard(sim, 'stomp', at, at);
+      sim.emit('splash', at.x, at.z);
     }
     sim.emit('spit', at.x, at.z);
   }
@@ -405,7 +422,44 @@ function updatePhase(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transfo
     enemy.phase = phase;
     sim.emit('phase', at.x, at.z);
     if (enemy.kind === 'snuffer') snuff(sim, at);
+    if (phase >= 2) callBrood(sim, enemy, at);
   }
+}
+
+/** A boss's last phase calls help: the Lanternroot's seeds sprout, the others call their kin. */
+function callBrood(sim: Simulation, enemy: Enemy, at: Transform): void {
+  const brood: Partial<Record<Enemy['kind'], Enemy['kind']>> = {
+    lanternroot: 'spitter',
+    galewing: 'moth',
+    mirelord: 'newt',
+  };
+  const kind = brood[enemy.kind];
+  if (!kind) return;
+  for (let i = 0; i < 2; i++) {
+    const angle = sim.rng.range(0, Math.PI * 2);
+    const nav = kind === 'newt' ? sim.wadeNav : sim.nav;
+    const spot = nav.nearestWalkable(at.x + Math.sin(angle) * 6, at.z + Math.cos(angle) * 6);
+    // Kin called to the Galewing's or the Mire Lord's side leave no carcass: they are not part
+    // of the field's tally. (The Lanternroot's sprouts are ordinary Bogspitters.)
+    const kin = enemy.kind !== 'lanternroot';
+    const called = spawnEnemy(sim, spot.x, spot.z, kind);
+    if (kin) sim.enemies.require(called).parent = BROOD;
+  }
+  sim.emit('regrow', at.x, at.z);
+}
+
+/** The Gravelmaw's last phase: it goes under and comes up beneath the biggest crowd, rearing. */
+function burrow(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform): void {
+  const crowd = densestCluster(sim, at, spec.territory) ?? sim.captainTransform;
+  if (Math.hypot(crowd.x - enemy.homeX, crowd.z - enemy.homeZ) > spec.territory) return;
+  for (const latched of [...enemy.latched]) setIdle(sim, latched, sim.workers.require(latched));
+  sim.emit('dug', at.x, at.z);
+  const spot = sim.nav.nearestWalkable(crowd.x, crowd.z);
+  at.x = spot.x;
+  at.z = spot.z;
+  beginWindup(enemy, at, windupOf(sim, spec), crowd.x, crowd.z);
+  spawnHazard(sim, 'slam', at, at, windupOf(sim, spec));
+  sim.emit('slamWindup', at.x, at.z);
 }
 
 /** The Snuffer's breath: nearby beacons go dark and Skitters crawl out of the walls. */
@@ -472,6 +526,7 @@ export function updateEnemies(sim: Simulation, dt: number): void {
           strike(sim, enemy, spec, at);
         } else {
           enemy.state = 'roam';
+          if (enemy.kind === 'gravelmaw' && enemy.phase > 1) burrow(sim, enemy, spec, at);
           // The Bellwether's last phase wakes with a stomp that floors the squad.
           if (enemy.kind === 'bellwether' && enemy.phase > 1) {
             spawnHazard(sim, 'stomp', at, at);

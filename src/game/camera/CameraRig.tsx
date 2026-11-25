@@ -59,6 +59,20 @@ export function CameraRig({ sim, input, fx }: CameraRigProps): null {
       return;
     }
 
+    // A boss's intro: the camera swoops low over it.
+    const intro = useGameStore.getState().bossIntro;
+    if (intro) {
+      const ease = 1 - Math.exp(-delta * 2.2);
+      const swing = clock.elapsedTime * 0.35;
+      const ground = heightAt(level, intro.x, intro.z);
+      camera.position.x += (intro.x + Math.sin(swing) * 9 - camera.position.x) * ease;
+      camera.position.y += (ground + 7 - camera.position.y) * ease;
+      camera.position.z += (intro.z + 10 + Math.cos(swing) * 3 - camera.position.z) * ease;
+      camera.lookAt(intro.x, ground + 1.5, intro.z);
+      cut.current = false;
+      return;
+    }
+
     const captain = sim.captainTransform;
     const peek = input.peek;
     const tactical = input.tactical;

@@ -331,7 +331,7 @@ const RESTORATION_DAY: LevelSpec = {
   width: 196,
   depth: 128,
   dayLength: 1150,
-  platinumTime: 666,
+  platinumTime: 645,
   seed: 27,
   startingWorkers: 24,
   squad: { ember: 13, dew: 4, stone: 4, spark: 3 },

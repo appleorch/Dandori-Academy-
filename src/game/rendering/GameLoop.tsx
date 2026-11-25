@@ -10,7 +10,7 @@ import { FixedClock } from '../core/clock';
 import { CAPTAIN, SIM_DT } from '../core/config';
 import { useGameStore } from '../core/gameStore';
 import { splitKey } from '../save/saveManager';
-import { ENEMY_SPECS } from '../enemies/enemyKinds';
+import { ENEMY_SPECS, type EnemyKind } from '../enemies/enemyKinds';
 import type { Battle, BattleOutcome } from '../modes/battle';
 import type { Expedition } from '../simulation/expedition';
 import type { Simulation } from '../simulation/Simulation';
@@ -72,6 +72,40 @@ interface GameLoopProps {
   onSwitch: (sim: Simulation) => void;
 }
 
+/** Seconds a boss's intro holds the day. */
+const BOSS_INTRO_SECONDS = 3;
+
+/** Each boss's variation on the boss music: the key it is played in. */
+const BOSS_KEYS: Partial<Record<EnemyKind, number>> = {
+  gravelmaw: -2,
+  lanternroot: 3,
+  bellwether: 0,
+  snuffer: -5,
+  galewing: 5,
+  mirelord: -3,
+};
+
+/** A line under each boss's name in its intro. */
+const BOSS_TITLES: Partial<Record<string, string>> = {
+  gravelmaw: 'Old Tenant of the Pit',
+  lanternroot: 'The Light That Grew Teeth',
+  bellwether: 'It Tolls for Thee, Mostly',
+  snuffer: 'Keeper of the Undercroft Dark',
+  galewing: 'Rider of the Evening Wind',
+  mirelord: 'Sovereign of the Flooded Pool',
+};
+
+/** The first boss to be roused (hunting, hurt or clung to), with where it is. */
+function rousedBoss(sim: Simulation): { kind: EnemyKind; x: number; z: number } | null {
+  for (const [entity, enemy] of sim.enemies.entries()) {
+    if (!ENEMY_SPECS[enemy.kind].boss || enemy.hp <= 0) continue;
+    if (!enemy.alert && enemy.hp >= enemy.maxHp && enemy.latched.length === 0) continue;
+    const at = sim.transforms.require(entity);
+    return { kind: enemy.kind, x: at.x, z: at.z };
+  }
+  return null;
+}
+
 /** How tense the music should be: a boss fight, danger nearby, or an ordinary working day. */
 function mood(sim: Simulation): { boss: boolean; intensity: Intensity } {
   let boss = false;
@@ -107,6 +141,7 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
   const [headmaster] = useState(() => new Headmaster(surface));
   const frame = useRef(0);
   const pluckWait = useRef(0);
+  const introTime = useRef(0);
   const heaveBeat = useRef(-1);
   const walked = useRef(0);
   const lastSpot = useRef({ x: surface.captainTransform.x, z: surface.captainTransform.z });
@@ -168,6 +203,33 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
     }
     if (store.paused || store.briefing) {
       audio.setWhistle(false);
+      return;
+    }
+    // A boss's intro: the day waits while it is shown; any press of the interact key, the
+    // whistle or a click ends it early.
+    if (store.bossIntro) {
+      // Capped, so one slow frame never skips the intro altogether.
+      introTime.current += Math.min(delta, 0.1);
+      if (introTime.current > BOSS_INTRO_SECONDS || input.takeInteract() || input.held('whistle')) {
+        store.showBossIntro(null);
+      }
+      audio.setWhistle(false);
+      return;
+    }
+    const roused = rousedBoss(sim);
+    if (roused && !store.save.bossIntros.includes(sim.level.id)) {
+      introTime.current = 0;
+      const spec = ENEMY_SPECS[roused.kind];
+      store.showBossIntro({
+        field: sim.level.id,
+        kind: roused.kind,
+        name: spec.name,
+        title: BOSS_TITLES[roused.kind] ?? '',
+        x: roused.x,
+        z: roused.z,
+      });
+      audio.play('bossSting');
+      audio.playMusic('boss');
       return;
     }
     const fast = input.fast && !sim.ended;
@@ -366,6 +428,12 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
       }
       const { boss, intensity } = mood(sim);
       audio.playMusic(boss ? 'boss' : sim.level.theme);
+      const fight = rousedBoss(sim);
+      if (fight) {
+        const phase =
+          [...sim.enemies.entries()].find(([, e]) => e.kind === fight.kind)?.[1].phase ?? 0;
+        audio.setBossMusic(BOSS_KEYS[fight.kind] ?? 0, phase);
+      }
       audio.setMusicMood(intensity, sim.timeLeft <= LAST_CALL_SECONDS);
     }
   }, -1);

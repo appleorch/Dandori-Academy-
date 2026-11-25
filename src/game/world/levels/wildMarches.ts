@@ -103,6 +103,14 @@ const DRIP_LINE: LevelSpec = {
 
 const GRAVELMAWS_PIT: LevelSpec = {
   id: 'gravelmaws-pit',
+  // The arena (art only, see docs-design/ART_DIRECTION.md). The pit is a dug-out flowerpot bed: rock walls, a broken pot and a trowel at its rim.
+  wallLook: 'rock',
+  props: [
+    { kind: 'flowerpot', x: -31, z: -23, scale: 1.6, turn: 0.3 },
+    { kind: 'trowel', x: 31, z: -23, scale: 1.6, turn: 0.9 },
+    { kind: 'acorn-cap', x: -31, z: 23, scale: 1.6, turn: 1.5 },
+    { kind: 'conker', x: 31, z: 23, scale: 1.6, turn: 2.1 },
+  ],
   stage: 13,
   name: "Gravelmaw's Pit",
   brief:
@@ -110,7 +118,7 @@ const GRAVELMAWS_PIT: LevelSpec = {
   width: 56,
   depth: 40,
   dayLength: 300,
-  platinumTime: 118,
+  platinumTime: 133,
   seed: 13,
   startingWorkers: 12,
   squad: { ember: 8, stone: 4 },
@@ -142,6 +150,14 @@ const GRAVELMAWS_PIT: LevelSpec = {
 
 const THREE_ROOTS: LevelSpec = {
   id: 'three-roots',
+  // The arena (art only, see docs-design/ART_DIRECTION.md). Roots for walls, as befits the Lanternroot's hollow.
+  wallLook: 'root',
+  props: [
+    { kind: 'lily-pad', x: -33, z: -25, scale: 1.6, turn: 0.3 },
+    { kind: 'teacup', x: 33, z: -25, scale: 1.6, turn: 0.9 },
+    { kind: 'acorn-cap', x: -33, z: 25, scale: 1.6, turn: 1.5 },
+    { kind: 'spool', x: 33, z: 25, scale: 1.6, turn: 2.1 },
+  ],
   stage: 14,
   name: 'Three Roots',
   brief:
@@ -149,7 +165,7 @@ const THREE_ROOTS: LevelSpec = {
   width: 60,
   depth: 44,
   dayLength: 320,
-  platinumTime: 136,
+  platinumTime: 185,
   seed: 14,
   startingWorkers: 15,
   squad: { ember: 8, dew: 4, spark: 3 },
@@ -256,6 +272,14 @@ const RUSH_HOUR: LevelSpec = {
 
 const THE_BELLWETHER: LevelSpec = {
   id: 'the-bellwether',
+  // The arena (art only, see docs-design/ART_DIRECTION.md). A walled bell-yard: brick all round, candles and a stopped watch at the corners.
+  wallLook: 'brick',
+  props: [
+    { kind: 'candle', x: -38, z: -25, scale: 1.6, turn: 0.3 },
+    { kind: 'pocket-watch', x: 38, z: -25, scale: 1.6, turn: 0.9 },
+    { kind: 'book-stack', x: -38, z: 25, scale: 1.6, turn: 1.5 },
+    { kind: 'candle', x: 38, z: 25, scale: 1.6, turn: 2.1 },
+  ],
   stage: 16,
   name: 'The Bellwether',
   brief:

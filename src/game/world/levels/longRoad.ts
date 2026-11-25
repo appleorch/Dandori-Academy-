@@ -263,7 +263,7 @@ const GRADUATION_DAY: LevelSpec = {
   width: 120,
   depth: 80,
   dayLength: 1000,
-  platinumTime: 563,
+  platinumTime: 771,
   seed: 21,
   startingWorkers: 22,
   squad: { ember: 12, dew: 4, stone: 3, spark: 3 },

@@ -50,6 +50,7 @@ export type SoundName =
   | 'burned'
   | 'pluck'
   | 'nectar'
+  | 'bossSting'
   | 'drowned'
   | 'ignite'
   | 'zap'
@@ -201,6 +202,7 @@ class AudioManager {
   private drone: { osc: OscillatorNode; gain: GainNode } | null = null;
   /** Music, mood and ambience asked for before the context existed; started on unlock. */
   private wanted: TrackName | null = null;
+  private bossMusic = { key: 0, phase: 0 };
   private mood: { intensity: Intensity; urgent: boolean } = { intensity: 1, urgent: false };
   private ambienceWanted = false;
 
@@ -237,6 +239,7 @@ class AudioManager {
     this.applyVolumes();
     this.applyScene();
     this.player.setMood(this.mood.intensity, this.mood.urgent);
+    this.player.setBoss(this.bossMusic.key, this.bossMusic.phase);
     if (this.wanted) this.player.play(this.wanted);
     if (this.ambienceWanted) this.startAmbience();
   }
@@ -490,6 +493,15 @@ class AudioManager {
       case 'spawn':
         this.tone(out, 300 * d, 900 * d, 0.07, 'sine', 0.14);
         this.chirp(out, 800, 1300, 0.09, 0.14, 0.05);
+        break;
+      case 'bossSting':
+        // A roar, then a falling brass stab over a low drum.
+        this.burst(out, 0.9, 260, 0.5);
+        this.tone(out, 110, 55, 1.1, 'sawtooth', 0.28);
+        [392, 370, 311].forEach((hz, i) =>
+          this.tone(out, hz, hz * 0.98, 0.5, 'square', 0.1, 0.35 + i * 0.18),
+        );
+        this.tone(out, 60, 40, 0.8, 'sine', 0.5, 0.35);
         break;
       case 'pluck':
         this.burst(out, 0.08, 1600, 0.14, 0, 'bandpass', 900);
@@ -936,6 +948,12 @@ class AudioManager {
   setMusicMood(intensity: Intensity, urgent: boolean): void {
     this.mood = { intensity, urgent };
     this.player?.setMood(intensity, urgent);
+  }
+
+  /** Boss music: the boss's own key and the fight's phase (see MusicPlayer.setBoss). */
+  setBossMusic(key: number, phase: number): void {
+    this.bossMusic = { key, phase };
+    this.player?.setBoss(key, phase);
   }
 
   stopMusic(): void {

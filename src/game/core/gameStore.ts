@@ -123,12 +123,25 @@ export interface HudSnapshot {
   twins: { letter: string; colour: string; shape: string; left: number }[];
 }
 
+export interface BossIntro {
+  /** The field it was shown on, and the boss. */
+  field: string;
+  kind: string;
+  name: string;
+  title: string;
+  x: number;
+  z: number;
+}
+
 export interface BossSnapshot {
   name: string;
   /** Remaining health, 0 to 1. */
   health: number;
   /** 'open' while it takes full damage, 'armoured' while it takes reduced damage, 'shielded' while it takes none. */
   guard: 'open' | 'armoured' | 'shielded' | 'dark';
+  /** Health fractions where its phases begin, highest first, and the phase it is in. */
+  phases: readonly number[];
+  phase: number;
 }
 
 export interface DayResult {
@@ -196,6 +209,8 @@ interface GameStore {
   nearSecret: boolean;
   /** Story: a sprout is in the Warden's reach to pluck. */
   nearSprout: boolean;
+  /** A boss being introduced: the day waits while its name card shows. */
+  bossIntro: BossIntro | null;
   /** Id of the side lesson whose way down the Warden is standing at, or null. */
   nearDescent: string | null;
   /** True while the Warden stands at the way back up out of a cave. */
@@ -228,6 +243,8 @@ interface GameStore {
   say: (line: Line) => void;
   setNearSecret: (near: boolean) => void;
   setNearSprout: (near: boolean) => void;
+  /** Starts a boss's intro and remembers it was shown on this field; null ends it. */
+  showBossIntro: (intro: BossIntro | null) => void;
   /** The Warden is at a way down (or has left it): the side lesson is found for good. */
   setNearDescent: (levelId: string | null) => void;
   setNearAscent: (near: boolean) => void;
@@ -330,6 +347,8 @@ function bossSnapshot(sim: Simulation): BossSnapshot | null {
     const taken = damageTaken(sim, entity, enemy);
     return {
       name: spec.name,
+      phases: spec.phases,
+      phase: enemy.phase,
       health: Math.max(0, enemy.hp / enemy.maxHp),
       guard:
         taken === 0
@@ -374,6 +393,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     sprocket: null,
     nearSecret: false,
     nearSprout: false,
+    bossIntro: null,
     nearDescent: null,
     nearAscent: false,
     pokerOpen: false,
@@ -406,6 +426,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         sprocket: null,
         nearSecret: false,
         nearSprout: false,
+        bossIntro: null,
         nearDescent: null,
         hud: null,
         result: null,
@@ -441,6 +462,18 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
     setNearSprout: (near) => {
       if (near !== get().nearSprout) set({ nearSprout: near });
+    },
+    showBossIntro: (intro) => {
+      if (!intro) {
+        set({ bossIntro: null });
+        return;
+      }
+      const before = get().save;
+      const save = before.bossIntros.includes(intro.field)
+        ? before
+        : { ...before, bossIntros: [...before.bossIntros, intro.field] };
+      if (save !== before) persist(save);
+      set({ bossIntro: intro, save });
     },
 
     setNearDescent: (levelId) => {
@@ -629,6 +662,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         hint: null,
         nearSecret: false,
         nearSprout: false,
+        bossIntro: null,
         nearDescent: null,
         hud: get().hud ?? snapshot(sim),
         save,

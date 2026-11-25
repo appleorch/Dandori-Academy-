@@ -3,7 +3,7 @@ import type { Enemy, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { killWorker, setIdle } from '../workers/squad';
 import type { SproutKind } from '../workers/sprouts';
-import { spawnEnemy } from '../world/spawn';
+import { spawnEnemy, spawnHazard } from '../world/spawn';
 import { ENEMY_SPECS, type EnemyKind, type EnemySpec } from './enemyKinds';
 
 /**
@@ -33,6 +33,7 @@ const SHELL_FLIPPED = 1;
 const SLUG_WAKING = 1;
 const SLUG_AWAKE = 2;
 const MIMIC_REVEALED = 1;
+const GALE_LANDED = 1;
 
 const MOTH = {
   /** Height it flies at; thrown Sproutlings still reach it. */
@@ -71,6 +72,7 @@ export const BEAST_KINDS: readonly EnemyKind[] = [
 export function flightHeight(enemy: Enemy): number {
   if (enemy.kind === 'moth') return MOTH.height;
   if (enemy.kind === 'sparkwasp') return 0.8;
+  if (enemy.kind === 'galewing') return enemy.special === GALE_LANDED ? 0 : 3;
   return 0;
 }
 
@@ -82,6 +84,7 @@ export function canBeHit(enemy: Enemy): boolean {
 /** Whether walking Sproutlings can go for it: not a moth (too high), a grub underground or a disguised mimic. */
 export function walkersCanReach(enemy: Enemy): boolean {
   if (enemy.kind === 'moth') return false;
+  if (enemy.kind === 'galewing') return enemy.special === GALE_LANDED;
   if (enemy.kind === 'mimic') return enemy.special === MIMIC_REVEALED;
   return canBeHit(enemy);
 }
@@ -476,8 +479,87 @@ export function beastBrain(
     case 'waspnest':
       nest(sim, entity, enemy, at, dt);
       return true;
+    case 'galewing':
+      galewing(sim, enemy, spec, at, dt);
+      return true;
     default:
       return false;
+  }
+}
+
+/** Picks the nearest grounded Sproutling (or the Warden) in a flier's territory, or null. */
+function markFor(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform): Transform | null {
+  let mark: Transform | null = null;
+  let markDist: number = spec.aggroRange;
+  const consider = (spot: Transform) => {
+    const dist = Math.hypot(spot.x - at.x, spot.z - at.z);
+    if (dist >= markDist) return;
+    if (Math.hypot(spot.x - enemy.homeX, spot.z - enemy.homeZ) > spec.territory) return;
+    mark = spot;
+    markDist = dist;
+  };
+  consider(sim.captainTransform);
+  for (const [, spot] of grounded(sim)) consider(spot);
+  return mark;
+}
+
+/** Starts a dive on a mark: the ring on the ground is where it will land. */
+function beginDive(sim: Simulation, enemy: Enemy, at: Transform, mark: Transform, windup: number) {
+  const spot = sim.nav.nearestWalkable(mark.x, mark.z);
+  enemy.targetX = spot.x;
+  enemy.targetZ = spot.z;
+  enemy.state = 'windup';
+  enemy.timer = windup;
+  spawnHazard(sim, 'slam', spot, spot, windup);
+  sim.emit('chargeWindup', at.x, at.z);
+}
+
+/**
+ * The Galewing circles out of walking reach and dives on the crowd, the ring on the ground
+ * showing where. After a dive it lies on the ground, open to everyone, then takes off again
+ * (shaking everyone off). From its second phase it dives twice before it rests.
+ */
+function galewing(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform, dt: number) {
+  if (enemy.special === GALE_LANDED) {
+    enemy.alert = false;
+    enemy.timer -= dt;
+    if (enemy.timer <= 0) {
+      for (const latched of [...enemy.latched]) setIdle(sim, latched, sim.workers.require(latched));
+      enemy.special = 0;
+      enemy.state = 'roam';
+      sim.emit('shake', at.x, at.z);
+    }
+    return;
+  }
+  if (enemy.state === 'windup') {
+    const left = Math.max(enemy.timer, dt);
+    const dist = Math.hypot(enemy.targetX - at.x, enemy.targetZ - at.z);
+    glide(sim, at, enemy.targetX, enemy.targetZ, dist / left, dt);
+    enemy.timer -= dt;
+    if (enemy.timer > 0) return;
+    sim.emit('slam', at.x, at.z);
+    const mark = enemy.phase > 0 && enemy.charges === 0 ? markFor(sim, enemy, spec, at) : null;
+    if (mark) {
+      // Straight back up and down again.
+      enemy.charges = 1;
+      beginDive(sim, enemy, at, mark, spec.windup * 0.7);
+      return;
+    }
+    enemy.charges = 0;
+    enemy.special = GALE_LANDED;
+    enemy.state = 'recover';
+    enemy.timer = spec.recover;
+    return;
+  }
+  const mark = markFor(sim, enemy, spec, at);
+  enemy.alert = mark !== null;
+  if (mark) {
+    enemy.targetX = mark.x;
+    enemy.targetZ = mark.z;
+    beginDive(sim, enemy, at, mark, spec.windup);
+  } else {
+    const t = sim.tick * 0.006 + enemy.homeX;
+    glide(sim, at, enemy.homeX + Math.sin(t) * 6, enemy.homeZ + Math.cos(t) * 6, spec.speed, dt);
   }
 }
 

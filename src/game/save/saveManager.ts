@@ -104,6 +104,8 @@ export interface SaveData {
    * story before 0.19.0, now Time Attack, keeps its progress in `story` and `stage`.)
    */
   campaign: CampaignState;
+  /** Fields where a boss's intro has been shown: each plays once per field per save. */
+  bossIntros: string[];
 }
 
 export interface StoryProgress {
@@ -239,6 +241,7 @@ export function emptySave(): SaveData {
     bests: {},
     battles: {},
     campaign: newCampaign(),
+    bossIntros: [],
   };
 }
 
@@ -373,6 +376,9 @@ export function parseSave(value: unknown): SaveData | null {
     bests: isNumberRecord(value.bests) ? value.bests : {},
     battles: parseBattles(value.battles),
     campaign: parseCampaign(value.campaign) ?? newCampaign(),
+    bossIntros: Array.isArray(value.bossIntros)
+      ? value.bossIntros.filter((id): id is string => typeof id === 'string')
+      : [],
   };
 }
 
@@ -633,6 +639,7 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
     bests,
     battles,
     campaign: day.campaign ?? save.campaign,
+    bossIntros: save.bossIntros,
     totals: {
       days: save.totals.days + 1,
       treasures: save.totals.treasures + day.treasureIds.length,

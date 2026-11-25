@@ -46,6 +46,8 @@ export function Hud({
   const sprocket = useGameStore((state) => state.sprocket);
   const nearSecret = useGameStore((state) => state.nearSecret);
   const nearSprout = useGameStore((state) => state.nearSprout);
+  const bossIntro = useGameStore((state) => state.bossIntro);
+  const showBossIntro = useGameStore((state) => state.showBossIntro);
   const openPoker = useGameStore((state) => state.openPoker);
   const nearDescent = useGameStore((state) => state.nearDescent);
   const nearAscent = useGameStore((state) => state.nearAscent);
@@ -237,7 +239,14 @@ export function Hud({
           </button>
         )}
       </div>
-      {hud.boss && (
+      {bossIntro && (
+        <button type="button" className="boss-intro" onClick={() => showBossIntro(null)}>
+          <strong>{bossIntro.name}</strong>
+          <em>{bossIntro.title}</em>
+          <small>Click to skip</small>
+        </button>
+      )}
+      {hud.boss && !bossIntro && (
         <div
           className={`bossbar ${hud.boss.guard}`}
           role="img"
@@ -248,6 +257,10 @@ export function Hud({
           </span>
           <span className="bossbar-track">
             <span className="bossbar-fill" style={{ width: `${hud.boss.health * 100}%` }} />
+            {/* Where each phase begins: the fight changes when the bar crosses a mark. */}
+            {hud.boss.phases.map((at) => (
+              <span key={at} className="bossbar-phase" style={{ left: `${at * 100}%` }} />
+            ))}
           </span>
         </div>
       )}

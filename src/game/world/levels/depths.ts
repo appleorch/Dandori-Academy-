@@ -29,6 +29,14 @@ const UNDERCROFT_ROOMS: readonly Rect[] = [
 
 const THE_UNDERCROFT: LevelSpec = {
   id: 'the-undercroft',
+  // The arena (art only, see docs-design/ART_DIRECTION.md). A cellar's dark: rock walls, and guttered candles in the corners as islands of light.
+  wallLook: 'rock',
+  props: [
+    { kind: 'candle', x: -55, z: -37, scale: 1.6, turn: 0.3 },
+    { kind: 'coin', x: 55, z: -37, scale: 1.6, turn: 0.9 },
+    { kind: 'candle', x: -55, z: 37, scale: 1.6, turn: 1.5 },
+    { kind: 'button', x: 55, z: 37, scale: 1.6, turn: 2.1 },
+  ],
   stage: 22,
   name: 'The Undercroft',
   theme: 'cave',
@@ -309,7 +317,7 @@ const THE_ROOT_CELLAR: LevelSpec = {
   width: 72,
   depth: 52,
   dayLength: 280,
-  platinumTime: 149,
+  platinumTime: 162,
   seed: 25,
   startingWorkers: 14,
   squad: { ember: 9, dew: 3, stone: 2 },

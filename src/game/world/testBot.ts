@@ -129,7 +129,7 @@ function throwKind(sim: Simulation, job: Entity): SproutKind | null {
  */
 function worthFighting(sim: Simulation, entity: Entity, enemy: Enemy): boolean {
   if (enemy.hp <= 0) return false;
-  if (enemy.kind === 'moth' || enemy.kind === 'mimic') return true;
+  if (enemy.kind === 'moth' || enemy.kind === 'mimic' || enemy.kind === 'galewing') return true;
   return isTargetable(sim, entity, enemy);
 }
 

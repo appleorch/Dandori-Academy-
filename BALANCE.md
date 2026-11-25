@@ -17,21 +17,21 @@ On Normal it must clear each lesson by the Platinum time (which is set from its 
 | 10 | Final Exam | 560s | 308s | 363s | 362.0s | 1.00 | 9 | Platinum | 504s | 11/11 | 15 | Gold | 1 |
 | 11 | Bramble Gate | 260s | 107s | 127s | 126.8s | 1.00 | 3 | Platinum | 234s | 7/7 | 4 | Gold | 1 |
 | 12 | Drip Line | 300s | 138s | 163s | 163.0s | 1.00 | 6 | Platinum | 270s | 8/8 | 10 | Gold | 1 |
-| 13 | Gravelmaw's Pit | 300s | 100s | 118s | 117.1s | 0.99 | 6 | Platinum | 270s | 6/6 | 8 | Gold | 1 |
-| 14 | Three Roots | 320s | 115s | 136s | 135.1s | 0.99 | 0 | Platinum | 288s | 7/7 | 9 | Gold | 1 |
+| 13 | Gravelmaw's Pit | 300s | 100s | 118s | 132.8s | 1.13 | 7 | Gold | 270s | 6/6 | 12 | Gold | 1 |
+| 14 | Three Roots | 320s | 115s | 136s | 184.2s | 1.35 | 4 | Gold | 288s | 7/7 | 13 | Silver | 2 |
 | 15 | Rush Hour | 520s | 259s | 305s | 304.1s | 1.00 | 4 | Platinum | 468s | 10/10 | 17 | Gold | 1 |
 | 16 | The Bellwether | 420s | 162s | 191s | 190.4s | 1.00 | 9 | Gold | 378s | 7/7 | 11 | Gold | 1 |
 | 17 | Crossroads | 300s | 153s | 180s | 179.3s | 1.00 | 4 | Platinum | 270s | 10/10 | 4 | Gold | 1 |
 | 18 | The Span | 760s | 430s | 507s | 506.9s | 1.00 | 10 | Gold | 684s | 10/10 | 14 | Gold | 2 |
 | 19 | Matched Pairs | 360s | 145s | 171s | 170.5s | 1.00 | 3 | Gold | 324s | 9/9 | 19 | Silver | 1 |
 | 20 | Glass River | 660s | 331s | 390s | 389.1s | 1.00 | 9 | Platinum | 594s | 11/11 | 22 | Gold | 1 |
-| 21 | Graduation Day | 1000s | 478s | 563s | 562.3s | 1.00 | 7 | Gold | 900s | 16/16 | 21 | Gold | 1 |
+| 21 | Graduation Day | 1000s | 478s | 563s | 770.5s | 1.37 | 10 | Gold | 900s | 16/16 | 23 | Gold | 1 |
 | 22 | The Undercroft | 620s | 377s | 444s | 443.6s | 1.00 | 34 | Gold | 558s | 16/16 | 40 | Gold | 2 |
 | 23 | Terrace Gardens | 900s | 449s | 529s | 528.1s | 1.00 | 4 | Platinum | 810s | 12/12 | 2 | Platinum | 1 |
 | 24 | The Long Drop | 860s | 546s | 643s | 642.9s | 1.00 | 6 | Platinum | 774s | 13/13 | 4 | Platinum | 2 |
 | 25 | Crystal Conservatory | 800s | 438s | 516s | 516.0s | 1.00 | 6 | Gold | 720s | 12/12 | 8 | Gold | 1 |
 | 26 | Clockwork Causeway | 960s | 620s | 730s | 730.0s | 1.00 | 8 | Platinum | 864s | 12/12 | 14 | Gold | 1 |
-| 27 | Restoration Day | 1150s | 566s | 666s | 666.0s | 1.00 | 21 | Gold | 1035s | 14/15 | 21 | Silver | 2 |
+| 27 | Restoration Day | 1150s | 566s | 666s | 644.1s | 0.97 | 20 | Gold | 1035s | 14/15 | 22 | Silver | 2 |
 | 28 | The Cistern | 260s | 96s | 114s | 113.3s | 0.99 | 0 | Gold | 234s | 10/10 | 5 | Gold | 1 |
 | 29 | Skitter Warren | 420s | 177s | 209s | 208.4s | 1.00 | 10 | Platinum | 378s | 13/14 | 15 | Silver | 1 |
-| 30 | The Root Cellar | 280s | 126s | 149s | 148.3s | 1.00 | 4 | Platinum | 252s | 8/8 | 5 | Gold | 1 |
+| 30 | The Root Cellar | 280s | 126s | 149s | 161.9s | 1.09 | 3 | Gold | 252s | 8/8 | 14 | Gold | 1 |

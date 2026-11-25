@@ -3,7 +3,16 @@ import { useMemo, useRef, useState } from 'react';
 import { ACESFilmicToneMapping, type Group } from 'three';
 import { useGameStore } from '../game/core/gameStore';
 import { RelicModel } from '../game/rendering/models/RelicModel';
-import { recoveredRelics, relicLocations, RELICS, type Relic } from '../game/story/relics';
+import {
+  BOSS_RELICS,
+  recoveredRelics,
+  relicLocations,
+  RELICS as ORDINARY_RELICS,
+  type Relic,
+} from '../game/story/relics';
+
+/** Every relic in the cabinet: the ordinary ones, then each boss's own. */
+const RELICS: readonly Relic[] = [...ORDINARY_RELICS, ...Object.values(BOSS_RELICS)];
 import { MenuNav } from './MenuNav';
 import { SproutlingGuide } from './SquadRoster';
 import { ENEMY_SPECS } from '../game/enemies/enemyKinds';

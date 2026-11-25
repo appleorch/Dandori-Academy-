@@ -146,11 +146,12 @@ describe('the rules', () => {
 });
 
 describe('the challenge fields', () => {
-  it('give every challenge twelve fields of its own, in order', () => {
+  it('give every challenge at least twelve fields of its own, in order', () => {
     for (const mode of CHALLENGE_IDS) {
       const fields = CHALLENGE_LEVELS.filter((level) => level.challenge?.mode === mode);
+      expect(fields.length).toBeGreaterThanOrEqual(12);
       expect(fields.map((level) => level.challenge?.order)).toEqual(
-        Array.from({ length: 12 }, (_, i) => i + 1),
+        Array.from({ length: fields.length }, (_, i) => i + 1),
       );
       for (const level of fields) {
         expect(challengeOpen(mode, level)).toBe(true);

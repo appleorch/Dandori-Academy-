@@ -8,6 +8,17 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.25.0',
+    date: '2026-11-25',
+    changes: [
+      'Bosses are now set pieces: the first time you rouse one on a field, it gets an intro with its name and title (click to skip), and every boss fights in three phases, marked on its health bar.',
+      'The Gravelmaw now burrows and comes up under your squad in its last phase; the Lanternroot sprouts Bogspitters and regrows its knots faster.',
+      'Two new bosses, each with a new Mission: the Galewing in The High Wind, which dives from out of reach and then lies open on the ground, and the Mire Lord in The Mire, which spits waves of pond water that only Dewlings can swim through.',
+      'Every boss drops a named relic of its own for the Field Guide, and boss music has its own key for each boss and quickens with each phase.',
+      'The boss lessons’ arenas are dressed to match. Their Time Attack targets and the targets of a few challenge fields with bosses have been re-measured.',
+    ],
+  },
+  {
     version: '0.24.0',
     date: '2026-11-25',
     changes: [

@@ -440,6 +440,8 @@ const LOOKAHEAD = 0.35;
 const TICK_MS = 90;
 /** Tempo multiplier for the last stretch of a day. */
 const URGENT_TEMPO = 1.12;
+/** How much faster boss music gets with each phase of the fight. */
+const BOSS_PHASE_TEMPO = 0.06;
 
 function midiToHz(note: number): number {
   return 440 * 2 ** ((note - 69) / 12);
@@ -455,6 +457,9 @@ export class MusicPlayer {
   private nextTime = 0;
   private intensity: Intensity = 1;
   private urgent = false;
+  /** Boss music only: semitones the boss's own variation is moved by, and the fight's phase. */
+  private bossKey = 0;
+  private bossPhase = 0;
   private readonly echoSend: GainNode;
   private readonly noise: AudioBuffer;
 
@@ -502,6 +507,15 @@ export class MusicPlayer {
     this.pending = null;
   }
 
+  /**
+   * Each boss has its own key, and the music climbs with the fight: a little faster in every
+   * phase, and in the last an arpeggio an octave up over everything.
+   */
+  setBoss(key: number, phase: number): void {
+    this.bossKey = key;
+    this.bossPhase = phase;
+  }
+
   setMood(intensity: Intensity, urgent: boolean): void {
     this.intensity = intensity;
     this.urgent = urgent;
@@ -520,7 +534,8 @@ export class MusicPlayer {
       if (this.step % STEPS_PER_BAR === 0 && this.pending) this.begin(this.pending);
       const song = this.song;
       if (!song) return;
-      const stepTime = 60 / (song.bpm * (this.urgent ? URGENT_TEMPO : 1)) / 4;
+      const phaseTempo = this.current === 'boss' ? 1 + this.bossPhase * BOSS_PHASE_TEMPO : 1;
+      const stepTime = 60 / (song.bpm * phaseTempo * (this.urgent ? URGENT_TEMPO : 1)) / 4;
       // Swing delays the second eighth of each beat.
       const inBeat = this.step % 4;
       const swung = inBeat === 2 ? (song.swing - 0.5) * stepTime * 4 : 0;
@@ -533,7 +548,8 @@ export class MusicPlayer {
   /** The MIDI note `steps` scale steps above the song's root. */
   private note(song: Song, steps: number, octave: number): number {
     const degree = ((steps % 7) + 7) % 7;
-    return song.root + octave * 12 + song.scale[degree] + 12 * Math.floor(steps / 7);
+    const key = this.current === 'boss' ? this.bossKey : 0;
+    return song.root + key + octave * 12 + song.scale[degree] + 12 * Math.floor(steps / 7);
   }
 
   private schedule(song: Song, step: number, time: number, stepTime: number): void {
@@ -577,6 +593,19 @@ export class MusicPlayer {
           time,
           stepTime * 3,
           song.arp.volume,
+        );
+      }
+    }
+    // The phase layer: in a boss's last phase the arpeggio doubles an octave up.
+    if (song.arp && this.current === 'boss' && this.bossPhase >= 2) {
+      const index = song.arp.steps[beat];
+      if (index !== null) {
+        this.voice(
+          song.arp.voice,
+          midiToHz(tone(index, song.arp.octave + 1)),
+          time,
+          stepTime * 2,
+          song.arp.volume * 0.7,
         );
       }
     }

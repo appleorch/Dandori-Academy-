@@ -972,6 +972,7 @@ button.segment.active {
 }
 
 .bossbar-track {
+  position: relative;
   height: 12px;
   border-radius: 999px;
   background: var(--panel);
@@ -984,6 +985,53 @@ button.segment.active {
   height: 100%;
   background: linear-gradient(90deg, #a3271b, #e5533d);
   transition: width 0.2s linear;
+}
+
+.bossbar-phase {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(255, 246, 220, 0.85);
+}
+
+/* The boss intro: its name and title across the screen for a moment. */
+.boss-intro {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 22%;
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  pointer-events: auto;
+  cursor: pointer;
+  animation: boss-intro-in 0.5s ease-out;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.7);
+  color: #fff6dc;
+  z-index: 30;
+}
+
+.boss-intro strong {
+  font-size: clamp(2rem, 6vw, 3.6rem);
+  letter-spacing: 0.04em;
+}
+
+.boss-intro em {
+  font-size: clamp(1rem, 2.6vw, 1.4rem);
+  color: #ffcf6a;
+}
+
+.boss-intro small {
+  opacity: 0.7;
+}
+
+@keyframes boss-intro-in {
+  from {
+    opacity: 0;
+    transform: scale(1.1);
+  }
 }
 
 .bossbar.open .bossbar-fill {

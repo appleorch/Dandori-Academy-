@@ -28,6 +28,7 @@ const LOOK: Record<
   stomp: { body: null, ring: 'stomp', size: 0 },
   flame: { body: null, ring: 'flame', size: 0 },
   arc: { body: null, ring: 'arc', size: 0 },
+  wave: { body: '#6ac8d8', ring: 'drip', size: 0.55 },
 };
 
 /**

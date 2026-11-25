@@ -996,6 +996,63 @@ function SparkWaspBody({ r, wings }: { r: number; wings: React.Ref<Group> }) {
   );
 }
 
+/** Boss: broad dusk-coloured wings with eye-spots, a furred body and a crest of feelers. */
+function GalewingBody({ r, wings }: { r: number; wings: React.Ref<Group> }) {
+  return (
+    <>
+      <mesh scale={[0.55, 0.5, 1.4]} castShadow>
+        <sphereGeometry args={[r * 0.5, 16, 12]} />
+        <meshStandardMaterial color="#5a4a6a" roughness={0.9} />
+      </mesh>
+      <group ref={wings}>
+        {[-1, 1].map((side) => (
+          <group key={side}>
+            <mesh position={[side * r * 0.85, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow>
+              <circleGeometry args={[r * 0.85, 16]} />
+              <meshStandardMaterial color="#7a5a9a" roughness={0.9} side={DoubleSide} />
+            </mesh>
+            <mesh position={[side * r * 1.0, 0.02, -r * 0.1]} rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[r * 0.25, 12]} />
+              <meshBasicMaterial color="#ffcf6a" side={DoubleSide} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          position={[side * r * 0.12, r * 0.2, r * 0.75]}
+          rotation={[0.9, 0, side * 0.4]}
+        >
+          <cylinderGeometry args={[r * 0.015, r * 0.02, r * 0.6, 4]} />
+          <meshStandardMaterial color="#3a2a4a" />
+        </mesh>
+      ))}
+      <Eye x={-r * 0.12} y={r * 0.1} z={r * 0.62} size={r * 0.09} glow="#ff6a3a" />
+      <Eye x={r * 0.12} y={r * 0.1} z={r * 0.62} size={r * 0.09} glow="#ff6a3a" />
+    </>
+  );
+}
+
+/** Boss: a huge pike-jawed newt with a gilded crest, wearing the pond's weed. */
+function MirelordBody({ r, gait, jaw }: { r: number; gait: Gait; jaw: React.Ref<Group> }) {
+  return (
+    <>
+      <NewtBody r={r} gait={gait} jaw={jaw} />
+      {[-0.5, 0, 0.5].map((along, i) => (
+        <mesh key={i} position={[0, r * 0.75, along * r]} rotation={[0, 0, 0]}>
+          <coneGeometry args={[r * 0.12, r * 0.45, 6]} />
+          <meshStandardMaterial color="#d8b04a" metalness={0.5} roughness={0.3} />
+        </mesh>
+      ))}
+      <mesh position={[r * 0.3, r * 0.5, -r * 0.3]} rotation={[0.3, 0.4, 1.2]}>
+        <torusGeometry args={[r * 0.35, r * 0.05, 6, 12, Math.PI]} />
+        <meshStandardMaterial color="#4a7a3a" roughness={0.9} />
+      </mesh>
+    </>
+  );
+}
+
 interface EnemyMeshProps {
   sim: Simulation;
   entity: Entity;
@@ -1023,6 +1080,8 @@ const BAR_HEIGHT: Record<EnemyKind, number> = {
   mimic: 1.4,
   waspnest: 2.6,
   sparkwasp: 1.6,
+  galewing: 4.6,
+  mirelord: 3,
 };
 
 /**
@@ -1271,6 +1330,8 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
         {enemy.kind === 'mimic' && <MimicBody r={r} jaw={jaw} />}
         {enemy.kind === 'waspnest' && <WaspNestBody r={r} />}
         {enemy.kind === 'sparkwasp' && <SparkWaspBody r={r} wings={wings} />}
+        {enemy.kind === 'galewing' && <GalewingBody r={r} wings={wings} />}
+        {enemy.kind === 'mirelord' && <MirelordBody r={r} gait={gait} jaw={jaw} />}
         {enemy.shape &&
           ((enemy.shape as GateSpawn).style === 'crystal' ? (
             <CrystalGateBody box={enemy.shape} />

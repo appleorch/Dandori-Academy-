@@ -397,11 +397,64 @@ const ASSIGNED: ReadonlyMap<string, Relic> = (() => {
 })();
 
 /**
+ * Each boss's own relic, set into the Sunshard it drops (`<kind>-shard`): the reward for a
+ * set piece, the same wherever that boss is beaten.
+ */
+export const BOSS_RELICS: Readonly<Record<string, Relic>> = {
+  'gravelmaw-shard': {
+    id: 'gravelmaw-molar',
+    name: 'The Gravelmaw’s Molar',
+    shape: 'crystal',
+    material: 'iron',
+    description:
+      'It ground gravel for a century. Somebody has polished it, which feels rather cheeky.',
+  },
+  'lanternroot-shard': {
+    id: 'lanternroot-wick',
+    name: 'Everburning Wick',
+    shape: 'lantern',
+    material: 'glass',
+    description: 'Taken from the heart of the Lanternroot. It still glows when nobody is looking.',
+  },
+  'bellwether-shard': {
+    id: 'bellwether-clapper',
+    name: 'The Bellwether’s Clapper',
+    shape: 'bell',
+    material: 'brass',
+    description: 'Silent at last. The Headmaster keeps it in a drawer, and checks the drawer.',
+  },
+  'snuffer-shard': {
+    id: 'snuffer-candle',
+    name: 'Last Candle of the Undercroft',
+    shape: 'lantern',
+    material: 'silver',
+    description:
+      'The one flame the Snuffer never reached. Handle with both hands and some respect.',
+  },
+  'galewing-shard': {
+    id: 'galewing-scale',
+    name: 'Dusk Scale of the Galewing',
+    shape: 'compass',
+    material: 'crystal',
+    description: 'Hold it up and the needle swings towards wherever the wind is going next.',
+  },
+  'mirelord-shard': {
+    id: 'mirelord-crown',
+    name: 'The Mire Lord’s Crown',
+    shape: 'thimble',
+    material: 'gold',
+    description: 'Small, dented, weedy and unmistakably royal. It fits a Sproutling perfectly.',
+  },
+};
+
+/**
  * The relic a treasure is. Shards dropped by bosses and mounds are not in any lesson's list;
  * they take one from the common pool by their id.
  */
 export function relicFor(levelId: string, treasureId: string, variant?: ShardVariant): Relic {
   if (levelId.startsWith('campaign-') && CLOCK_PARTS[treasureId]) return CLOCK_PARTS[treasureId];
+  const boss = BOSS_RELICS[treasureId];
+  if (boss) return boss;
   const known = ASSIGNED.get(`${levelId}:${treasureId}`);
   if (known) return known;
   const pool = poolFor(variant);

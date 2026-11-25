@@ -20,7 +20,9 @@ export type EnemyKind =
   | 'hedgehog'
   | 'mimic'
   | 'waspnest'
-  | 'sparkwasp';
+  | 'sparkwasp'
+  | 'galewing'
+  | 'mirelord';
 
 /**
  * How an enemy attacks. `slam` rears up over a ring on the ground; `none` is for
@@ -159,7 +161,8 @@ export const ENEMY_SPECS: Record<EnemyKind, EnemySpec> = {
     carcassWeight: 6,
     carcassYield: 12,
     armour: 0.25,
-    phases: [0.5],
+    // Then pebbles fly after every slam; then it burrows and comes up under the crowd.
+    phases: [0.66, 0.33],
     boss: true,
   },
   /** Boss. A rooted bulb, shielded while any of its three root-knots lives. */
@@ -177,7 +180,8 @@ export const ENEMY_SPECS: Record<EnemyKind, EnemySpec> = {
     shakeInterval: 5,
     carcassWeight: 0,
     carcassYield: 0,
-    phases: [0.5],
+    // Then globs come in pairs; then seeds sprout Bogspitters and the knots regrow sooner.
+    phases: [0.66, 0.33],
     boss: true,
   },
   /** One of the Lanternroot's knots. It withers when beaten and regrows later. */
@@ -396,6 +400,49 @@ export const ENEMY_SPECS: Record<EnemyKind, EnemySpec> = {
     carcassWeight: 0,
     carcassYield: 0,
     biteVictims: 1,
+  } /**
+   * Boss. A great moth-winged thing that circles out of reach and dives on the crowd, then lies
+   * on the ground a moment, open to everyone. Later it dives twice, then calls Pollen Moths.
+   */,
+  galewing: {
+    ...BASE,
+    name: 'The Galewing',
+    attack: 'bite',
+    hp: 420,
+    radius: 2,
+    speed: 3.2,
+    aggroRange: 14,
+    territory: 22,
+    windup: 1.4,
+    recover: 4.5,
+    shakeInterval: 4,
+    carcassWeight: 8,
+    carcassYield: 12,
+    armour: 0.5,
+    phases: [0.66, 0.33],
+    boss: true,
+  },
+  /**
+   * Boss. Lord of a flooded pool: it swims, spits from the water and hunts only on the banks.
+   * Later every spit comes with a wave that floors the bank; then it calls Pike Newts.
+   */
+  mirelord: {
+    ...BASE,
+    name: 'The Mire Lord',
+    attack: 'spit',
+    hp: 440,
+    radius: 2,
+    speed: 2.6,
+    aggroRange: 11,
+    territory: 12,
+    windup: 1.1,
+    recover: 3,
+    shakeInterval: 4.5,
+    carcassWeight: 8,
+    carcassYield: 12,
+    armour: 0.35,
+    phases: [0.66, 0.33],
+    boss: true,
   },
 };
 
@@ -415,6 +462,8 @@ export const ENEMY = {
   coreOpen: 14,
   /** Pause before a late-phase Bellwether turns and charges again. */
   rechargeWindup: 0.6,
+  /** Root-knot regrowth in the Lanternroot's last phase. */
+  knotRegrowLast: 12,
   /** Delay between a Lanternroot's paired globs in its late phase. */
   secondGlobDelay: 0.5,
   /** Reach of the Snuffer's breath over lit beacons, and the Skitters each breath calls. */
@@ -422,7 +471,7 @@ export const ENEMY = {
   snuffBrood: 2,
 } as const;
 
-export type HazardKind = 'glob' | 'pebble' | 'drip' | 'slam' | 'stomp' | 'flame' | 'arc';
+export type HazardKind = 'glob' | 'pebble' | 'drip' | 'slam' | 'stomp' | 'flame' | 'arc' | 'wave';
 
 export interface HazardSpec {
   radius: number;
@@ -470,6 +519,17 @@ export const HAZARDS: Record<HazardKind, HazardSpec> = {
     drop: 0,
     spares: 'ember',
     ignites: true,
+  },
+  /** The Mire Lord's spit: a gout of pond water that drowns a few and floors the rest. Dewlings swim it. */
+  wave: {
+    radius: 2,
+    flight: 1.1,
+    kills: 2,
+    stun: 2,
+    hurtsCaptain: false,
+    arc: 4,
+    drop: 0,
+    spares: 'dew',
   },
   /** One stretch of a spark coil's arc: anything but a Sparkling caught in it is lost at once. */
   arc: {
