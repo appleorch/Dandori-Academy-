@@ -15,6 +15,8 @@ import { Hud, ScenePanel } from './ui/Hud';
 import { BattleSelect } from './ui/BattleSelect';
 import { ChallengeSelect } from './ui/ChallengeSelect';
 import { MainMenu } from './ui/MainMenu';
+import { TitleScreen } from './ui/TitleScreen';
+import { tipFor } from './ui/manual';
 import { StoryMap } from './ui/StoryMap';
 import { useBoardPoster } from './ui/useBoardPoster';
 import { PauseMenu } from './ui/PauseMenu';
@@ -45,12 +47,16 @@ const LeaderboardScreen = lazy(() =>
 const SettingsScreen = lazy(() =>
   import('./ui/SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
 );
+const WardrobeScreen = lazy(() =>
+  import('./ui/SettingsScreen').then((m) => ({ default: m.WardrobeScreen })),
+);
 /** Shown while a lazily loaded screen arrives; it fades in late, so quick loads never flash it. */
 function ScreenLoading() {
   return (
     <div className="loading-kiln" role="status">
       <span className="loading-kiln-glow" aria-hidden="true" />
       {t('loading.screen')}
+      <small className="loading-tip">{tipFor(Date.now())}</small>
     </div>
   );
 }
@@ -66,6 +72,7 @@ export function App() {
   const paused = useGameStore((state) => state.paused);
   const briefing = useGameStore((state) => state.briefing);
   const pokerOpen = useGameStore((state) => state.pokerOpen);
+  const titleDone = useGameStore((state) => state.titleDone);
   const runId = useGameStore((state) => state.runId);
   const levelId = useGameStore((state) => state.levelId);
   const playDifficulty = useGameStore((state) => state.playDifficulty);
@@ -176,7 +183,8 @@ export function App() {
   return (
     <Fragment key={locale}>
       <SaveRecoveryNotice />
-      {phase === 'menu' && <MainMenu />}
+      {phase === 'menu' && !titleDone && <TitleScreen />}
+      {phase === 'menu' && titleDone && <MainMenu />}
       {phase === 'camp' && <CampScreen />}
       {phase === 'map' && <StoryMap />}
       {phase === 'challenges' && <ChallengeSelect />}
@@ -184,6 +192,7 @@ export function App() {
       <Suspense fallback={<ScreenLoading />}>
         {phase === 'achievements' && <AchievementsScreen />}
         {phase === 'settings' && <SettingsScreen />}
+        {phase === 'wardrobe' && <WardrobeScreen />}
         {phase === 'journal' && <JournalScreen />}
         {phase === 'leaderboard' && <LeaderboardScreen />}
         {phase === 'guide' && <FieldGuide />}

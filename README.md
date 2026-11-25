@@ -461,6 +461,30 @@ shape and letter (A hexagon, B triangle, C square...), on the field, on the mini
 briefing (`src/game/world/twins.ts`). Once the first half of a pair is home, the HUD counts down
 the seconds left to bring the other half for the bonus.
 
+## Menus, HUD and results
+
+- **Title and menus.** The game opens on a title (the Academy courtyard at dusk, the Great Clock
+  turning, Sproutlings milling about) that waits for any key, click, tap or pad button. The main
+  menu has four big choices (Story, Time Attack, Challenges, Battles) and a row of Extras
+  (Journal, Field Guide, Leaderboard, Achievements, Wardrobe, Settings, Credits). Every other
+  screen has a back button (Escape, or B) and tabs across its own group.
+- **Design system** (`ui.css`): one type scale, spacing scale, radii and focus ring, as CSS custom
+  properties on `:root`; screens slide in, overlays fade. Reduced motion stills it all.
+- **HUD.** Only the essentials stay up: the field, the clock, what the day counts, health and
+  pause. Working and field counts, bonus treasure and Glowcaps sit in a panel behind **More**.
+  The story's clock is a dial with the sunset minute marked in red. Off-screen markers count idle
+  Sproutlings at the screen edge, beside the red arrows for those in danger. On a pad, hold
+  D-pad right for the **kind wheel** and point the right stick; on a keyboard, hold Z and lean
+  the mouse.
+- **Results.** Tallies count up, a medal drops in for Time Attack clears, challenges and
+  battles, and two small charts show Sproutlings on the field and treasure home over the day
+  (`Simulation.timeline`, every five seconds). **Share a card** makes a picture of the result
+  with the field and the medal (the share sheet where there is one, else a download).
+- **Manual and tips.** Pause → Manual has an illustrated page for every mechanic (`manual.ts`);
+  loading screens show a tip.
+
+Before and after: `docs-design/art/ui-*-before.jpg` and `ui-*-after.jpg`.
+
 ## Lessons and progression
 
 | #   | Lesson               | Teaches                                                    |

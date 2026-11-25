@@ -21,6 +21,8 @@ import { t } from '../i18n/i18n';
 import type { MessageKey } from '../i18n/en';
 import { timeMedal } from '../game/modes/timeAttack';
 import { ActionPrompt } from './Glyph';
+import { DayGraphs } from './DayGraphs';
+import { awardFor, MedalCeremony, ShareCardButton } from './ResultCeremony';
 
 const HEADLINES: Record<DayEnd, string> = {
   allCollected: 'Every Sunshard is home',
@@ -500,6 +502,8 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
       ? `Time Attack · ${level.stage <= MAIN_LEVELS.length && !level.side ? `Lesson ${level.stage}` : 'Below'}${hard ? ' · Hard' : ''}`
       : `${MODES[mode].name}${result.battle ? ` against ${RIVAL_NAMES[rival]}` : ''}`;
 
+  const award = awardFor(result, level);
+
   const headline =
     campaign && result.reason === 'timeUp'
       ? 'The sun has set'
@@ -523,6 +527,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
           <p className="sr-only" id="results-summary" role="status">
             {resultSummary(result)}
           </p>
+          {award && <MedalCeremony award={award} />}
           {body}
           {result.bestChain >= 3 && <p className="day-stats">Longest chain: ×{result.bestChain}</p>}
           {result.caveRelics > 0 && (
@@ -576,6 +581,8 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
           </div>
         </section>
         <section className="results-side">
+          <DayGraphs timeline={result.timeline} />
+          <ShareCardButton result={result} level={level} fieldName={level.name} />
           {story && result.tally.cleared && LESSON_STORY[level.id] && (
             <blockquote className="journal-note">
               <small>{result.firstClear ? 'New journal entry' : 'From the journal'}</small>

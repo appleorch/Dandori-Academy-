@@ -11,6 +11,8 @@ import { FOG_CELL, fogSize } from '../campaign/fog';
 
 const MAP_WIDTH = 190;
 const REDRAW_FRAMES = 4;
+/** Idle Sproutlings this close together share one off-screen marker. */
+const IDLE_CELL = 16;
 const probe = new Vector3();
 
 function makeCanvas(className: string): HTMLCanvasElement {
@@ -113,6 +115,53 @@ export function Minimap({
         pen.fill();
         pen.restore();
       }
+    }
+
+    // Idle Sproutlings off screen, gathered by where they stand: a ringed count at the edge.
+    if (pen) {
+      const groups = new Map<string, { x: number; z: number; count: number }>();
+      for (const [entity, worker] of sim.workers.entries()) {
+        if (worker.state !== 'idle') continue;
+        const at = sim.transforms.require(entity);
+        const key = `${Math.floor(at.x / IDLE_CELL)},${Math.floor(at.z / IDLE_CELL)}`;
+        const group = groups.get(key);
+        if (group) {
+          group.x += at.x;
+          group.z += at.z;
+          group.count++;
+        } else groups.set(key, { x: at.x, z: at.z, count: 1 });
+      }
+      pen.font = '700 13px system-ui, sans-serif';
+      pen.textAlign = 'center';
+      pen.textBaseline = 'middle';
+      for (const group of groups.values()) {
+        probe.set(group.x / group.count, 0.4, group.z / group.count).project(camera);
+        const behind = probe.z > 1;
+        if (!behind && Math.abs(probe.x) <= 0.95 && Math.abs(probe.y) <= 0.95) continue;
+        const px = behind ? -probe.x : probe.x;
+        const py = behind ? -probe.y : probe.y;
+        const angle = Math.atan2(-py, px);
+        const edge = 0.86 / Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle)));
+        const sx = Math.min(
+          size.width - 30,
+          Math.max(30, size.width / 2 + Math.cos(angle) * edge * (size.width / 2)),
+        );
+        const sy = Math.min(
+          size.height - 110,
+          Math.max(70, size.height / 2 + Math.sin(angle) * edge * (size.height / 2)),
+        );
+        pen.fillStyle = 'rgba(28, 20, 16, 0.85)';
+        pen.strokeStyle = '#d9a79c';
+        pen.lineWidth = 2;
+        pen.beginPath();
+        pen.arc(sx, sy, 13, 0, Math.PI * 2);
+        pen.fill();
+        pen.stroke();
+        pen.fillStyle = '#fff6dc';
+        pen.fillText(String(group.count), sx, sy + 1);
+      }
+      pen.textAlign = 'start';
+      pen.textBaseline = 'alphabetic';
     }
 
     // Compass markers: home, and the nearest relic nobody has lifted yet, when off screen.

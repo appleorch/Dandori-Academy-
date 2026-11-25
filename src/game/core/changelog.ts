@@ -8,6 +8,18 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.36.0',
+    date: '2026-11-25',
+    changes: [
+      'A title screen: the Academy courtyard at dusk, the Great Clock turning. Press any key.',
+      'A new main menu: four big ways to play, and the Extras (Journal, Field Guide, Leaderboard, Achievements, Wardrobe, Settings) in a row of their own. The Wardrobe has its own screen.',
+      'A tidier HUD: the essentials stay up, the rest folds behind More. The story’s clock is now a dial with sunset marked, and markers at the screen edge show where idle Sproutlings are.',
+      'The kind wheel: on a pad hold D-pad right and point the right stick; on a keyboard hold Z and lean the mouse.',
+      'Results show the day on two small charts, award your medal with a little ceremony, and can make a card to share.',
+      'An illustrated manual, from the pause menu, with a page for every mechanic. Tips while loading.',
+    ],
+  },
+  {
     version: '0.35.0',
     date: '2026-11-25',
     changes: [

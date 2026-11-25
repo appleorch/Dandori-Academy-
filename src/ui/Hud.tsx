@@ -8,6 +8,7 @@ import { SPROUT_KINDS, SPROUTS } from '../game/workers/sprouts';
 import { isChallenge, medalTargets, MODES } from '../game/modes/modes';
 import { levelById, type LevelDefinition } from '../game/world/level';
 import { RacePanel } from './RacePanel';
+import { ClockDial, KindWheel, useHudDetails } from './HudParts';
 import { KindGlyph } from './KindGlyph';
 import { ActionPrompt } from './Glyph';
 import { SPEAKER_NAMES, type Speaker } from '../game/story/scenes';
@@ -64,6 +65,7 @@ export function Hud({
   const nearAscent = useGameStore((state) => state.nearAscent);
   const below = nearDescent ? levelById(nearDescent) : undefined;
   const campaign = useGameStore((state) => state.save.campaign);
+  const [details, toggleDetails] = useHudDetails();
   useEffect(() => {
     if (!hint) return;
     audio.play('hint');
@@ -126,13 +128,9 @@ export function Hud({
           ) : null,
         )}
       </div>
-      <div className="chip">
-        <span className="dot working" /> Working {hud.working}
-      </div>
       <div className={hud.idle > 0 ? 'chip idle-warning' : 'chip'}>
         <span className="dot idle" /> Idle {hud.idle}
       </div>
-      <div className="chip">Field {hud.total}</div>
     </div>
   );
 
@@ -146,7 +144,6 @@ export function Hud({
               ? fieldTitle(level)
               : `${MODES[mode].name} · ${fieldTitle(level)}`}
         </div>
-        {level.difficulty === 'hard' && <div className="chip hard-chip">Hard</div>}
         <div
           className={
             hud.below
@@ -165,7 +162,13 @@ export function Hud({
                   : undefined
           }
         >
-          {untimed ? `⏱ ${formatTime(hud.elapsed)}` : formatTime(hud.timeLeft)}
+          {untimed ? (
+            `⏱ ${formatTime(hud.elapsed)}`
+          ) : story && !hud.below ? (
+            <ClockDial timeLeft={hud.timeLeft} dayLength={level.dayLength} />
+          ) : (
+            formatTime(hud.timeLeft)
+          )}
           {hud.below && ' ⏸'}
         </div>
         {sunset && (
@@ -214,22 +217,6 @@ export function Hud({
                 )}
               </div>
             )}
-            {hud.bonusOf > 0 && (
-              <div
-                className="chip bonus-chip"
-                title="Bonus treasure: twin pairs home on time and Dewglass kept whole"
-              >
-                Bonus {hud.bonusGot}/{hud.bonusOf}
-              </div>
-            )}
-            {hud.glowcapsOf > 0 && (
-              <div
-                className="chip bonus-chip"
-                title="Glowcaps: extra points in challenges, never needed for a medal"
-              >
-                Glowcaps {hud.glowcapsGot}/{hud.glowcapsOf}
-              </div>
-            )}
           </>
         )}
         {hud.split !== null && (
@@ -251,12 +238,47 @@ export function Hud({
         <div className="chip" aria-label={`Warden health ${hud.captainHp}`}>
           {'♥'.repeat(hud.captainHp) || '0'}
         </div>
+        <button
+          type="button"
+          className={details ? 'chip details-toggle open' : 'chip details-toggle'}
+          onClick={toggleDetails}
+          aria-expanded={details}
+          aria-controls="hud-details"
+        >
+          {details ? 'Less ▴' : 'More ▾'}
+        </button>
         {phase === 'playing' && (
           <button type="button" className="chip quit" onClick={pause}>
             Pause {!touch && <ActionPrompt action="pause" />}
           </button>
         )}
       </div>
+      {details && (
+        <div className="hud-details" id="hud-details">
+          {level.difficulty === 'hard' && <div className="chip hard-chip">Hard</div>}
+          <div className="chip">
+            <span className="dot working" /> Working {hud.working}
+          </div>
+          <div className="chip">Field {hud.total}</div>
+          {hud.bonusOf > 0 && (
+            <div
+              className="chip bonus-chip"
+              title="Bonus treasure: twin pairs home on time and Dewglass kept whole"
+            >
+              Bonus {hud.bonusGot}/{hud.bonusOf}
+            </div>
+          )}
+          {hud.glowcapsOf > 0 && (
+            <div
+              className="chip bonus-chip"
+              title="Glowcaps: extra points in challenges, never needed for a medal"
+            >
+              Glowcaps {hud.glowcapsGot}/{hud.glowcapsOf}
+            </div>
+          )}
+        </div>
+      )}
+      <KindWheel input={input} squad={hud.squadKinds} />
       {bossIntro && (
         <button type="button" className="boss-intro" onClick={() => showBossIntro(null)}>
           <strong>{bossIntro.name}</strong>

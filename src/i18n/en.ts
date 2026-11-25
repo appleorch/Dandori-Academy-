@@ -17,11 +17,19 @@ export const EN = {
   'nav.guide': 'Field Guide',
   'nav.leaderboard': 'Leaderboard',
   'nav.achievements': 'Achievements',
-  'nav.settings': 'Wardrobe & settings',
+  'nav.settings': 'Settings',
+  'nav.wardrobe': 'Wardrobe',
+  'nav.extras': 'Extras',
+  'nav.play': 'Play',
   'nav.credits': 'Credits',
   'nav.backRoom': '♠ Back room',
 
+  // The title screen.
+  'title.tagline': 'The Grand Botanical & Clockwork Academy',
+  'title.press': 'Press any key',
+
   // The main menu.
+  'menu.extras': 'Extras',
   'menu.title': 'Dandori Academy',
   'menu.subtitleFirst': 'The Grand Botanical & Clockwork Academy. Your first day.',
   'menu.subtitle': 'The Grand Botanical & Clockwork Academy · Story day {day}',
@@ -49,6 +57,7 @@ export const EN = {
   'pause.concede': 'Concede the battle',
   'pause.endNow': 'End the day now',
   'pause.restart': 'Restart',
+  'pause.manual': 'Manual',
   'pause.settings': 'Settings',
   'pause.quit': 'Quit',
   'pause.back': 'Back',

@@ -157,6 +157,9 @@ export interface WorkerCounts {
  * dependencies: the same inputs always produce the same day.
  * `initPhysics()` must have resolved before constructing one.
  */
+/** How often the day's timeline is noted, in steps: every five seconds. */
+export const TIMELINE_EVERY = 300;
+
 export class Simulation {
   readonly ecs = new EcsWorld();
   readonly transforms: Store<Transform> = this.ecs.createStore();
@@ -259,6 +262,8 @@ export class Simulation {
   brewTimer = 0;
   /** The Warden's path through the day, (x, z) every TRACK_EVERY steps: a best run's ghost. */
   readonly track: number[] = [];
+  /** The day as it went, every TIMELINE_EVERY steps: Sproutlings on the field and hauls home. */
+  readonly timeline: { field: number[]; home: number[] } = { field: [], home: [] };
   /** Treasure the telescope has yet to show, and whether it has been looked through today. */
   readonly hiddenTreasures: TreasureSpawn[] = [];
   telescopeAimed = false;
@@ -477,6 +482,10 @@ export class Simulation {
     applySeparation(this);
     updateCarrying(this, dt);
     updateConveyors(this, dt);
+    if (this.tick % TIMELINE_EVERY === 0) {
+      this.timeline.field.push(this.workers.size);
+      this.timeline.home.push(this.stats.treasuresCollected.length);
+    }
     if (this.tick % TRACK_EVERY === 0) {
       this.track.push(
         Math.round(this.captainTransform.x * 10) / 10,

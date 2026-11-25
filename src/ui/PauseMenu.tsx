@@ -7,6 +7,7 @@ import { SettingsPanel } from './SettingsPanel';
 import { t } from '../i18n/i18n';
 import { fieldName } from '../i18n/gameText';
 import { ActionPrompt } from './Glyph';
+import { Manual } from './Manual';
 
 /** Shown over a paused day: resume, restart, change settings or leave the lesson. */
 export function PauseMenu({ level }: { level: LevelDefinition }) {
@@ -15,11 +16,15 @@ export function PauseMenu({ level }: { level: LevelDefinition }) {
   const leaveDay = useGameStore((state) => state.leaveDay);
   const endDay = useGameStore((state) => state.endDay);
   const mode = useGameStore((state) => state.playMode);
-  const [view, setView] = useState<'main' | 'settings'>('main');
+  const [view, setView] = useState<'main' | 'settings' | 'manual'>('main');
 
   return (
     <div className="screen overlay">
-      <div className="panel" role="dialog" aria-labelledby="pause-title">
+      <div
+        className={view === 'manual' ? 'panel wide' : 'panel'}
+        role="dialog"
+        aria-labelledby="pause-title"
+      >
         <p className="eyebrow" id="pause-title">
           {t('pause.title')}
         </p>
@@ -48,6 +53,9 @@ export function PauseMenu({ level }: { level: LevelDefinition }) {
                 {t('pause.restart')} <ActionPrompt action="restart" />
               </button>
             )}
+            <button type="button" className="secondary" onClick={() => setView('manual')}>
+              {t('pause.manual')}
+            </button>
             <button type="button" className="secondary" onClick={() => setView('settings')}>
               {t('pause.settings')}
             </button>
@@ -57,6 +65,8 @@ export function PauseMenu({ level }: { level: LevelDefinition }) {
               </button>
             )}
           </>
+        ) : view === 'manual' ? (
+          <Manual onClose={() => setView('main')} />
         ) : (
           <>
             <SettingsPanel />

@@ -69,6 +69,22 @@ const ONE_SHOTS = [
 type OneShot = (typeof ONE_SHOTS)[number];
 const KIND_ACTIONS: readonly Action[] = ['kind1', 'kind2', 'kind3', 'kind4'];
 
+/** How far the right stick must lean, held on the kind wheel, to point at a slice. */
+const WHEEL_LEAN = 0.5;
+/** The mouse counts as leant fully this far from the screen's middle (as a share of half). */
+const POINTER_LEAN = 0.3;
+
+/**
+ * The kind wheel's slice a stick points at: up, right, down and left are the four kinds in
+ * order (Emberlings at the top). Null while the stick is near the centre.
+ */
+export function wheelSlot(x: number, z: number): number | null {
+  if (Math.hypot(x, z) < WHEEL_LEAN) return null;
+  // Clockwise from straight up the screen (minus z).
+  const angle = (Math.atan2(x, -z) + Math.PI * 2) % (Math.PI * 2);
+  return Math.round(angle / (Math.PI / 2)) % 4;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -128,6 +144,9 @@ export class InputController {
   private fastLatched = false;
   private readonly pad = new PadReader();
   private padFrame: PadFrame | null = null;
+  /** The kind wheel: whether it is held open, and the slice pointed at. */
+  private wheelOpen = false;
+  private wheelPick: number | null = null;
   /** The pad's cursor, relative to the Warden, while the pad has the aim. */
   private padAim: Vec = { x: 0, z: -REST_AIM };
   private padHasAim = false;
@@ -245,9 +264,26 @@ export class InputController {
   pollPads(pads: readonly PadSnapshot[], dt: number): void {
     const frame = this.pad.read(pads, this.bindings);
     this.padFrame = frame;
+    // Letting go of the wheel chooses whatever it points at. (The keyboard's wheel, if held,
+    // is looked after in `update`.)
+    const wheel = frame.held.has('kindWheel');
+    const keyWheel = this.keyWheelHeld();
+    if (!keyWheel) {
+      if (!wheel && this.wheelOpen && this.wheelPick !== null) {
+        this.selectQueued = SPROUT_KINDS[this.wheelPick];
+      }
+      if (wheel && !this.wheelOpen) this.wheelPick = null;
+      this.wheelOpen = wheel;
+    }
     if (!frame.active) return;
     noteDevice('pad');
     for (const action of frame.pressed) this.press(action);
+    if (wheel) {
+      // While the wheel is open the right stick points at a kind instead of aiming.
+      const slot = wheelSlot(frame.aim.x, frame.aim.z);
+      if (slot !== null) this.wheelPick = slot;
+      return;
+    }
     const reach = CAPTAIN.cursorRange;
     const aiming = frame.aim.x !== 0 || frame.aim.z !== 0;
     const walking = frame.move.x !== 0 || frame.move.z !== 0;
@@ -269,8 +305,28 @@ export class InputController {
     if (this.padHasAim) this.aimOffset = { ...this.padAim };
   }
 
+  private keyWheelHeld(): boolean {
+    return this.bindings.keys.kindWheel.some((code) => code !== null && this.keys.has(code));
+  }
+
+  /** The kind wheel as it stands: open or not, and the slice pointed at. */
+  wheel(): { open: boolean; pick: number | null } {
+    return { open: this.wheelOpen, pick: this.wheelPick };
+  }
+
   /** Per-frame upkeep that is not tied to simulation steps: zooming with held keys or buttons. */
   update(dt: number): void {
+    // The kind wheel on the keyboard: the mouse's lean from the screen's middle points.
+    if (this.keyWheelHeld()) {
+      if (!this.wheelOpen) this.wheelPick = null;
+      this.wheelOpen = true;
+      const slot = wheelSlot(this.pointerX / POINTER_LEAN, -this.pointerY / POINTER_LEAN);
+      if (slot !== null) this.wheelPick = slot;
+    } else if (this.wheelOpen && !(this.padFrame?.held.has('kindWheel') ?? false)) {
+      if (this.wheelPick !== null) this.selectQueued = SPROUT_KINDS[this.wheelPick];
+      this.wheelOpen = false;
+      this.wheelPick = null;
+    }
     const zoom = (this.held('zoomOut') ? 1 : 0) - (this.held('zoomIn') ? 1 : 0);
     if (zoom !== 0 && this.live) {
       this.zoom = clamp(this.zoom + zoom * ZOOM_KEY_RATE * dt * this.zoomSpeed, MIN_ZOOM, MAX_ZOOM);

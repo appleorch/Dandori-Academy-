@@ -88,6 +88,7 @@ export type MenuScreen =
   | 'battles'
   | 'achievements'
   | 'settings'
+  | 'wardrobe'
   | 'journal'
   | 'guide'
   | 'leaderboard'
@@ -183,6 +184,8 @@ export interface DayResult {
   splits: readonly number[];
   previousSplits: readonly number[] | null;
   bestChain: number;
+  /** Sproutlings on the field and hauls home, every five seconds of the day. */
+  timeline: { field: readonly number[]; home: readonly number[] };
   /** Relics brought up from caves on the way: for the Field Guide, not the rank. */
   caveRelics: number;
   /** The day as a leaderboard run, or null when it cannot be posted. */
@@ -244,6 +247,9 @@ interface GameStore {
   nearAscent: boolean;
   /** True while the back room is open, over whatever screen was showing. */
   pokerOpen: boolean;
+  /** Whether the title screen has been passed this session (it shows once per launch). */
+  titleDone: boolean;
+  leaveTitle: () => void;
   /** Which pages the story screen is showing. */
   storyKind: 'prologue' | 'epilogue';
   hud: HudSnapshot | null;
@@ -450,6 +456,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     nearDescent: null,
     nearAscent: false,
     pokerOpen: false,
+    titleDone: false,
+    leaveTitle: () => set({ titleDone: true }),
     hud: null,
     race: null,
     entityVersion: 0,
@@ -802,6 +810,7 @@ export const useGameStore = create<GameStore>((set, get) => {
               ? (previous.bestSplits[splitKey(level.id, level.difficulty)] ?? null)
               : null,
           bestChain: stats.bestChain,
+          timeline: { field: [...sim.timeline.field], home: [...sim.timeline.home] },
           caveRelics: haul?.relics.length ?? 0,
           run: day.run ?? null,
           tally,

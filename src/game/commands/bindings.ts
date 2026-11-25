@@ -37,6 +37,7 @@ export const ACTIONS = [
   'emberbrew',
   'stillwater',
   'map',
+  'kindWheel',
 ] as const;
 export type Action = (typeof ACTIONS)[number];
 
@@ -69,6 +70,10 @@ export const ACTION_INFO: Record<Action, { label: string; group: 'move' | 'squad
   emberbrew: { label: 'Story: spray Emberbrew (a faster, fiercer squad)', group: 'squad' },
   stillwater: { label: 'Story: spray Stillwater (freezes nearby beasts)', group: 'squad' },
   map: { label: 'Hold for the full map', group: 'view' },
+  kindWheel: {
+    label: 'Hold for the kind wheel; point the mouse or right stick, let go to choose',
+    group: 'squad',
+  },
 };
 
 /** Two keyboard or mouse slots per action; null is an empty slot. */
@@ -150,6 +155,7 @@ export const DEFAULT_BINDINGS: Bindings = {
     emberbrew: ['KeyB', null],
     stillwater: ['KeyN', null],
     map: ['KeyM', null],
+    kindWheel: ['KeyZ', null],
   },
   pad: {
     moveUp: null,
@@ -179,6 +185,7 @@ export const DEFAULT_BINDINGS: Bindings = {
     emberbrew: null,
     stillwater: null,
     map: null,
+    kindWheel: PAD.right,
   },
 };
 

@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
+/** The title screen waits for any key; press one to reach the main menu. */
+async function passTitle(page: Page): Promise<void> {
+  await expect(page.locator('.title-screen')).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.title-screen')).toHaveCount(0);
+}
+
 /** A returning player on low graphics, with the briefings and commentary off. */
 async function freshPlayer(page: Page): Promise<string[]> {
   const errors: string[] = [];
@@ -20,6 +27,7 @@ async function freshPlayer(page: Page): Promise<string[]> {
     );
   });
   await page.goto('./');
+  await passTitle(page);
   return errors;
 }
 
@@ -98,6 +106,7 @@ test('once opened, the game loads and starts a day offline', async ({ page, cont
   await page.waitForTimeout(6000);
   await context.setOffline(true);
   await page.reload();
+  await passTitle(page);
   await page.locator('.mode-card', { hasText: 'Challenges' }).click();
   await page.getByRole('button', { name: 'Treasure Hunt' }).click();
   await page.getByRole('button', { name: /Scattered Light/ }).click();
@@ -130,6 +139,9 @@ test('in the pseudo-locale, the converted screens show no untranslated text', as
     );
   });
   await page.goto('./');
+  await expect(page.locator('.title-logo')).toContainText('⟦');
+  expect(await untranslated(page)).toEqual([]);
+  await passTitle(page);
   await expect(page.locator('.hero-title')).toContainText('⟦');
   expect(await untranslated(page)).toEqual([]);
   await page.locator('.mode-card').first().click();

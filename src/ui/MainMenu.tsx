@@ -4,7 +4,7 @@ import { storyCleared } from '../game/save/saveManager';
 import { CHALLENGE_LEVELS, MAIN_LEVELS } from '../game/world/level';
 import { currentSection, sectionProgress } from '../game/campaign/campaign';
 import { hasMedal, nextStoryLesson } from './lessonAccess';
-import { MenuNav } from './MenuNav';
+import { Crest, EXTRA_SCREENS } from './MenuNav';
 import { t } from '../i18n/i18n';
 import { fieldName, modeName, modeSummary, sectionName } from '../i18n/gameText';
 
@@ -26,6 +26,9 @@ export function MainMenu() {
   const lastPlayed = useGameStore((state) => state.levelId);
   const startDay = useGameStore((state) => state.startDay);
   const showScreen = useGameStore((state) => state.showScreen);
+  const openPoker = useGameStore((state) => state.openPoker);
+  const earned = useGameStore((state) => Object.keys(state.save.achievements).length);
+  const knowsTheRoom = useGameStore((state) => 'back-room' in state.save.achievements);
   const next = nextStoryLesson(save, lastPlayed);
   const fresh = save.campaign.day === 0 && save.totals.days === 0;
   const cleared = MAIN_LEVELS.filter((level) => storyCleared(save, level.id)).length;
@@ -81,7 +84,12 @@ export function MainMenu() {
   return (
     <main className="screen">
       <div className="panel wide">
-        <MenuNav />
+        <div className="menu-head">
+          <p className="eyebrow crest-line">
+            <Crest />
+            {t('nav.title')}
+          </p>
+        </div>
         <header className="hero">
           <span className="hero-embers" aria-hidden="true">
             {Array.from({ length: 14 }, (_, i) => (
@@ -128,6 +136,20 @@ export function MainMenu() {
             </button>
           ))}
         </div>
+        <nav className="extras" aria-label={t('menu.extras')}>
+          <p className="eyebrow">{t('menu.extras')}</p>
+          {EXTRA_SCREENS.map(([screen, label]) => (
+            <button key={screen} type="button" className="extra" onClick={() => showScreen(screen)}>
+              {t(label)}
+              {screen === 'achievements' && <span className="tab-count">{earned}</span>}
+            </button>
+          ))}
+          {knowsTheRoom && (
+            <button type="button" className="extra" onClick={openPoker}>
+              {t('nav.backRoom')}
+            </button>
+          )}
+        </nav>
       </div>
     </main>
   );
