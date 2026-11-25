@@ -1,5 +1,5 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import {
   AdditiveBlending,
   BackSide,
@@ -13,10 +13,12 @@ import {
   PerspectiveCamera,
   type Group,
   type Mesh,
+  type MeshBasicMaterial,
   type MeshStandardMaterial,
   type PointLight,
   type Sprite,
 } from 'three';
+import { audio } from '../game/audio/audioManager';
 import { backTexture, faceTexture } from './cardTextures';
 import type { Card } from './cards';
 import type { PokerGame } from './game';
@@ -47,6 +49,14 @@ const LOOK = new Vector3(0, 0.98, -0.3);
 /** Where cards are dealt from: the middle of the table. */
 const DECK: [number, number, number] = [0, CARD_Y + 0.05, 0.1];
 const ease = (t: number): number => 1 - (1 - t) ** 3;
+const easeInOut = (t: number): number => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+const clamp01 = (t: number): number => MathUtils.clamp(t, 0, 1);
+
+/**
+ * The other door: in the back wall, behind the Warden's chair, where nobody ever looks. Its
+ * opening is `width` across and `height` tall, centred on `x`, on the wall's face at `z`.
+ */
+const DARK_DOOR = { x: -1.1, z: 4.97, width: 0.95, height: 2.05 } as const;
 
 /** Where a seat is on the floor plan. Seat 0 is the Warden; the rest are the regulars. */
 function seatAngle(seat: number): number {
@@ -383,6 +393,8 @@ function DisguiseParts({ kind }: { kind: Disguise }) {
 interface RegularProps {
   /** True on phones and low graphics: no light of its own for each ember. */
   lite: boolean;
+  /** The Warden has got up: every regular turns to watch where they go. */
+  leaving: boolean;
   player: Player;
   seat: number;
   game: PokerGame;
@@ -390,7 +402,7 @@ interface RegularProps {
 }
 
 /** One of the regulars: an Emberling on a tall stool, wearing what it thinks is a disguise. */
-function Regular({ player, seat, game, view, lite }: RegularProps) {
+function Regular({ player, seat, game, view, lite, leaving }: RegularProps) {
   const root = useRef<Group>(null);
   const body = useRef<Group>(null);
   const eyes = useRef<Group>(null);
@@ -401,7 +413,7 @@ function Regular({ player, seat, game, view, lite }: RegularProps) {
   const turn = useRef(facing);
   const phase = seat * 1.7;
 
-  useFrame(({ clock }, delta) => {
+  useFrame(({ clock, camera }, delta) => {
     const node = root.current;
     const model = body.current;
     if (!node || !model) return;
@@ -409,12 +421,14 @@ function Regular({ player, seat, game, view, lite }: RegularProps) {
     node.visible = !state.out;
     if (state.out) return;
     const t = clock.elapsedTime;
-    const acting = game.toAct === seat;
+    const acting = game.toAct === seat && !leaving;
     const won = view.winners.includes(seat) && game.handOver;
 
     // Everyone watches whoever is deciding; otherwise they study the board.
     let look = facing;
-    if (game.toAct >= 0 && game.toAct !== seat) {
+    if (leaving) {
+      look = Math.atan2(camera.position.x - x, camera.position.z - z);
+    } else if (game.toAct >= 0 && game.toAct !== seat) {
       const [tx, tz] = around(seatAngle(game.toAct), game.toAct === 0 ? 2.6 : SEAT_RADIUS);
       look = Math.atan2(tx - x, tz - z);
     }
@@ -533,8 +547,110 @@ function Regular({ player, seat, game, view, lite }: RegularProps) {
   );
 }
 
+/**
+ * The dark door: old boards in a frame, with nothing but cold air under it. Behind it is a
+ * blackness the room's light does not reach. It swings out into that dark when `open` says so.
+ */
+function DarkDoor({ open }: { open: RefObject<number> }) {
+  const hinge = useRef<Group>(null);
+  const draft = useRef<MeshBasicMaterial>(null);
+  const flame = useRef<Mesh>(null);
+  const candle = useRef<PointLight>(null);
+  const swing = useRef(0);
+  const { x, z, width, height } = DARK_DOOR;
+  useFrame(({ clock }, delta) => {
+    const t = clock.elapsedTime;
+    const flicker = 0.85 + Math.sin(t * 11) * 0.08 + Math.sin(t * 29) * 0.05;
+    if (candle.current) candle.current.intensity = 3.4 * flicker;
+    if (flame.current) flame.current.scale.set(1, flicker, 1);
+    const target = open.current ?? 0;
+    // It opens slowly, as if heavy; it shuts at once.
+    swing.current +=
+      (target - swing.current) * Math.min(1, delta * (target > swing.current ? 1.1 : 8));
+    if (hinge.current) hinge.current.rotation.y = swing.current * 1.65;
+    if (draft.current) {
+      draft.current.opacity =
+        0.08 + Math.sin(clock.elapsedTime * 0.7) * 0.025 + swing.current * 0.1;
+    }
+  });
+  return (
+    <>
+      {/* Nothing: what is on the far side of the doorway. */}
+      <mesh position={[x, height / 2, z + 0.012]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial color="#000000" fog={false} toneMapped={false} />
+      </mesh>
+      {/* The frame. */}
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[x + side * (width / 2 + 0.05), height / 2 + 0.03, z - 0.02]}>
+          <boxGeometry args={[0.1, height + 0.06, 0.08]} />
+          <meshStandardMaterial color="#160f0b" roughness={0.9} />
+        </mesh>
+      ))}
+      <mesh position={[x, height + 0.08, z - 0.02]}>
+        <boxGeometry args={[width + 0.2, 0.1, 0.08]} />
+        <meshStandardMaterial color="#160f0b" roughness={0.9} />
+      </mesh>
+      {/* The door, hung on its left as seen from the table, opening outwards. */}
+      <group ref={hinge} position={[x + width / 2, 0, z - 0.035]}>
+        <mesh position={[-width / 2, height / 2, 0]}>
+          <boxGeometry args={[width, height, 0.05]} />
+          <meshStandardMaterial color="#1e1510" roughness={0.95} />
+        </mesh>
+        {[0.28, 0.72].map((h) => (
+          <mesh key={h} position={[-width / 2, height * h, -0.03]}>
+            <boxGeometry args={[width * 0.94, 0.05, 0.012]} />
+            <meshStandardMaterial color="#120c09" roughness={0.9} />
+          </mesh>
+        ))}
+        <mesh position={[-width + 0.1, height * 0.48, -0.045]}>
+          <sphereGeometry args={[0.03, 10, 8]} />
+          <meshStandardMaterial color="#5a4a34" metalness={0.6} roughness={0.5} />
+        </mesh>
+      </group>
+      {/* A candle each side: the wall is lit, so the door shows as a dark shape in it. */}
+      {[-1, 1].map((side) => (
+        <group key={side} position={[x + side * (width / 2 + 0.34), 1.45, z - 0.08]}>
+          <mesh position={[0, -0.06, 0.04]}>
+            <boxGeometry args={[0.16, 0.03, 0.12]} />
+            <meshStandardMaterial color="#3a2a1c" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 0.03, 0]}>
+            <cylinderGeometry args={[0.025, 0.028, 0.14, 10]} />
+            <meshStandardMaterial color="#efe4cc" roughness={0.6} />
+          </mesh>
+          <mesh ref={side < 0 ? flame : undefined} position={[0, 0.13, 0]}>
+            <coneGeometry args={[0.018, 0.06, 8]} />
+            <meshBasicMaterial color="#ffd27a" toneMapped={false} />
+          </mesh>
+        </group>
+      ))}
+      <pointLight
+        ref={candle}
+        position={[x, 1.35, z - 0.6]}
+        color="#ffb060"
+        intensity={3.4}
+        distance={3.6}
+        decay={1.4}
+      />
+      {/* Cold air under it, where the other door has lantern light. */}
+      <mesh position={[x, 0.012, z - 0.16]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[width * 0.9, 0.3]} />
+        <meshBasicMaterial
+          ref={draft}
+          color="#5a6ab0"
+          transparent
+          opacity={0.08}
+          blending={AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+    </>
+  );
+}
+
 /** The back room itself: boards, a low lamp, a shelf of bottles and a door that is not on the plans. */
-function Room({ lite }: { lite: boolean }) {
+function Room({ lite, door }: { lite: boolean; door: RefObject<number> }) {
   const haze = useRef<Group>(null);
   const bulb = useRef<MeshStandardMaterial>(null);
   useFrame(({ clock }) => {
@@ -653,6 +769,7 @@ function Room({ lite }: { lite: boolean }) {
         <planeGeometry args={[0.5, 0.9]} />
         <meshBasicMaterial color="#ffcf7a" transparent opacity={0.25} />
       </mesh>
+      <DarkDoor open={door} />
     </>
   );
 }
@@ -698,11 +815,12 @@ function Table({ game }: { game: PokerGame }) {
  * The Warden's own two cards, held up in front of the camera the way a player holds a
  * hand, with a gloved thumb on each. They follow the head as it looks about.
  */
-function HeldCards({ game }: { game: PokerGame }) {
+function HeldCards({ game, leaving }: { game: PokerGame; leaving: boolean }) {
   const hand = useRef<Group>(null);
   const { camera } = useThree();
   const seat = game.seats[0];
-  const show = !seat.out && !seat.folded && seat.cards.length === 2;
+  // Getting up, the Warden leaves the cards face down on the table.
+  const show = !seat.out && !seat.folded && seat.cards.length === 2 && !leaving;
   useFrame(({ clock }) => {
     const node = hand.current;
     if (!node) return;
@@ -761,20 +879,30 @@ const BASE_PITCH = Math.atan2(LOOK.y - EYE.y, EYE.z - LOOK.z);
  * is; a finger drags the view round. Either way the head eases to where it was asked to
  * look, at the same speed whatever the frame rate, so it never jumps.
  */
-function Head() {
+function Head({ leaving }: { leaving: boolean }) {
   const { camera, scene, gl, size } = useThree();
   const aim = useRef({ yaw: 0, pitch: 0, toYaw: 0, toPitch: 0 });
 
   useEffect(() => {
     scene.fog = new Fog('#0c0806', 4.5, 11);
     scene.background = new Color('#0c0806');
-    camera.position.copy(EYE);
-    camera.rotation.set(BASE_PITCH, 0, 0, 'YXZ');
     return () => {
       scene.fog = null;
       scene.background = null;
     };
-  }, [camera, scene]);
+  }, [scene]);
+
+  // In the chair: at the start, and again on coming back through the dark door.
+  useEffect(() => {
+    if (leaving) return;
+    if (scene.fog instanceof Fog) {
+      scene.fog.near = 4.5;
+      scene.fog.far = 11;
+    }
+    camera.position.copy(EYE);
+    camera.rotation.set(BASE_PITCH, 0, 0, 'YXZ');
+    aim.current = { yaw: 0, pitch: 0, toYaw: 0, toPitch: 0 };
+  }, [camera, scene, leaving]);
 
   useEffect(() => {
     const element = gl.domElement;
@@ -832,6 +960,7 @@ function Head() {
   }, [camera, size]);
 
   useFrame(({ clock }, delta) => {
+    if (leaving) return;
     const a = aim.current;
     const ease = 1 - Math.exp(-Math.min(delta, 0.1) * 9);
     a.yaw += (a.toYaw - a.yaw) * ease;
@@ -843,6 +972,106 @@ function Head() {
   return null;
 }
 
+/** Height of the Warden's eye standing up, and where they stand to push the chair back. */
+const STANDING_EYE = 1.9;
+const CHAIR_BACK = 0.35;
+/** When each part of the walk out starts and how long it takes, in seconds. */
+const WALK = {
+  stand: [0, 1] as const,
+  turn: [0.85, 1.5] as const,
+  walk: [2.15, 2.7] as const,
+  dark: [4.85, 0.9] as const,
+  doorOpens: 2.6,
+  through: 5.9,
+};
+/** Steps a second while walking to the door. */
+const PACE = 2.1;
+
+interface WalkOutProps {
+  /** How far the dark door should be open, 0 to 1: the walk opens it. */
+  door: RefObject<number>;
+  /** Darkens the whole view at the end; the room's own overlay. */
+  blackout: RefObject<HTMLDivElement | null>;
+  onThrough: () => void;
+}
+
+/**
+ * The Warden pushes back the chair, stands, turns round, walks to the dark door and on into
+ * the dark beyond it. The camera is theirs throughout: this takes it over from the head.
+ */
+function WalkOut({ door, blackout, onThrough }: WalkOutProps) {
+  const { camera, scene } = useThree();
+  const start = useRef<{ position: Vector3; yaw: number; pitch: number } | null>(null);
+  const elapsed = useRef(0);
+  const done = useRef(new Set<string>());
+  const steps = useRef(0);
+  const at = useMemo(() => new Vector3(), []);
+  const stood = useMemo(() => new Vector3(), []);
+  const near = useMemo(() => new Vector3(DARK_DOOR.x, STANDING_EYE, DARK_DOOR.z - 0.55), []);
+  const inside = useMemo(() => new Vector3(DARK_DOOR.x, STANDING_EYE, DARK_DOOR.z - 0.07), []);
+
+  useFrame((_, delta) => {
+    start.current ??= {
+      position: camera.position.clone(),
+      yaw: camera.rotation.y,
+      pitch: camera.rotation.x,
+    };
+    const from = start.current;
+    elapsed.current += Math.min(delta, 0.05);
+    const t = elapsed.current;
+    const once = (name: string, when: number, run: () => void): void => {
+      if (t >= when && !done.current.has(name)) {
+        done.current.add(name);
+        run();
+      }
+    };
+    const part = ([begin, length]: readonly [number, number]): number =>
+      clamp01((t - begin) / length);
+
+    once('scrape', 0.05, () => audio.play('scrape'));
+    once('door', WALK.doorOpens, () => {
+      door.current = 1;
+      audio.play('darkDoor');
+    });
+
+    // Up out of the chair, and back a little.
+    stood.set(from.position.x, STANDING_EYE, from.position.z + CHAIR_BACK);
+    at.lerpVectors(from.position, stood, easeInOut(part(WALK.stand)));
+    // Across to the door, then the last step into the dark.
+    at.lerp(near, easeInOut(part(WALK.walk)));
+    at.lerp(inside, part(WALK.dark) ** 1.5);
+
+    const walking = t > WALK.walk[0] && t < WALK.dark[0] + WALK.dark[1];
+    if (walking) {
+      const phase = (t - WALK.walk[0]) * PACE;
+      at.y += Math.abs(Math.sin(phase * Math.PI)) * 0.035 - 0.017;
+      if (Math.floor(phase) > steps.current) {
+        steps.current = Math.floor(phase);
+        audio.play('step', { gain: 0.7 });
+      }
+    }
+    camera.position.copy(at);
+
+    // Round to face the door, whichever way is shorter, and level the gaze.
+    const face = Math.atan2(-(DARK_DOOR.x - at.x), -(DARK_DOOR.z - at.z));
+    const turn = Math.atan2(Math.sin(face - from.yaw), Math.cos(face - from.yaw));
+    const yaw = from.yaw + turn * easeInOut(part(WALK.turn));
+    const pitch = MathUtils.lerp(from.pitch, -0.02, easeInOut(part(WALK.stand)));
+    const sway = walking ? Math.sin((t - WALK.walk[0]) * PACE * Math.PI) * 0.012 : 0;
+    camera.rotation.set(pitch, yaw, sway, 'YXZ');
+
+    // The dark closes in: the fog first, then everything.
+    if (scene.fog instanceof Fog) {
+      const close = clamp01((t - 4.3) / 1.4);
+      scene.fog.near = MathUtils.lerp(4.5, 0.2, close);
+      scene.fog.far = MathUtils.lerp(11, 1.6, close);
+    }
+    if (blackout.current) blackout.current.style.opacity = String(part(WALK.dark));
+    once('through', WALK.through, onThrough);
+  });
+  return null;
+}
+
 interface PokerSceneProps {
   game: PokerGame;
   view: TableView;
@@ -850,19 +1079,30 @@ interface PokerSceneProps {
   version: number;
   /** Cheaper lighting, for phones and the low graphics setting. */
   lite: boolean;
+  /** The Warden has got up and is walking out through the dark door. */
+  leaving: boolean;
+  blackout: RefObject<HTMLDivElement | null>;
+  /** Called once the Warden is through the door and the view is black. */
+  onThrough: () => void;
 }
 
 /** Everything in the back room, seen from the Warden's chair. */
-export function PokerScene({ game, view, lite }: PokerSceneProps) {
+export function PokerScene({ game, view, lite, leaving, blackout, onThrough }: PokerSceneProps) {
+  const door = useRef(0);
+  // Back in the chair, the door is shut again.
+  useEffect(() => {
+    if (!leaving) door.current = 0;
+  }, [leaving]);
   const hand = game.handNumber;
   const { seats, dealer } = game;
   const [buttonX, buttonZ] =
     dealer >= 0 ? around(seatAngle(dealer) + 0.28, TABLE_RADIUS * 0.72) : [0, 0];
   return (
     <>
-      <Head />
+      <Head leaving={leaving} />
+      {leaving && <WalkOut door={door} blackout={blackout} onThrough={onThrough} />}
       <ambientLight intensity={lite ? 0.3 : 0.16} color="#8a6a5a" />
-      <Room lite={lite} />
+      <Room lite={lite} door={door} />
       <Table game={game} />
       {PLAYERS.map((player, i) => (
         <Regular
@@ -872,6 +1112,7 @@ export function PokerScene({ game, view, lite }: PokerSceneProps) {
           game={game}
           view={view}
           lite={lite}
+          leaving={leaving}
         />
       ))}
 
@@ -944,7 +1185,7 @@ export function PokerScene({ game, view, lite }: PokerSceneProps) {
         scale={0.8}
         getLines={() => (game.handOver || game.pot === 0 ? [] : [`Pot ${game.pot}`])}
       />
-      <HeldCards game={game} />
+      <HeldCards game={game} leaving={leaving} />
     </>
   );
 }

@@ -12,8 +12,18 @@ export interface Player {
   color: string;
   /** If true the ember on its head flares on a bluff, not on a good hand. */
   flareOnBluff?: boolean;
-  /** Things it says: when folding, when betting big, when winning, when knocked out. */
-  quips: { fold: readonly string[]; raise: readonly string[]; win: readonly string[]; out: string };
+  /**
+   * Things it says: when folding, when betting big, when winning, when knocked out, when the
+   * Warden gets up from the table, and when the Warden sits back down.
+   */
+  quips: {
+    fold: readonly string[];
+    raise: readonly string[];
+    win: readonly string[];
+    out: string;
+    leave: string;
+    back: string;
+  };
 }
 
 const DEGREES = Math.PI / 180;
@@ -34,6 +44,8 @@ export const PLAYERS: readonly Player[] = [
       raise: ['Let us be serious.', 'I have seen enough.'],
       win: ['As expected.', 'A fair hand, fairly played.'],
       out: 'I was never here.',
+      leave: 'Not that door.',
+      back: 'We did not notice you had gone.',
     },
   },
   {
@@ -48,6 +60,8 @@ export const PLAYERS: readonly Player[] = [
       raise: ['Do keep up, darling.', 'More. Always more.'],
       win: ['Naturally.', 'Was there ever a doubt?'],
       out: 'My carriage is waiting. Probably.',
+      leave: 'Leaving so soon, darling?',
+      back: 'Back so soon, darling?',
     },
   },
   {
@@ -61,6 +75,8 @@ export const PLAYERS: readonly Player[] = [
       raise: ['Yee-haw!', 'Reckon I will raise.'],
       win: ['Hoo-ee!', 'Rake it in, boys.'],
       out: 'This town ain’t big enough anyhow.',
+      leave: 'Partner, your chips!',
+      back: 'Where’d you get to, partner?',
     },
   },
   {
@@ -74,6 +90,8 @@ export const PLAYERS: readonly Player[] = [
       raise: ['By my calculations...', 'A measured increase.'],
       win: ['Quod erat demonstrandum.', 'Precisely as modelled.'],
       out: 'An outlier. A mere outlier.',
+      leave: 'Most irregular.',
+      back: 'Fascinating. Do sit.',
     },
   },
   {
@@ -87,6 +105,8 @@ export const PLAYERS: readonly Player[] = [
       raise: ['Grr. More chips. Grr.', 'Normal Mossback raise.'],
       win: ['Squeak! I mean, roar.', 'Mossback happy.'],
       out: 'Going back to the... swamp. Yes.',
+      leave: 'Grr? Where going?',
+      back: 'Mossback missed you. Grr.',
     },
   },
 ];

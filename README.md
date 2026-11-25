@@ -808,6 +808,7 @@ src/
     rendering/    React Three Fiber scene: terrain, architecture, scenery, the instanced
                   Emberling rig, the Warden, relic models (models/), particles and feedback
   poker/          a card game: rules engine, players and its own 3D room
+  squarehollow/   what is behind the back room's other door: a block world, loaded on demand
   ui/             menus, HUD, briefing, journal, pause, results, achievements, settings
                   (with rebinding) and gamepad menu navigation
 ```

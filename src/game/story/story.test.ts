@@ -122,6 +122,7 @@ describe('secret achievements', () => {
         'hoarder',
         'photographer',
         'replay-fan',
+        'dark-door',
       ].sort(),
     );
     for (const achievement of secrets) expect(achievement.earned(emptySave(), null)).toBe(false);
