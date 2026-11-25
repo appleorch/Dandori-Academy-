@@ -1,3 +1,5 @@
+import { t } from '../i18n/i18n';
+import type { MessageKey } from '../i18n/en';
 import { useEffect } from 'react';
 import { audio } from '../game/audio/audioManager';
 import { useGameStore, type BossSnapshot } from '../game/core/gameStore';
@@ -29,11 +31,11 @@ const KIND_ACTIONS: readonly Action[] = ['kind1', 'kind2', 'kind3', 'kind4'];
 /** How long a remark of the Headmaster's stays up: it fades out over the end of this. */
 const SPROCKET_SECONDS = 5.6;
 
-const GUARD_TEXT: Record<BossSnapshot['guard'], string> = {
-  open: 'Open: full damage!',
-  armoured: 'Armoured',
-  shielded: 'Shielded: break the root-knots',
-  dark: 'In the dark: light a beacon nearby',
+const GUARD_TEXT: Record<BossSnapshot['guard'], MessageKey> = {
+  open: 'hud.guard.open',
+  armoured: 'hud.guard.armoured',
+  shielded: 'hud.guard.shielded',
+  dark: 'hud.guard.dark',
 };
 
 /** In-day overlay: clock, treasure progress, a day bar marked with each rank's deadline, where
@@ -109,7 +111,7 @@ export function Hud({
   // Where the workforce is: along the bottom on a desktop; on touch, up top, clear of the controls.
   const counts = (
     <div className={touch ? 'hud-row counts' : 'hud-row bottom'}>
-      <div className="chip squad-kinds" aria-label="Squad by kind">
+      <div className="chip squad-kinds" aria-label={t('hud.squadByKind')}>
         {SPROUT_KINDS.map((kind, i) =>
           hud.squadKinds[kind] > 0 || hud.selected === kind ? (
             <button
@@ -117,7 +119,7 @@ export function Hud({
               type="button"
               className={hud.selected === kind ? `kind ${kind} chosen` : `kind ${kind}`}
               onClick={() => input?.queueSelect(kind)}
-              aria-label={`${hud.squadKinds[kind]} ${SPROUTS[kind].plural}${hud.selected === kind ? ', chosen to throw' : ''}`}
+              aria-label={`${hud.squadKinds[kind]} ${SPROUTS[kind].plural}${hud.selected === kind ? t('hud.chosenToThrow') : ''}`}
               aria-pressed={hud.selected === kind}
               title={`${SPROUTS[kind].plural}: ${SPROUTS[kind].knack}${
                 touch || !keyLabel(bindings, KIND_ACTIONS[i])
@@ -132,7 +134,7 @@ export function Hud({
         )}
       </div>
       <div className={hud.idle > 0 ? 'chip idle-warning' : 'chip'}>
-        <span className="dot idle" /> Idle {hud.idle}
+        <span className="dot idle" /> {t('hud.idle', { count: hud.idle })}
       </div>
     </div>
   );
@@ -142,7 +144,10 @@ export function Hud({
       <div className="hud-row">
         <div className="chip hud-level">
           {story
-            ? `Day ${campaign.day + (phase === 'results' ? 0 : 1)} · ${level.name}`
+            ? t('hud.storyDay', {
+                day: campaign.day + (phase === 'results' ? 0 : 1),
+                field: level.name,
+              })
             : mode === 'lessons'
               ? fieldTitle(level)
               : `${MODES[mode].name} · ${fieldTitle(level)}`}
@@ -157,11 +162,11 @@ export function Hud({
           }
           title={
             hud.below
-              ? 'The day above waits until you come back up'
+              ? t('hud.clock.below')
               : untimed
-                ? 'No clock today: time taken, for your own interest'
+                ? t('hud.clock.untimed')
                 : story
-                  ? 'Daylight left. At sunset everyone away from the Kiln and the lit beacons is lost'
+                  ? t('hud.clock.story')
                   : undefined
           }
         >
@@ -176,47 +181,41 @@ export function Hud({
         </div>
         {sunset && (
           <div className="chip sunset" role="status">
-            Sunset: back to the Kiln or a lit beacon!
+            {t('hud.sunset')}
           </div>
         )}
         {hud.below ? (
           <div className="chip below-chip">
-            Below: {hud.below} · Relics {hud.treasuresCollected}/{hud.treasuresTotal}
+            {t('hud.below', {
+              place: hud.below,
+              got: hud.treasuresCollected,
+              of: hud.treasuresTotal,
+            })}
           </div>
         ) : (
           <>
             {section ? (
-              <div
-                className="chip"
-                title="Parts of the Great Clock home, today and on earlier days"
-              >
-                Clock parts {partsHome}/{section.parts.length}
+              <div className="chip" title={t('hud.partsTitle')}>
+                {t('hud.parts', { got: partsHome, of: section.parts.length })}
               </div>
             ) : (
               <div
                 className="chip"
-                title={
-                  mode === 'lessons'
-                    ? 'Bring every Sunshard home to clear the lesson'
-                    : 'Sunshards home'
-                }
+                title={mode === 'lessons' ? t('hud.shardsLesson') : t('hud.shardsHome')}
               >
-                Sunshards {hud.treasuresCollected}/{hud.treasuresTotal}
+                {t('hud.shards', { got: hud.treasuresCollected, of: hud.treasuresTotal })}
               </div>
             )}
             {live && (
-              <div
-                className="chip score-chip"
-                title="Points banked so far; any time bonus is added when the day ends"
-              >
-                Score <strong>{live.total}</strong>
+              <div className="chip score-chip" title={t('hud.scoreTitle')}>
+                {t('hud.score')} <strong>{live.total}</strong>
                 {live.next ? (
                   <small className={`rank-${live.next.rank.toLowerCase()}`}>
                     {' '}
-                    · {live.next.rank} at {live.next.score}
+                    {t('hud.nextRank', { rank: live.next.rank, score: live.next.score })}
                   </small>
                 ) : (
-                  <small className="rank-diamond"> · Diamond pace</small>
+                  <small className="rank-diamond"> {t('hud.diamondPace')}</small>
                 )}
               </div>
             )}
@@ -225,9 +224,9 @@ export function Hud({
         {hud.split !== null && (
           <div
             className={hud.split <= 0 ? 'chip split ahead' : 'chip split behind'}
-            title="Compared with your fastest clear, at the same Sunshard"
+            title={t('hud.splitTitle')}
           >
-            PB {hud.split <= 0 ? '−' : '+'}
+            {t('hud.pb')} {hud.split <= 0 ? '−' : '+'}
             {Math.abs(hud.split).toFixed(1)}s
           </div>
         )}
@@ -235,10 +234,10 @@ export function Hud({
           // Keyed so each new link replays the pop. Prefixed: keys must never collide with a
           // sibling's, or React leaves stale copies behind.
           <div key={`chain-${hud.chain}`} className="chip chain" aria-live="polite">
-            Chain <strong>×{hud.chain}</strong>
+            {t('hud.chain')} <strong>×{hud.chain}</strong>
           </div>
         )}
-        <div className="chip" aria-label={`Warden health ${hud.captainHp}`}>
+        <div className="chip" aria-label={t('hud.health', { hp: hud.captainHp })}>
           {'♥'.repeat(hud.captainHp) || '0'}
         </div>
         <button
@@ -248,35 +247,29 @@ export function Hud({
           aria-expanded={details}
           aria-controls="hud-details"
         >
-          {details ? 'Less ▴' : 'More ▾'}
+          {details ? t('hud.less') : t('hud.more')}
         </button>
         {phase === 'playing' && (
           <button type="button" className="chip quit" onClick={pause}>
-            Pause {!touch && <ActionPrompt action="pause" />}
+            {t('hud.pause')} {!touch && <ActionPrompt action="pause" />}
           </button>
         )}
       </div>
       {details && (
         <div className="hud-details" id="hud-details">
-          {level.difficulty === 'hard' && <div className="chip hard-chip">Hard</div>}
+          {level.difficulty === 'hard' && <div className="chip hard-chip">{t('hud.hard')}</div>}
           <div className="chip">
-            <span className="dot working" /> Working {hud.working}
+            <span className="dot working" /> {t('hud.working', { count: hud.working })}
           </div>
-          <div className="chip">Field {hud.total}</div>
+          <div className="chip">{t('hud.field', { count: hud.total })}</div>
           {hud.bonusOf > 0 && (
-            <div
-              className="chip bonus-chip"
-              title="Bonus treasure: twin pairs home on time and Dewglass kept whole"
-            >
-              Bonus {hud.bonusGot}/{hud.bonusOf}
+            <div className="chip bonus-chip" title={t('hud.bonusTitle')}>
+              {t('hud.bonus', { got: hud.bonusGot, of: hud.bonusOf })}
             </div>
           )}
           {hud.glowcapsOf > 0 && (
-            <div
-              className="chip bonus-chip"
-              title="Glowcaps: extra points in challenges, never needed for a medal"
-            >
-              Glowcaps {hud.glowcapsGot}/{hud.glowcapsOf}
+            <div className="chip bonus-chip" title={t('hud.glowcapsTitle')}>
+              {t('hud.glowcaps', { got: hud.glowcapsGot, of: hud.glowcapsOf })}
             </div>
           )}
         </div>
@@ -286,19 +279,23 @@ export function Hud({
         <button type="button" className="boss-intro" onClick={() => showBossIntro(null)}>
           <strong>{bossIntro.name}</strong>
           <em>{bossIntro.title}</em>
-          <small>Click to skip</small>
+          <small>{t('hud.clickToSkip')}</small>
         </button>
       )}
       {hud.boss && !bossIntro && (
         <div
           className={`bossbar ${hud.boss.guard}`}
           role="img"
-          aria-label={`${hud.boss.name} health ${Math.round(hud.boss.health * 100)} percent, ${GUARD_TEXT[hud.boss.guard]}`}
+          aria-label={t('hud.bossHealth', {
+            name: hud.boss.name,
+            percent: Math.round(hud.boss.health * 100),
+            guard: t(GUARD_TEXT[hud.boss.guard]),
+          })}
         >
           <span className="bossbar-name">
-            {hud.boss.name} <small>{GUARD_TEXT[hud.boss.guard]}</small>
+            {hud.boss.name} <small>{t(GUARD_TEXT[hud.boss.guard])}</small>
             {hud.boss.weakTo && (
-              <small> · only {SPROUTS[hud.boss.weakTo].plural} hurt it now</small>
+              <small> {t('hud.weakTo', { kind: SPROUTS[hud.boss.weakTo].plural })}</small>
             )}
           </span>
           <span className="bossbar-track">
@@ -318,7 +315,7 @@ export function Hud({
               className="chip twin-timer"
               style={{ borderColor: twin.colour, color: twin.colour }}
             >
-              Twin {twin.letter} ({twin.shape}): bring its other half home in{' '}
+              {t('hud.twin', { letter: twin.letter, shape: twin.shape })}{' '}
               <strong>{Math.ceil(twin.left)}s</strong>
             </div>
           ))}
@@ -334,7 +331,7 @@ export function Hud({
         <div
           className="daybar"
           role="img"
-          aria-label={`Day ${Math.round(elapsed * 100)} percent over`}
+          aria-label={t('hud.dayOver', { percent: Math.round(elapsed * 100) })}
         >
           <div className="daybar-fill" style={{ width: `${elapsed * 100}%` }} />
           {marks.map((mark) => (
@@ -342,7 +339,7 @@ export function Hud({
               key={mark.rank}
               className={`daybar-mark rank-${mark.rank.toLowerCase()}`}
               style={{ left: `${(mark.at / level.dayLength) * 100}%` }}
-              title={`${mark.rank} pace: everything done by here`}
+              title={t('hud.paceMark', { rank: mark.rank })}
             >
               {mark.rank[0]}
             </span>
@@ -357,37 +354,39 @@ export function Hud({
             <p className="chip story-kit" role="status">
               {hud.warden !== null && (
                 <span>
-                  Warden {hud.warden + 1} of 2 <ActionPrompt action="switchWarden" />
+                  {t('hud.warden', { n: hud.warden + 1 })} <ActionPrompt action="switchWarden" />
                 </span>
               )}
               {hud.items.emberbrew > 0 && (
                 <span>
                   {' '}
-                  Emberbrew ×{hud.items.emberbrew} <ActionPrompt action="emberbrew" />
+                  {t('hud.emberbrew', { count: hud.items.emberbrew })}{' '}
+                  <ActionPrompt action="emberbrew" />
                 </span>
               )}
               {hud.items.stillwater > 0 && (
                 <span>
                   {' '}
-                  Stillwater ×{hud.items.stillwater} <ActionPrompt action="stillwater" />
+                  {t('hud.stillwater', { count: hud.items.stillwater })}{' '}
+                  <ActionPrompt action="stillwater" />
                 </span>
               )}
-              {hud.brew > 0 && <span> · brewed up {Math.ceil(hud.brew)}s</span>}
+              {hud.brew > 0 && <span> {t('hud.brewed', { seconds: Math.ceil(hud.brew) })}</span>}
             </p>
           )}
           {nearTelescope && (
             <button type="button" className="chip knock" onClick={() => input?.queueInteract()}>
-              Look through the telescope {!touch && <ActionPrompt action="interact" />}
+              {t('hud.telescope')} {!touch && <ActionPrompt action="interact" />}
             </button>
           )}
           {nearSprout && !nearSecret && !nearTelescope && (
             <button type="button" className="chip knock" onClick={() => input?.queueInteract()}>
-              Pluck (hold to sweep) {!touch && <ActionPrompt action="interact" />}
+              {t('hud.pluck')} {!touch && <ActionPrompt action="interact" />}
             </button>
           )}
           {nearSecret && (
             <button type="button" className="chip knock" onClick={openPoker}>
-              Knock on the little door {!touch && <ActionPrompt action="interact" />}
+              {t('hud.knock')} {!touch && <ActionPrompt action="interact" />}
             </button>
           )}
           {below && (
@@ -396,7 +395,7 @@ export function Hud({
               className="chip knock descend"
               onClick={() => input?.queueInteract()}
             >
-              Go down to {below.name} (the day above waits){' '}
+              {t('hud.goDown', { place: below.name })}{' '}
               {!touch && <ActionPrompt action="interact" />}
             </button>
           )}
@@ -406,18 +405,18 @@ export function Hud({
               className="chip knock descend"
               onClick={() => input?.queueInteract()}
             >
-              Go back up {!touch && <ActionPrompt action="interact" />}
+              {t('hud.goUp')} {!touch && <ActionPrompt action="interact" />}
             </button>
           )}
           {guide ? (
             <div className="guide-panel" role="status">
               {guide.of > 0 && (
                 <small className="guide-step">
-                  Guided morning · step {guide.step} of {guide.of}
+                  {t('hud.guideStep', { step: guide.step, of: guide.of })}
                 </small>
               )}
               <p>
-                <strong>Ashwick</strong> {guide.text}
+                <strong>{t('hud.ashwick')}</strong> {guide.text}
               </p>
               {guide.skippable && (
                 <button
@@ -425,13 +424,13 @@ export function Hud({
                   className="chip knock guide-skip"
                   onClick={() => skipTutorial(true)}
                 >
-                  Skip the guide
+                  {t('hud.skipGuide')}
                 </button>
               )}
             </div>
           ) : hint ? (
             <p className="coach" role="status">
-              <strong>Ashwick</strong> {hint}
+              <strong>{t('hud.ashwick')}</strong> {hint}
             </p>
           ) : (
             sprocket && (
@@ -442,7 +441,7 @@ export function Hud({
               >
                 <SprocketPortrait mood={sprocket.mood} />
                 <p>
-                  <strong>Headmaster Sprocket</strong>
+                  <strong>{t('hud.sprocket')}</strong>
                   {sprocket.text}
                 </p>
               </div>
@@ -471,7 +470,7 @@ export function ScenePanel() {
   if (!scene) return null;
   const line = scene.scene.lines[scene.line];
   return (
-    <div className="scene-line" role="dialog" aria-label="Story scene">
+    <div className="scene-line" role="dialog" aria-label={t('hud.scene')}>
       <button type="button" className="scene-say" onClick={nextSceneLine}>
         {speakerPortrait(line.who)}
         <span>
@@ -480,7 +479,7 @@ export function ScenePanel() {
         </span>
       </button>
       <button type="button" className="secondary small scene-skip" onClick={endScene}>
-        Skip
+        {t('hud.skip')}
       </button>
     </div>
   );

@@ -8,6 +8,14 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.41.0',
+    date: '2026-11-25',
+    changes: [
+      'Settings: keep your save synced to a file of your own as you play (in browsers that allow it). Put it in a cloud-drive folder to carry your progress between computers.',
+      'The in-day HUD is now fully translatable.',
+    ],
+  },
+  {
     version: '0.40.0',
     date: '2026-11-25',
     changes: [

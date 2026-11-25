@@ -20,6 +20,7 @@ import { PhotoPanel } from './ui/PhotoPanel';
 import { tipFor } from './ui/manual';
 import { StoryMap } from './ui/StoryMap';
 import { useBoardPoster } from './ui/useBoardPoster';
+import { useSaveSync } from './ui/SyncPanel';
 import { PauseMenu } from './ui/PauseMenu';
 import { ResultsScreen } from './ui/ResultsScreen';
 import { StoryScreen } from './ui/StoryScreen';
@@ -122,6 +123,8 @@ export function App() {
   usePadNavigation();
   // New personal bests go to the Academy board by themselves.
   useBoardPoster();
+  // Every change of the save goes to the synced file, if one is chosen.
+  useSaveSync();
 
   // The soundtrack follows where the player is: the back room, a lesson's setting, or the menus.
   // During a day the game loop moves between the setting's tune and the boss tune by itself.

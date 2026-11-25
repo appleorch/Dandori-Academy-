@@ -705,6 +705,10 @@ The Leaderboard tab needs no server of its own, and posting is automatic
 
 ## Settings, save files and achievements
 
+- **Sync to a file** (Settings, Chromium browsers): choose a file once and every change to the
+  save is written to it a moment later, through the File System Access API
+  (`save/fileSync.ts`). After a reload the browser asks once before writing again.
+
 - **Settings** (main menu, or the pause menu during a day): graphics level, carrier counts,
   enemy health bars, pause when the window loses focus, advice from Ashwick, briefings, sound
   and music volume, and zoom speed. They apply immediately and
