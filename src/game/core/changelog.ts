@@ -8,6 +8,14 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.23.1',
+    date: '2026-11-25',
+    changes: [
+      'A lost Sproutling’s last moment now shows how it went: burned to ash, sinking under the water, jolted rigid by a spark, or flattened.',
+      'Butterflies flutter over outdoor fields, and idle Sproutlings hop off after any that come close.',
+    ],
+  },
+  {
     version: '0.23.0',
     date: '2026-11-25',
     changes: [

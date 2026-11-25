@@ -184,7 +184,7 @@ function sufferPeril(
       0,
       worker.kind,
     );
-    killWorker(sim, entity, worker);
+    killWorker(sim, entity, worker, worker.peril === 'fire' ? 'fire' : 'water');
     return;
   }
   if (worker.peril === 'fire') {

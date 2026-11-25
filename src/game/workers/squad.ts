@@ -115,9 +115,22 @@ export function latchOn(
   sim.emit('latch', transform.x, transform.z, 0, worker.kind);
 }
 
-export function killWorker(sim: Simulation, entity: Entity, worker: Worker): void {
+/** How a Sproutling was lost, for how its last moment is drawn. */
+export type DeathCause = 'fire' | 'water' | 'shock' | 'crushed' | 'eaten';
+
+/** How many recent losses are kept for the renderer. */
+const FALLEN_KEPT = 64;
+
+export function killWorker(
+  sim: Simulation,
+  entity: Entity,
+  worker: Worker,
+  cause: DeathCause = 'crushed',
+): void {
   detachWorker(sim, entity, worker);
   const at = sim.transforms.require(entity);
+  sim.fallen.push({ x: at.x, z: at.z, kind: worker.kind, cause, tick: sim.tick });
+  if (sim.fallen.length > FALLEN_KEPT) sim.fallen.shift();
   sim.emit('workerLost', at.x, at.z, 0, worker.kind);
   sim.ecs.destroy(entity);
   sim.stats.workersLost++;

@@ -17,6 +17,7 @@ import type { Worker, WorkerState } from '../simulation/components';
 import { SPROUT_KINDS, stageOf, type SproutKind } from '../workers/sprouts';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
+import { butterflySpots } from './Butterflies';
 import { inDanger } from './danger';
 import { PALETTE_SETS } from './palette';
 import { crownGeometries } from './sproutCrowns';
@@ -355,6 +356,16 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
           // Now and then, a little hop for no reason at all, or a sit down for a rest.
           if (roll < 0.3) anim.hop = 0.35;
           else if (roll < 0.42) anim.sit = 2 + Math.random() * 3;
+          // A butterfly close by: off after it, hopping.
+          const butterfly = butterflySpots.find(
+            (fly) => Math.hypot(fly.x - at.x, fly.z - at.z) < 3,
+          );
+          if (butterfly) {
+            anim.glance = angleDelta(at.facing, Math.atan2(butterfly.x - at.x, butterfly.z - at.z));
+            anim.hop = 0.35;
+            anim.sit = 0;
+            anim.glanceTimer = 0.5;
+          }
           // A wave (a hop, facing the Warden) when the Warden is close.
           const warden = sim.captainTransform;
           if (roll > 0.8 && Math.hypot(warden.x - at.x, warden.z - at.z) < 5) {

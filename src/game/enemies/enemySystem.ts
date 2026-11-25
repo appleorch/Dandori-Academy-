@@ -129,7 +129,7 @@ function bite(sim: Simulation, enemy: Enemy, at: Transform): void {
       continue;
     const prey = sim.transforms.require(entity);
     if (Math.hypot(prey.x - mouthX, prey.z - mouthZ) <= ENEMY.biteRange) {
-      killWorker(sim, entity, worker);
+      killWorker(sim, entity, worker, 'eaten');
       eaten++;
     }
   }

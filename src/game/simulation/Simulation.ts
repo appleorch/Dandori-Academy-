@@ -17,7 +17,7 @@ import { NavGrid, type Box, type Point } from '../navigation/NavGrid';
 import { FlowField } from '../pathfinding/flowField';
 import { updateSelection, updateThrowing } from '../throwing/throwSystem';
 import { updateWhistle } from '../whistle/whistleSystem';
-import { dismissSquad, rushSquad } from '../workers/squad';
+import { dismissSquad, rushSquad, type DeathCause } from '../workers/squad';
 import { updateWorkers } from '../workers/workerSystem';
 import { shardCount, type LevelDefinition } from '../world/level';
 import { Beacon, updateBeacons } from '../carry/beacon';
@@ -224,6 +224,9 @@ export class Simulation {
   readonly story: boolean;
   /** Dewdrops lying on the field, waiting to be drunk. */
   readonly dewdrops: Point[];
+  /** Recent losses, newest last, for drawing each one's last moment (never read by the rules). */
+  readonly fallen: { x: number; z: number; kind: SproutKind; cause: DeathCause; tick: number }[] =
+    [];
 
   constructor(
     readonly level: LevelDefinition,

@@ -1,7 +1,7 @@
 import { damageCaptain } from '../captain/captainSystem';
 import type { Hazard } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
-import { killWorker, setIdle } from '../workers/squad';
+import { killWorker, setIdle, type DeathCause } from '../workers/squad';
 import { HARD } from '../core/difficulty';
 import { HAZARDS, type HazardKind } from './enemyKinds';
 import { PERIL_SECONDS } from '../core/config';
@@ -16,6 +16,17 @@ const LANDING_EVENT: Record<HazardKind, SimEventType> = {
   stomp: 'slam',
   flame: 'flare',
   arc: 'zap',
+};
+
+/** How a hazard that lands on a Sproutling finishes it. */
+const DEATH_BY: Record<HazardKind, DeathCause> = {
+  glob: 'crushed',
+  pebble: 'crushed',
+  drip: 'water',
+  slam: 'crushed',
+  stomp: 'crushed',
+  flame: 'fire',
+  arc: 'shock',
 };
 
 /** Resolves a hazard where it lands: kills up to its limit, stuns the rest, hurts the captain. */
@@ -40,7 +51,7 @@ function land(sim: Simulation, hazard: Hazard): void {
       continue;
     }
     if (killed < kills) {
-      killWorker(sim, entity, worker);
+      killWorker(sim, entity, worker, DEATH_BY[hazard.kind]);
       killed++;
     } else if (spec.stun > 0) {
       setIdle(sim, entity, worker);

@@ -267,6 +267,9 @@ camp**, which shows a map of the Quad, the Kiln's stock by kind and the Clock's 
   load with everyone a leaf. Plucking and growing are the story's alone (`SimOptions.story`,
   `src/game/workers/growth.ts`): everywhere paces are measured, every Sproutling is a leaf and
   hatches on its feet, so no target or leaderboard moved.
+- **Losses** show how they happened (`src/game/rendering/Fallen.tsx`, from `Simulation.fallen`):
+  burned to ash, sinking, jolted by a spark, or flattened; each releases a spirit in its kind's
+  colour. Butterflies on outdoor fields are chased by idle Sproutlings (`Butterflies.tsx`).
 - The parts are named relics of their own (`CLOCK_PARTS` in `src/game/story/relics.ts`).
 
 **Time Attack.** The Academy's thirty numbered lessons in order (this was the story until
