@@ -44,6 +44,9 @@ const JournalScreen = lazy(() =>
 const LeaderboardScreen = lazy(() =>
   import('./ui/LeaderboardScreen').then((m) => ({ default: m.LeaderboardScreen })),
 );
+const ReplayView = lazy(() =>
+  import('./game/rendering/ReplayView').then((m) => ({ default: m.ReplayView })),
+);
 const SettingsScreen = lazy(() =>
   import('./ui/SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
 );
@@ -73,6 +76,7 @@ export function App() {
   const briefing = useGameStore((state) => state.briefing);
   const pokerOpen = useGameStore((state) => state.pokerOpen);
   const titleDone = useGameStore((state) => state.titleDone);
+  const replay = useGameStore((state) => state.replay);
   const runId = useGameStore((state) => state.runId);
   const levelId = useGameStore((state) => state.levelId);
   const playDifficulty = useGameStore((state) => state.playDifficulty);
@@ -198,6 +202,11 @@ export function App() {
         {phase === 'guide' && <FieldGuide />}
       </Suspense>
       {phase === 'credits' && <CreditsScreen />}
+      {phase === 'replay' && replay && (
+        <Suspense fallback={<ScreenLoading />}>
+          <ReplayView log={replay.log} title={replay.title} />
+        </Suspense>
+      )}
       {phase === 'story' && <StoryScreen />}
       {inGame && (
         <div className="game">

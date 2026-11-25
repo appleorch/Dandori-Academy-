@@ -410,6 +410,11 @@ export interface BoardPost {
   /** The Warden name shown beside the run. */
   name: string;
   run: RunEntry;
+  /**
+   * The SHA-256 (hex) of the run's replay log, which travels beside the post on the relay: the
+   * board replays it to check the run. Missing on posts from before replays (0.38.0).
+   */
+  log?: string;
 }
 
 /** A post as a signed code, the form it travels and is stored in. */
@@ -426,6 +431,8 @@ export async function decodePost(code: string): Promise<BoardPost | null> {
     return null;
   }
   if (typeof post.name !== 'string' || post.name.length === 0 || post.name.length > 20) return null;
+  if (post.log !== undefined && (typeof post.log !== 'string' || !/^[0-9a-f]{64}$/.test(post.log)))
+    return null;
   return isRun(post.run) ? (post as BoardPost) : null;
 }
 

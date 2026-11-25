@@ -5,11 +5,19 @@ import { cleanWardenName, defaultWardenName, WARDEN_NAME_MAX } from '../game/cor
 import {
   BOARD_REPO,
   fetchBoard,
+  fetchLog,
+  type Board,
   standings,
   type BoardEntry,
   type BoardMode,
 } from '../game/leaderboard/board';
-import { CHALLENGE_IDS, challengeOpen, isChallenge, MODES } from '../game/modes/modes';
+import {
+  CHALLENGE_IDS,
+  challengeOpen,
+  isChallenge,
+  MODES,
+  type ChallengeId,
+} from '../game/modes/modes';
 import { challengeFieldsOf } from './lessonAccess';
 import { fieldTitle } from './format';
 import type { RunEntry } from '../game/leaderboard/runCode';
@@ -17,6 +25,107 @@ import { runStatus } from './runStatus';
 import { runsKey } from '../game/save/saveManager';
 import { LEVELS, levelById } from '../game/world/level';
 import { MenuNav } from './MenuNav';
+import type { DayLog } from '../game/replay/replay';
+import { bestKey, getReplay } from '../game/replay/replayStore';
+
+/** Watches your own best run on a field again, if its replay is kept in this browser. */
+function WatchBest({
+  level,
+  difficulty,
+  mode,
+  title,
+}: {
+  level: string;
+  difficulty: Difficulty;
+  mode: ChallengeId;
+  title: string;
+}) {
+  const watchReplay = useGameStore((state) => state.watchReplay);
+  const [log, setLog] = useState<DayLog | null>(null);
+  useEffect(() => {
+    let live = true;
+    void getReplay(bestKey(level, difficulty, mode)).then((found) => live && setLog(found));
+    return () => {
+      live = false;
+    };
+  }, [level, difficulty, mode]);
+  if (!log) return null;
+  return (
+    <button
+      type="button"
+      className="secondary small"
+      onClick={() => watchReplay(log, `Your best on ${title}`)}
+    >
+      Watch your best run
+    </button>
+  );
+}
+
+/** Watch a board run's replay, or race its ghost on the same field. */
+function RunReplayButtons({
+  entry,
+  replays,
+}: {
+  entry: BoardEntry;
+  replays: Pick<Board, 'logs' | 'kept'>;
+}) {
+  const watchReplay = useGameStore((state) => state.watchReplay);
+  const raceGhost = useGameStore((state) => state.raceGhost);
+  const [busy, setBusy] = useState<string | null>(null);
+  const field = levelById(entry.level);
+  const title = `${entry.name} on ${field ? fieldTitle(field) : entry.level}`;
+  const withLog = async (act: (log: DayLog) => Promise<void> | void) => {
+    if (!entry.logHash) return;
+    setBusy('Fetching…');
+    const log = await fetchLog(entry.logHash, replays);
+    if (!log) {
+      setBusy('Replay not found');
+      return;
+    }
+    await act(log);
+    setBusy(null);
+  };
+  return (
+    <span className="replay-buttons">
+      <button
+        type="button"
+        className="secondary small"
+        disabled={busy === 'Fetching…'}
+        onClick={() => void withLog((log) => watchReplay(log, title))}
+      >
+        Watch
+      </button>
+      {entry.mode && (
+        <button
+          type="button"
+          className="secondary small"
+          disabled={busy === 'Fetching…'}
+          onClick={() =>
+            void withLog(async (log) => {
+              setBusy('Preparing the ghost…');
+              // The ghost is the Warden's path through the run, replayed here (headless).
+              const { replayToEnd } = await import('../game/replay/replay');
+              const run = await replayToEnd(log);
+              if (!run) {
+                setBusy('This replay is from another version');
+                return;
+              }
+              const track = [...run.expedition.surface.track];
+              run.dispose();
+              raceGhost(
+                { level: entry.level, difficulty: entry.difficulty, track, name: entry.name },
+                entry.mode ?? 'hunt',
+              );
+            })
+          }
+        >
+          Race
+        </button>
+      )}
+      {busy && <small className="note">{busy}</small>}
+    </span>
+  );
+}
 
 /** The board is read at most this often while the screen is open. */
 const REFRESH_MS = 2 * 60 * 1000;
@@ -24,11 +133,22 @@ const REFRESH_MS = 2 * 60 * 1000;
 type Load =
   | { state: 'idle' }
   | { state: 'loading' }
-  | { state: 'ready'; entries: BoardEntry[]; at: number; partial: boolean }
+  | {
+      state: 'ready';
+      entries: BoardEntry[];
+      at: number;
+      partial: boolean;
+      replays: Pick<Board, 'logs' | 'kept'>;
+    }
   | { state: 'error'; message: string };
 
 /** Kept between visits to the screen, so flicking between tabs does not read it again. */
-let cached: { entries: BoardEntry[]; at: number; partial: boolean } | null = null;
+let cached: {
+  entries: BoardEntry[];
+  at: number;
+  partial: boolean;
+  replays: Pick<Board, 'logs' | 'kept'>;
+} | null = null;
 
 function timeText(run: RunEntry): string {
   if (run.mode === 'growing') return `${run.alive} at sunset`;
@@ -96,7 +216,12 @@ export function LeaderboardScreen() {
     setLoad({ state: 'loading' });
     fetchBoard()
       .then((board) => {
-        cached = { entries: board.entries, at: Date.now(), partial: !board.file || !board.relay };
+        cached = {
+          entries: board.entries,
+          at: Date.now(),
+          partial: !board.file || !board.relay,
+          replays: { logs: board.logs, kept: board.kept },
+        };
         setLoad({ state: 'ready', ...cached });
       })
       .catch((error: unknown) => {
@@ -275,6 +400,9 @@ export function LeaderboardScreen() {
                     <th scope="col">Rank</th>
                     <th scope="col">Time</th>
                     <th scope="col">Lost</th>
+                    <th scope="col">
+                      <span className="sr-only">Replay</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -294,6 +422,21 @@ export function LeaderboardScreen() {
                       <td className={`rank-${entry.rank.toLowerCase()}`}>{entry.rank}</td>
                       <td>{timeText(entry)}</td>
                       <td>{entry.lost}</td>
+                      <td className="board-replay">
+                        {entry.verified && (
+                          <span
+                            className="verified"
+                            title="Verified: the board replayed this run and got the same result"
+                          >
+                            ✓
+                          </span>
+                        )}
+                        {entry.logHash &&
+                          (load.replays.logs.has(entry.logHash) ||
+                            load.replays.kept.has(entry.logHash)) && (
+                            <RunReplayButtons entry={entry} replays={load.replays} />
+                          )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -321,6 +464,14 @@ export function LeaderboardScreen() {
 
         <section className="board">
           <h2>Your best runs</h2>
+          {mode !== 'classic' && (
+            <WatchBest
+              level={level.id}
+              difficulty={difficulty}
+              mode={mode}
+              title={fieldTitle(level)}
+            />
+          )}
           {mine.length === 0 ? (
             <p className="note">
               {mode === 'classic'

@@ -52,6 +52,7 @@ import type { SproutKind } from '../workers/sprouts';
 import { CHAIN, TWIN } from './config';
 import { twinStyle } from '../world/twins';
 import { penaltyPerLoss, type Difficulty } from './difficulty';
+import type { DayLog } from '../replay/replay';
 import type { Scene } from '../story/scenes';
 import { encodeTrack } from '../modes/timeAttack';
 import { splitKey } from '../save/saveManager';
@@ -101,7 +102,7 @@ export function screenFor(mode: ModeId): MenuScreen {
   if (mode === 'lessons') return 'map';
   return isBattle(mode) ? 'battles' : 'challenges';
 }
-export type GamePhase = MenuScreen | 'story' | 'playing' | 'results';
+export type GamePhase = MenuScreen | 'story' | 'playing' | 'results' | 'replay';
 
 /** Low-frequency copy of simulation state for the HUD. */
 export interface HudSnapshot {
@@ -251,6 +252,13 @@ interface GameStore {
   nearAscent: boolean;
   /** True while the back room is open, over whatever screen was showing. */
   pokerOpen: boolean;
+  /** The replay being watched, and the screen to go back to after. */
+  replay: { log: DayLog; title: string; back: GamePhase } | null;
+  watchReplay: (log: DayLog, title: string) => void;
+  leaveReplay: () => void;
+  /** A ghost from the board to race on the next day of its field, with whose it is. */
+  ghostRace: { level: string; difficulty: Difficulty; track: number[]; name: string } | null;
+  raceGhost: (race: NonNullable<GameStore['ghostRace']>, mode: ModeId) => void;
   /** Whether the title screen has been passed this session (it shows once per launch). */
   titleDone: boolean;
   leaveTitle: () => void;
@@ -484,6 +492,29 @@ export const useGameStore = create<GameStore>((set, get) => {
     nearAscent: false,
     pokerOpen: false,
     titleDone: false,
+    replay: null,
+    watchReplay: (log, title) =>
+      set((state) => ({
+        replay: {
+          log,
+          title,
+          back: state.phase === 'replay' ? (state.replay?.back ?? 'menu') : state.phase,
+        },
+        phase: 'replay',
+        paused: false,
+      })),
+    leaveReplay: () =>
+      set((state) => {
+        const back = state.replay?.back ?? 'menu';
+        // From the results, back to the results screen's own place: its mode's menu.
+        const phase = back === 'results' || back === 'playing' ? screenFor(state.playMode) : back;
+        return { replay: null, phase, result: null, hud: null };
+      }),
+    ghostRace: null,
+    raceGhost: (race, mode) => {
+      set({ ghostRace: race });
+      get().startDay(race.level, mode);
+    },
     leaveTitle: () => set({ titleDone: true }),
     hud: null,
     race: null,
@@ -528,7 +559,15 @@ export const useGameStore = create<GameStore>((set, get) => {
       })),
 
     showScreen: (screen) =>
-      set({ phase: screen, paused: false, briefing: false, hint: null, hud: null, result: null }),
+      set({
+        phase: screen,
+        paused: false,
+        briefing: false,
+        hint: null,
+        hud: null,
+        result: null,
+        ghostRace: null,
+      }),
 
     endDay: () => set({ endRequested: true, paused: false }),
 

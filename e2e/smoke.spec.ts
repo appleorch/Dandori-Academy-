@@ -76,6 +76,24 @@ test('a challenge can be played and ended for a result', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('a challenge day can be watched again as a replay', async ({ page }) => {
+  const errors = await freshPlayer(page);
+  await page.locator('.mode-card', { hasText: 'Challenges' }).click();
+  await page.getByRole('button', { name: 'Treasure Hunt' }).click();
+  await page.getByRole('button', { name: /Scattered Light/ }).click();
+  await inDay(page);
+  await page.waitForTimeout(3000);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: /End the day now/ }).click();
+  await page.getByRole('button', { name: 'Watch the replay' }).click();
+  await expect(page.getByRole('toolbar', { name: 'Replay controls' })).toBeVisible();
+  await page.getByRole('button', { name: '8×' }).click();
+  await expect(page.locator('.replay-time')).not.toContainText('0:00 /', { timeout: 20_000 });
+  await page.getByRole('button', { name: 'Leave' }).click();
+  await expect(page.getByRole('button', { name: 'Treasure Hunt' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('a Time Attack lesson starts from the lesson map', async ({ page }) => {
   const errors = await freshPlayer(page);
   await page.locator('.mode-card', { hasText: 'Time Attack' }).click();

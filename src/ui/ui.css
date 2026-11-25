@@ -3844,3 +3844,83 @@ button.chip.guide-skip {
 .camp-advice button {
   width: auto;
 }
+
+/* The replay viewer's bar along the bottom. */
+.game.replay {
+  cursor: grab;
+}
+.replay-bar {
+  position: absolute;
+  left: 50%;
+  bottom: max(var(--space-3), env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(980px, calc(100% - 2 * var(--space-4)));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.replay-bar button.chip {
+  width: auto;
+  margin: 0;
+  color: var(--ink);
+  background: rgba(255, 246, 220, 0.08);
+  border: 1px solid rgba(255, 246, 220, 0.25);
+  cursor: pointer;
+}
+.replay-bar button.chip.active {
+  background: var(--accent);
+  color: #2a1a08;
+}
+.replay-title {
+  flex-basis: 100%;
+  margin: 0;
+  font-weight: 700;
+}
+.replay-title .eyebrow {
+  display: inline;
+  margin-right: var(--space-2);
+}
+.replay-scrub {
+  flex: 1 1 260px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.replay-scrub input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+.replay-time {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.replay-speeds {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* The board: verified runs, and their replays. */
+.board-replay {
+  white-space: nowrap;
+}
+.board-replay .verified {
+  color: #7fdc8a;
+  font-weight: 800;
+  margin-right: var(--space-1);
+}
+.replay-buttons {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+.replay-buttons button {
+  width: auto;
+  margin: 0;
+  padding: 4px 8px;
+}

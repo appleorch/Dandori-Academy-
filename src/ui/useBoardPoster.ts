@@ -3,6 +3,7 @@ import { useGameStore } from '../game/core/gameStore';
 import { cleanWardenName, defaultWardenName } from '../game/core/settings';
 import { sendPost } from '../game/leaderboard/board';
 import { runKey } from '../game/save/saveManager';
+import { bestKey, getReplay, logHash } from '../game/replay/replayStore';
 
 /**
  * How long to wait before trying the outbox again after the relay could not be reached: a minute,
@@ -10,6 +11,8 @@ import { runKey } from '../game/save/saveManager';
  */
 const RETRY_MS = 60 * 1000;
 const RETRY_MAX_MS = 30 * 60 * 1000;
+/** How long to give a finished day's replay to be stored before its run is sent. */
+const REPLAY_SETTLE_MS = 1500;
 
 /** Runs being sent right now, so a rerun of the effect never sends one twice at once. */
 const sending = new Set<string>();
@@ -33,12 +36,23 @@ export function useBoardPoster(): void {
     let timer = 0;
     const name = cleanWardenName(wardenName) ?? defaultWardenName(playerId);
     void (async () => {
+      // A day's replay is kept a moment after its run reaches the outbox.
+      await new Promise((resolve) => window.setTimeout(resolve, REPLAY_SETTLE_MS));
+      if (!live) return;
       let failed = false;
       for (const run of outbox) {
         const key = runKey(run);
         if (sending.has(key)) continue;
         sending.add(key);
-        const sent = await sendPost({ v: 1, player: playerId, name, run });
+        // The run's replay goes with it, for the board to check; the post signs its hash.
+        const log = run.mode ? await getReplay(bestKey(run.level, run.difficulty, run.mode)) : null;
+        const matches =
+          log !== null && log.level === run.level && Math.abs(log.seconds - run.time) < 1;
+        const sent = await sendPost(
+          { v: 1, player: playerId, name, run, ...(matches ? { log: logHash(log) } : {}) },
+          undefined,
+          matches ? log : undefined,
+        );
         sending.delete(key);
         if (sent) runPosted(run);
         else failed = true;

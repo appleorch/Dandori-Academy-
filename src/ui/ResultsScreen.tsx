@@ -22,6 +22,8 @@ import type { MessageKey } from '../i18n/en';
 import { timeMedal } from '../game/modes/timeAttack';
 import { ActionPrompt } from './Glyph';
 import { DayGraphs } from './DayGraphs';
+import { replayable } from '../game/replay/replay';
+import { getReplay, LAST_KEY } from '../game/replay/replayStore';
 import { awardFor, MedalCeremony, ShareCardButton } from './ResultCeremony';
 
 const HEADLINES: Record<DayEnd, string> = {
@@ -146,6 +148,23 @@ function resultSummary(result: DayResult): string {
   return result.tally.cleared
     ? `Cleared${result.clearTime !== null ? ` in ${formatTime(result.clearTime)}` : ''}.`
     : 'Not cleared yet.';
+}
+
+/** Watches the day just played again, from the replay kept of it. */
+function WatchReplayButton({ title }: { title: string }) {
+  const watchReplay = useGameStore((state) => state.watchReplay);
+  const [missing, setMissing] = useState(false);
+  return (
+    <button
+      type="button"
+      className="secondary small share-card"
+      onClick={() =>
+        void getReplay(LAST_KEY).then((log) => (log ? watchReplay(log, title) : setMissing(true)))
+      }
+    >
+      {missing ? 'No replay kept' : 'Watch the replay'}
+    </button>
+  );
 }
 
 /** The Headmaster has his say. */
@@ -583,6 +602,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
         <section className="results-side">
           <DayGraphs timeline={result.timeline} />
           <ShareCardButton result={result} level={level} fieldName={level.name} />
+          {replayable(mode) && <WatchReplayButton title={`${level.name}, just now`} />}
           {story && result.tally.cleared && LESSON_STORY[level.id] && (
             <blockquote className="journal-note">
               <small>{result.firstClear ? 'New journal entry' : 'From the journal'}</small>

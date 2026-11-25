@@ -8,6 +8,15 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.38.0',
+    date: '2026-11-25',
+    changes: [
+      'Replays: every Time Attack and challenge day is recorded. Watch it again from the results, or your best run on any field from the Leaderboard tab, from a quarter speed to eight times, scrubbing along the day, following the Warden or roaming free.',
+      'Verified leaderboards: posted runs bring their replay, and the board replays each one to check it gives exactly the result claimed. Verified runs show a ✓.',
+      'Ghost races: Watch or Race the top runs on the board. Racing sets their Warden’s path as a ghost on your next day on that field.',
+    ],
+  },
+  {
     version: '0.37.0',
     date: '2026-11-25',
     changes: [

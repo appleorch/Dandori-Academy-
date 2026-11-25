@@ -619,6 +619,33 @@ The Leaderboard tab needs no server of its own, and posting is automatic
   against that version's own fingerprint and rank rules, and stay. The signing key ships with the game, so this stops casual editing, not a determined
   cheat. Names are not verified. To strike a player off, add their player id (16 hex digits,
   the first four are shown as `#abcd` beside their name) to `leaderboard/banned.json`.
+- **Replays and verification** (`src/game/replay/`). The simulation is deterministic, so a day is
+  decided by its field, its mode and its inputs. Every Time Attack and challenge day is recorded:
+  each step's input, on a fixed grid the game itself plays on (cursor to a twentieth of a unit,
+  stick to a hundredth), packed as runs of identical steps with the cursor as small changes and
+  then deflated (`inputLog.ts`), plus the few things outside the input (going down a stair and
+  back up, ending the day early). The last day and the best day on each field are kept in this
+  browser's IndexedDB. A posted run signs the SHA-256 of its log, and the log rides beside it on
+  the relay (ntfy.sh keeps a long message as a file, which the board fetches). The Action first
+  runs the arithmetic checks above, then replays every run that brought its log, in Node, with the
+  same build, and drops any whose replay does not give exactly the result claimed; runs that
+  pass are listed as verified in `board.json` and show a ✓. The best three replays of each board
+  are kept in `leaderboard/logs/<hash>.json`, for watching and racing. Runs without a log (from
+  before 0.38.0) keep their arithmetic checks only, unmarked.
+- **Version safety.** A log carries `SIM_VERSION` (`replay.ts`) and the run its field's
+  fingerprint. Bump `SIM_VERSION` with any change that could make an old log play differently
+  (rules, physics, a field). Logs only replay, and runs only verify, on the version they were
+  recorded on: older runs stay on the board as they were verified (verified once, kept so), and
+  their replays stop being offered. To keep an old version's replays watchable, the Action
+  could check out that version's tagged build to replay them; we retire them instead, and a
+  field whose layout changes gets a fresh board through its fingerprint, as before.
+- **Watching and racing.** The results screen has _Watch the replay_; the Leaderboard tab has
+  _Watch your best run_, and _Watch_ and _Race_ on board runs whose replay is kept. The viewer
+  plays from a quarter speed to eight times, with a timeline to scrub, and a camera that follows
+  the Warden or roams free (WASD or drag, the wheel zooms). Seeking back replays from the start,
+  headless, up to the chosen moment (a few seconds at most), rather than keeping snapshots. _Race_
+  replays the run here to get its Warden's path and sets it as the ghost on your next day on that
+  field, in Time Attack or a challenge.
 - Scheduled workflows only run on the default branch, so collecting starts once this is merged
   to `main`; until then (and if the Action is ever paused) runs still show from the relay for 12
   hours. GitHub pauses scheduled workflows in a repository with no activity for 60 days; re-enable

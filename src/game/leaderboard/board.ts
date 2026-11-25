@@ -1,3 +1,4 @@
+import type { DayLog } from '../replay/replay';
 import { cleanWardenName } from '../core/settings';
 import type { Difficulty } from '../core/difficulty';
 import type { ChallengeId } from '../modes/modes';
@@ -40,6 +41,16 @@ export interface BoardEntry extends RunEntry {
   name: string;
   /** The signed post the entry came from. */
   code: string;
+  /** The SHA-256 of the run's replay log, if it was posted with one. */
+  logHash?: string;
+  /** Whether the board's server replayed the run and got the same result. */
+  verified?: boolean;
+}
+
+/** A post as it comes off the relay: the signed code, and the replay log carried beside it. */
+export interface RelayPost {
+  code: string;
+  log?: DayLog;
 }
 
 /** The file the GitHub Action keeps. */
@@ -48,7 +59,17 @@ export interface BoardFile {
   updated: string;
   /** Signed posts, one per player per lesson and difficulty. */
   posts: string[];
+  /** Of the posts, those whose replay the server ran and found to give the result claimed. */
+  verified?: string[];
+  /** Hashes of the replay logs kept beside the board (`leaderboard/logs/<hash>.json`). */
+  logs?: string[];
 }
+
+/** Where kept replay logs are, by hash. */
+export const BOARD_LOGS_DIR = 'leaderboard/logs';
+export const BOARD_LOGS_URL = `https://raw.githubusercontent.com/${BOARD_REPO}/main/${BOARD_LOGS_DIR}`;
+/** Replays kept per board (mode, field and difficulty): the top few, for ghosts and watching. */
+export const LOGS_KEPT = 3;
 
 /** What the board needs from `fetch`. */
 export type Fetcher = (
@@ -63,7 +84,7 @@ export async function entryOf(code: string): Promise<BoardEntry | null> {
   const post = await decodePost(code);
   if (!post || cleanWardenName(post.name) !== post.name) return null;
   if (checkRun(post.run) !== null) return null;
-  return { ...post.run, player: post.player, name: post.name, code };
+  return { ...post.run, player: post.player, name: post.name, code, logHash: post.log };
 }
 
 /** Which board a run belongs on: its challenge, or 'classic' for runs from the scored story. */
@@ -105,37 +126,79 @@ export function keepBest(entries: readonly BoardEntry[]): BoardEntry[] {
   return [...lessons.values()].flatMap((list) => list.sort(compareRuns).slice(0, KEPT_PER_LESSON));
 }
 
-/** Signed posts from the relay's answer: one JSON event per line, runs in the messages. */
-export function parseRelay(text: string): string[] {
-  const codes: string[] = [];
+/** What the relay's answer holds: posts in its messages, and links to posts sent as files. */
+export function parseRelayPosts(text: string): { posts: RelayPost[]; attachments: string[] } {
+  const posts: RelayPost[] = [];
+  const attachments: string[] = [];
   for (const line of text.split('\n')) {
     if (!line.trim()) continue;
     try {
-      const event = JSON.parse(line) as { event?: unknown; message?: unknown };
-      if (event.event !== 'message' || typeof event.message !== 'string') continue;
-      const body = JSON.parse(event.message) as { dandori?: unknown; code?: unknown };
-      if (body.dandori === 1 && typeof body.code === 'string') codes.push(body.code);
+      const event = JSON.parse(line) as {
+        event?: unknown;
+        message?: unknown;
+        attachment?: { url?: unknown };
+      };
+      if (event.event !== 'message') continue;
+      // A long message (a post with its replay) is kept by the relay as a file.
+      if (typeof event.attachment?.url === 'string') {
+        attachments.push(event.attachment.url);
+        continue;
+      }
+      if (typeof event.message !== 'string') continue;
+      const post = relayPostOf(event.message);
+      if (post) posts.push(post);
     } catch {
       // Anything else on the topic is not a run.
     }
   }
-  return codes;
+  return { posts, attachments };
 }
 
-/** The message that carries a post over the relay. */
-export function relayMessage(code: string): string {
-  return JSON.stringify({ dandori: 1, code });
+/** The post in one relay message, or null. */
+export function relayPostOf(message: string): RelayPost | null {
+  try {
+    const body = JSON.parse(message) as { dandori?: unknown; code?: unknown; log?: unknown };
+    if (body.dandori !== 1 || typeof body.code !== 'string') return null;
+    const log = isDayLog(body.log) ? body.log : undefined;
+    return log ? { code: body.code, log } : { code: body.code };
+  } catch {
+    return null;
+  }
+}
+
+function isDayLog(value: unknown): value is DayLog {
+  if (typeof value !== 'object' || value === null) return false;
+  const log = value as Partial<DayLog>;
+  return (
+    log.v === 1 &&
+    typeof log.sim === 'number' &&
+    typeof log.level === 'string' &&
+    typeof log.mode === 'string' &&
+    typeof log.inputs === 'string' &&
+    Array.isArray(log.events)
+  );
+}
+
+/** Signed posts from the relay's answer: one JSON event per line, runs in the messages. */
+export function parseRelay(text: string): string[] {
+  return parseRelayPosts(text).posts.map((post) => post.code);
+}
+
+/** The message that carries a post over the relay, with its replay log if there is one. */
+export function relayMessage(code: string, log?: DayLog): string {
+  return JSON.stringify(log ? { dandori: 1, code, log } : { dandori: 1, code });
 }
 
 /** Posts a run to the relay. True once the relay has taken it. */
 export async function sendPost(
   post: BoardPost,
   fetcher: Fetcher = defaultFetcher,
+  log?: DayLog,
 ): Promise<boolean> {
   try {
     const response = await fetcher(`${RELAY}/${BOARD_TOPIC}`, {
       method: 'POST',
-      body: relayMessage(await encodePost(post)),
+      body: relayMessage(await encodePost(post), log),
     });
     return response.ok;
   } catch {
@@ -145,12 +208,46 @@ export async function sendPost(
 
 /** Every post on the relay from the last 12 hours. Throws if the relay cannot be reached. */
 export async function readRelay(fetcher: Fetcher = defaultFetcher): Promise<string[]> {
+  return (await readRelayPosts(fetcher)).map((post) => post.code);
+}
+
+/** Every post on the relay from the last 12 hours, with replays, fetching those kept as files. */
+export async function readRelayPosts(fetcher: Fetcher = defaultFetcher): Promise<RelayPost[]> {
   const response = await fetcher(`${RELAY}/${BOARD_TOPIC}/json?poll=1&since=${RELAY_HOURS}h`);
   if (!response.ok) throw new Error(`The relay answered ${response.status}.`);
-  return parseRelay(await response.text());
+  const { posts, attachments } = parseRelayPosts(await response.text());
+  for (const url of attachments) {
+    // Only the relay's own files are fetched.
+    if (!url.startsWith(`${RELAY}/`)) continue;
+    try {
+      const file = await fetcher(url);
+      const post = file.ok ? relayPostOf(await file.text()) : null;
+      if (post) posts.push(post);
+    } catch {
+      // A file gone or unreachable is a post missed this time.
+    }
+  }
+  return posts;
 }
 
 /** The posts in the board file. A file that is not there yet is an empty board. */
+export function parseBoardFileFull(text: string): BoardFile {
+  try {
+    const file = JSON.parse(text) as Partial<BoardFile>;
+    const strings = (list: unknown) =>
+      Array.isArray(list) ? list.filter((item): item is string => typeof item === 'string') : [];
+    return {
+      v: 1,
+      updated: typeof file.updated === 'string' ? file.updated : '',
+      posts: strings(file.posts),
+      verified: strings(file.verified),
+      logs: strings(file.logs),
+    };
+  } catch {
+    return { v: 1, updated: '', posts: [], verified: [], logs: [] };
+  }
+}
+
 export function parseBoardFile(text: string): string[] {
   try {
     const file = JSON.parse(text) as Partial<BoardFile>;
@@ -185,23 +282,73 @@ export interface Board {
   /** Which sources answered: the board file and the relay. */
   file: boolean;
   relay: boolean;
+  /** Replay logs to hand: those riding on the relay, by hash. */
+  logs: Map<string, DayLog>;
+  /** Hashes of the replays kept beside the board file. */
+  kept: Set<string>;
+}
+
+/** The whole board file, with which runs are verified and which replays are kept. */
+export async function readBoardFileFull(fetcher: Fetcher = defaultFetcher): Promise<BoardFile> {
+  const response = await fetcher(BOARD_FILE_URL);
+  if (response.status === 404) return { v: 1, updated: '', posts: [], verified: [], logs: [] };
+  if (!response.ok) throw new Error(`GitHub answered ${response.status}.`);
+  return parseBoardFileFull(await response.text());
 }
 
 /** The whole board: the file and the relay together. Throws only if neither can be read. */
 export async function fetchBoard(fetcher: Fetcher = defaultFetcher): Promise<Board> {
-  const [file, relay] = await Promise.allSettled([readBoardFile(fetcher), readRelay(fetcher)]);
+  const [file, relay] = await Promise.allSettled([
+    readBoardFileFull(fetcher),
+    readRelayPosts(fetcher),
+  ]);
   if (file.status === 'rejected' && relay.status === 'rejected') {
     throw new Error('The board could not be reached. Check your connection and try again.');
   }
-  const codes = [
-    ...(file.status === 'fulfilled' ? file.value : []),
-    ...(relay.status === 'fulfilled' ? relay.value : []),
-  ];
+  const fileValue = file.status === 'fulfilled' ? file.value : null;
+  const posts = relay.status === 'fulfilled' ? relay.value : [];
+  const verified = new Set(fileValue?.verified ?? []);
+  const logs = new Map<string, DayLog>();
+  const codes = [...(fileValue?.posts ?? []), ...posts.map((post) => post.code)];
+  const entries = keepBest(await checkPosts(codes)).map((entry) =>
+    verified.has(entry.code) ? { ...entry, verified: true } : entry,
+  );
+  // Replays on the relay are matched to their posts by the hash the post signed.
+  const wanted = new Set(entries.map((entry) => entry.logHash).filter(Boolean));
+  if (wanted.size > 0 && posts.some((post) => post.log)) {
+    const { logHash } = await import('../replay/replayStore');
+    for (const post of posts) {
+      if (!post.log) continue;
+      const hash = logHash(post.log);
+      if (wanted.has(hash)) logs.set(hash, post.log);
+    }
+  }
   return {
-    entries: keepBest(await checkPosts(codes)),
-    file: file.status === 'fulfilled',
+    entries,
+    file: fileValue !== null,
     relay: relay.status === 'fulfilled',
+    logs,
+    kept: new Set(fileValue?.logs ?? []),
   };
+}
+
+/** A run's replay, from the relay's answer or the logs kept beside the board; null if neither. */
+export async function fetchLog(
+  hash: string,
+  board: Pick<Board, 'logs' | 'kept'>,
+  fetcher: Fetcher = defaultFetcher,
+): Promise<DayLog | null> {
+  const riding = board.logs.get(hash);
+  if (riding) return riding;
+  if (!board.kept.has(hash)) return null;
+  try {
+    const response = await fetcher(`${BOARD_LOGS_URL}/${hash}.json`);
+    if (!response.ok) return null;
+    const log: unknown = JSON.parse(await response.text());
+    return isDayLog(log) ? log : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -222,4 +369,78 @@ export async function nextBoardFile(
       compareRuns(a, b),
   );
   return { v: 1, updated: now.toISOString(), posts: entries.map((entry) => entry.code) };
+}
+
+/** What replaying a run's log showed: the same result, a different one, or nothing (it could
+ * not be replayed here, as on another simulation version). */
+export type Verdict = 'same' | 'different' | 'unchecked';
+
+/** The next board file, checked by replay, and the replay logs to keep beside it. */
+export interface Collected {
+  file: BoardFile;
+  /** Logs new this time that the file keeps, by hash: to be written beside the board. */
+  logs: Map<string, DayLog>;
+}
+
+/**
+ * The board's collection, as the GitHub Action runs it: the posts kept already and those new on
+ * the relay, checked by the game's arithmetic first and then, where a post brought its replay,
+ * by replaying it (`verify`). A run whose replay gives a different result is dropped; one that
+ * cannot be replayed here stays, unverified. Runs verified before stay verified. The best few
+ * on each board keep their replays, for watching and racing.
+ */
+export async function collectBoard(
+  previous: BoardFile,
+  incoming: readonly RelayPost[],
+  banned: ReadonlySet<string>,
+  now: Date,
+  verify: (entry: BoardEntry, log: DayLog) => Promise<Verdict>,
+  hasLog: (hash: string) => boolean,
+  hashOf: (log: DayLog) => string,
+): Promise<Collected> {
+  const logs = new Map<string, DayLog>();
+  for (const post of incoming) if (post.log) logs.set(hashOf(post.log), post.log);
+  const before = new Set(previous.verified ?? []);
+  const checked: BoardEntry[] = [];
+  for (const entry of await checkPosts(
+    [...previous.posts, ...incoming.map((post) => post.code)],
+    banned,
+  )) {
+    if (before.has(entry.code)) {
+      checked.push({ ...entry, verified: true });
+      continue;
+    }
+    const log = entry.logHash ? logs.get(entry.logHash) : undefined;
+    const verdict = log ? await verify(entry, log) : 'unchecked';
+    if (verdict === 'different') continue;
+    checked.push({ ...entry, verified: verdict === 'same' });
+  }
+  const entries = keepBest(checked);
+  entries.sort(
+    (a, b) =>
+      a.level.localeCompare(b.level) ||
+      a.difficulty.localeCompare(b.difficulty) ||
+      compareRuns(a, b),
+  );
+  // The top few of each board keep their replays, where one is to hand.
+  const kept = new Set<string>();
+  const counted = new Map<string, number>();
+  for (const entry of entries) {
+    if (!entry.logHash || !(logs.has(entry.logHash) || hasLog(entry.logHash))) continue;
+    const key = `${boardMode(entry)}|${entry.level}|${entry.difficulty}`;
+    const count = counted.get(key) ?? 0;
+    if (count >= LOGS_KEPT) continue;
+    counted.set(key, count + 1);
+    kept.add(entry.logHash);
+  }
+  return {
+    file: {
+      v: 1,
+      updated: now.toISOString(),
+      posts: entries.map((entry) => entry.code),
+      verified: entries.filter((entry) => entry.verified).map((entry) => entry.code),
+      logs: [...kept],
+    },
+    logs: new Map([...logs].filter(([hash]) => kept.has(hash))),
+  };
 }

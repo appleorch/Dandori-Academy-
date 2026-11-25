@@ -1,18 +1,25 @@
 /**
  * Run by the Leaderboard GitHub Action (`.github/workflows/leaderboard.yml`), and by hand with
  * `npm run board:collect`. Reads the runs posted to the relay in the last 12 hours, checks each
- * against the game's own rules, merges them with the runs already kept, and rewrites
- * `leaderboard/board.json` only when the kept runs have changed.
+ * against the game's own rules, replays each one that brought its replay log (with this same
+ * build: see SIM_VERSION in src/game/replay/replay.ts) and drops any whose replay gives a
+ * different result, merges them with the runs already kept, and rewrites
+ * `leaderboard/board.json` only when it has changed. The best few replays of each board are
+ * kept beside it in `leaderboard/logs/`.
  *
  * `leaderboard/banned.json` lists player ids (16 hex digits) whose runs are left off.
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import {
   BOARD_FILE,
-  nextBoardFile,
-  parseBoardFile,
-  readRelay,
+  BOARD_LOGS_DIR,
+  collectBoard,
+  parseBoardFileFull,
+  readRelayPosts,
 } from '../src/game/leaderboard/board';
+import { logHash } from '../src/game/replay/replayStore';
+import { verifyRun } from '../src/game/replay/verify';
+import { initPhysics } from '../src/game/simulation/physics';
 
 const BANNED_FILE = 'leaderboard/banned.json';
 
@@ -22,19 +29,41 @@ function readBanned(): Set<string> {
   return new Set(Array.isArray(list) ? list.filter((id) => typeof id === 'string') : []);
 }
 
+const logFile = (hash: string) => `${BOARD_LOGS_DIR}/${hash}.json`;
+
 async function main(): Promise<void> {
-  const kept = existsSync(BOARD_FILE) ? parseBoardFile(readFileSync(BOARD_FILE, 'utf8')) : [];
-  const incoming = await readRelay();
-  const next = await nextBoardFile(kept, incoming, readBanned(), new Date());
-  const same = next.posts.length === kept.length && next.posts.every((post, i) => post === kept[i]);
-  console.log(
-    `Relay: ${incoming.length} posts. Board: ${kept.length} runs before, ${next.posts.length} after.`,
+  await initPhysics();
+  const previous = existsSync(BOARD_FILE)
+    ? parseBoardFileFull(readFileSync(BOARD_FILE, 'utf8'))
+    : { v: 1 as const, updated: '', posts: [], verified: [], logs: [] };
+  const incoming = await readRelayPosts();
+  let replayed = 0;
+  const next = await collectBoard(
+    previous,
+    incoming,
+    readBanned(),
+    new Date(),
+    async (entry, log) => {
+      replayed++;
+      return verifyRun(entry, log);
+    },
+    (hash) => existsSync(logFile(hash)),
+    logHash,
   );
+  const same =
+    JSON.stringify({ ...next.file, updated: '' }) === JSON.stringify({ ...previous, updated: '' });
+  console.log(
+    `Relay: ${incoming.length} posts, ${replayed} replayed. Board: ${previous.posts.length} runs before, ${next.file.posts.length} after, ${next.file.verified?.length ?? 0} verified.`,
+  );
+  if (next.logs.size > 0) {
+    mkdirSync(BOARD_LOGS_DIR, { recursive: true });
+    for (const [hash, log] of next.logs) writeFileSync(logFile(hash), JSON.stringify(log));
+  }
   if (same && existsSync(BOARD_FILE)) {
     console.log('No change.');
     return;
   }
-  writeFileSync(BOARD_FILE, `${JSON.stringify(next, null, 2)}\n`);
+  writeFileSync(BOARD_FILE, `${JSON.stringify(next.file, null, 2)}\n`);
   console.log(`Wrote ${BOARD_FILE}.`);
 }
 

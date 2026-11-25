@@ -9,12 +9,21 @@ import { heightAt } from '../world/heightMap';
 
 /**
  * Time Attack's ghost: the Warden's path through your fastest clear of this lesson, walked
- * again beside you as a pale figure, so you can see where you are ahead or behind.
+ * again beside you as a pale figure, so you can see where you are ahead or behind. Or, raced
+ * on purpose from the board, the path of another Warden's run (see ghostRace in the store).
  */
 export function GhostWarden({ sim }: { sim: Simulation }) {
   const group = useRef<Group>(null);
   const track = useMemo(() => {
-    const { save, playMode, settings } = useGameStore.getState();
+    const { save, playMode, settings, ghostRace } = useGameStore.getState();
+    // A ghost from the board, raced on purpose, in Time Attack or a timed challenge.
+    if (
+      ghostRace &&
+      ghostRace.level === sim.level.id &&
+      ghostRace.difficulty === sim.level.difficulty
+    ) {
+      return ghostRace.track;
+    }
     if (playMode !== 'lessons' || !settings.ghosts) return [];
     return decodeTrack(save.ghosts[splitKey(sim.level.id, sim.level.difficulty)]);
   }, [sim]);

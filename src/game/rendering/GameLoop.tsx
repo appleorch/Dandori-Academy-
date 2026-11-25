@@ -27,6 +27,10 @@ import { recordSteps } from './perf';
 const HEAVE_SECONDS = 1.1;
 const HEAVE_RANGE = 16;
 import { PLUCK_INTERVAL, pluckNearest, sproutInReach } from '../workers/growth';
+import { Recorder, replayable } from '../replay/replay';
+import { bestKey, LAST_KEY, putReplay } from '../replay/replayStore';
+import { GAME_VERSION } from '../core/changelog';
+import type { ModeId } from '../modes/modes';
 import { KIND_SCENES, LINE_SECONDS, openingScene, partScene } from '../story/scenes';
 import {
   advanceGuide,
@@ -148,6 +152,26 @@ function mood(sim: Simulation): { boss: boolean; intensity: Intensity } {
   return { boss, intensity: danger ? 2 : 1 };
 }
 
+/**
+ * Keeps a finished day's replay: always as the last day played, and as the field's best when
+ * the day was a new best (the fastest clear, or the best score).
+ */
+async function keepReplay(recorder: Recorder, sim: Simulation, mode: ModeId): Promise<void> {
+  const log = await recorder.log(
+    { level: sim.level.id, difficulty: sim.level.difficulty, mode },
+    GAME_VERSION,
+  );
+  await putReplay(LAST_KEY, log);
+  const result = useGameStore.getState().result;
+  const best =
+    result !== null &&
+    (mode === 'lessons'
+      ? result.clearTime !== null &&
+        (result.previousBest === null || result.clearTime < result.previousBest)
+      : result.isBestScore);
+  if (best) await putReplay(bestKey(log.level, log.difficulty, mode), log);
+}
+
 /** How long a new kind's first try stays up, at most, and the first sunset's warning. */
 const KIND_TRY_SECONDS = 40;
 const WARNING_SECONDS = 12;
@@ -178,6 +202,10 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
   const sceneLine = useRef(-1);
   const sceneOf = useRef('');
   const partsToday = useRef(0);
+  // The day's inputs, noted for its replay (every day but the story's and battles).
+  const [recorder] = useState(() =>
+    replayable(useGameStore.getState().playMode) ? new Recorder() : null,
+  );
   // The guided morning (undefined until the day's first look), kinds already met, a new
   // kind's first try, and the first day's sunset warning.
   const guide = useRef<GuideProgress | null | undefined>(undefined);
@@ -306,7 +334,10 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
 
     if (store.endRequested) {
       useGameStore.setState({ endRequested: false });
-      if (!surface.ended) surface.endNow();
+      if (!surface.ended) {
+        surface.endNow();
+        recorder?.event('end');
+      }
     }
     if (store.paused || store.briefing) {
       audio.setWhistle(false);
@@ -388,7 +419,9 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
     let switched = false;
     const stepStart = performance.now();
     for (let i = 0; i < steps && !sim.ended; i++) {
-      sim.step(input.sample(cursorX, cursorZ));
+      const sample = input.sample(cursorX, cursorZ);
+      // Recorded days are played on the log's grid, so the log replays them exactly.
+      sim.step(recorder ? recorder.input(sample) : sample);
       // The rival keeps pace step by step, and the battle is called the moment it is won.
       if (battle && sim === surface && !surface.ended) {
         battle.advance(1);
@@ -512,6 +545,7 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
         }
         if (battle) store.setRace(battle.race(surface));
         store.finishDay(surface, surface.ended, expedition.haul, outcome);
+        if (recorder) void keepReplay(recorder, surface, store.playMode);
       }
       return;
     }
@@ -572,12 +606,14 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
         if (why) {
           fx.popup(why, spot.x, spot.z, '#ffd0a0');
         } else if (expedition.descend()) {
+          recorder?.event('down');
           audio.play('doorOpen');
           onSwitch(expedition.active);
           return;
         }
       } else if (atAscent) {
         expedition.ascend();
+        recorder?.event('up');
         audio.play('doorOpen');
         onSwitch(expedition.active);
         return;
