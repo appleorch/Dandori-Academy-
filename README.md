@@ -98,6 +98,15 @@ sunset arrangement (`ARRANGEMENTS`), chosen by the day clock; intensity changes 
 line. Music, effects, ambience and voices have buses of their own into a limiter, and the music
 ducks under voices and big stingers.
 
+**Sound in space.** Every sound with a place in the world is set there round the Warden with a
+panner, fading with distance (`audio.setListener`); a few copies of one sound may ring at once,
+but a threat's warning always gets through (`src/game/audio/spatial.ts`). Big hits have tails.
+Every beast has a voice of its own (`CREATURE_VOICES`): an idle grumble, a call when it notices
+you, a hurt yelp, a dying cry, and an attack tell whose shape is its own and loud enough to hear
+off screen. Fields hum with ambient emitters placed from their own features: water burbles,
+hedges rustle, drips drip, coils buzz, vents crackle. Buttons tick under the pointer, text boxes
+click as you type, and achievements chime.
+
 **The ground and the weather.** The field's ground blends three covers by a splat map painted once
 per field (`src/game/rendering/ground.ts`): the setting's turf, bare soil worn along the paths from
 the Kiln to each treasure and round the feet of walls and banks of water, and moss in the shade on

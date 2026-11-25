@@ -145,12 +145,6 @@ function calmed(style: BurstStyle): BurstStyle {
   };
 }
 
-/** How far to the side a sound must be before it sits fully in one ear. */
-const PAN_RANGE = 18;
-/** Sounds fade with distance from the Warden, down to this floor. */
-const HEARING_RANGE = 70;
-const QUIETEST = 0.3;
-
 /**
  * Turns simulation events into what the player sees, hears and feels: sounds,
  * particle bursts, camera shake and floating score text.
@@ -178,17 +172,13 @@ export class Feedback {
   handle(event: SimEvent): void {
     const dx = event.x - this.listenerX;
     const distance = Math.hypot(dx, event.z - this.listenerZ);
-    audio.play(event.type, {
-      pan: Math.max(-1, Math.min(1, dx / PAN_RANGE)),
-      gain: Math.max(QUIETEST, 1 - distance / HEARING_RANGE),
-      pitch: event.amount,
-    });
+    // Placed where it happened; the distance fades it (see audio.setListener).
+    void dx;
+    void distance;
+    audio.play(event.type, { at: { x: event.x, z: event.z }, pitch: event.amount });
     const line = VOICED[event.type];
     if (line && event.kind) {
-      audio.voice(event.kind, line, {
-        pan: Math.max(-1, Math.min(1, dx / PAN_RANGE)),
-        gain: Math.max(QUIETEST, 1 - distance / HEARING_RANGE),
-      });
+      audio.voice(event.kind, line, { at: { x: event.x, z: event.z } });
     }
     if (event.type === 'workerLost' && event.kind) {
       // Its spirit rises in its kind's colour, slow enough to be seen from the camera.

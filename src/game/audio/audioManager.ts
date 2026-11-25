@@ -1,4 +1,12 @@
 import type { SproutKind } from '../workers/sprouts';
+import type { EnemyKind } from '../enemies/enemyKinds';
+import {
+  admit,
+  CREATURE_VOICES,
+  type CreatureLine,
+  type Emitter,
+  type EmitterKind,
+} from './spatial';
 import { MusicPlayer, type DayPhase, type Intensity, type Motif, type TrackName } from './music';
 
 /**
@@ -70,6 +78,8 @@ export type SoundName =
   | 'step'
   | 'uiClick'
   | 'uiHover'
+  | 'uiType'
+  | 'unlock'
   | 'page'
   | 'hint'
   | 'fastOn'
@@ -101,7 +111,24 @@ export interface PlayOptions {
   gain?: number;
   /** Pitch multiplier, for sounds that have a speaker. */
   pitch?: number;
+  /** Where in the world it happens: placed in space round the listener, fading with distance. */
+  at?: { x: number; z: number };
 }
+
+/** Sounds that warn of a threat: never capped, and heard from further off. */
+const PRIORITY = new Set<string>(['chargeWindup', 'slamWindup', 'bite', 'captainHurt']);
+
+/** Big sounds that get a tail of their own: seconds of soft noise after the hit. */
+const TAILS: Partial<Record<string, number>> = {
+  deliver: 0.6,
+  slam: 0.9,
+  gateBroken: 1.1,
+  bridgeBuilt: 0.9,
+  bite: 0.4,
+  enemyDefeated: 0.8,
+  logPlaced: 0.4,
+  splat: 0.5,
+};
 
 /** Identical sounds closer together than this are dropped, so volleys do not stack up. */
 const MIN_REPEAT_SECONDS = 0.045;
@@ -218,6 +245,9 @@ class AudioManager {
   private ducker: GainNode | null = null;
   private dayPhase: DayPhase = 'day';
   private lastMotif = new Map<string, number>();
+  private readonly active = new Map<string, number[]>();
+  private emitters: AudioBufferSourceNode[] = [];
+  private readonly loops = new Map<EmitterKind, AudioBuffer>();
   private mood: { intensity: Intensity; urgent: boolean } = { intensity: 1, urgent: false };
   private ambienceWanted = false;
 
@@ -309,6 +339,24 @@ class AudioManager {
     const ctx = this.ctx as AudioContext;
     const gain = ctx.createGain();
     gain.gain.value = options?.gain ?? 1;
+    // A sound with a place in the world is set there, round the listener, fading with distance.
+    if (options?.at && typeof ctx.createPanner === 'function') {
+      const panner = ctx.createPanner();
+      panner.panningModel = 'equalpower';
+      panner.distanceModel = 'inverse';
+      panner.refDistance = 8;
+      panner.maxDistance = 90;
+      panner.rolloffFactor = 1.1;
+      if (panner.positionX) {
+        panner.positionX.value = options.at.x;
+        panner.positionY.value = 0;
+        panner.positionZ.value = options.at.z;
+      } else {
+        panner.setPosition(options.at.x, 0, options.at.z);
+      }
+      gain.connect(panner).connect(bus);
+      return gain;
+    }
     if (typeof ctx.createStereoPanner === 'function') {
       const panner = ctx.createStereoPanner();
       panner.pan.value = Math.max(-1, Math.min(1, options?.pan ?? 0));
@@ -523,15 +571,155 @@ class AudioManager {
     }
   }
 
+  /** Where the listener stands: the Warden, as the camera follows them. */
+  setListener(x: number, z: number): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const listener = ctx.listener;
+    if (listener.positionX) {
+      listener.positionX.value = x;
+      listener.positionY.value = 6;
+      listener.positionZ.value = z;
+    } else {
+      listener.setPosition(x, 6, z);
+    }
+  }
+
+  /**
+   * A beast's voice: idle grumbles, a call when it notices you, its attack tell (a glide of
+   * its own shape, loud enough to hear off screen, so a charge can be dodged by ear), a yelp
+   * when hurt, and a fading cry when it falls.
+   */
+  creature(kind: EnemyKind, line: CreatureLine, at: { x: number; z: number }): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.sfx || ctx.state !== 'running') return;
+    const key = `creature:${kind}:${line}`;
+    const ends = this.active.get(key) ?? [];
+    this.active.set(key, ends);
+    if (!admit(ends, ctx.currentTime, line === 'tell')) return;
+    const voice = CREATURE_VOICES[kind];
+    const shape: Record<CreatureLine, readonly [number, number, number, number]> = {
+      idle: [1, 0.9, 0.3, 0.05],
+      alert: [1, 1.3, 0.25, 0.09],
+      tell: [voice.tell[0], voice.tell[1], voice.tell[2], 0.16],
+      hurt: [1.5, 1.1, 0.15, 0.1],
+      death: [1.2, 0.4, 0.9, 0.12],
+    };
+    const [from, to, length, volume] = shape[line];
+    ends.push(ctx.currentTime + length);
+    const out = this.channel({ at, gain: line === 'tell' ? 2.2 : 1 }, this.sfx);
+    const start = ctx.currentTime;
+    const pitch = voice.pitch * rand(0.94, 1.06);
+    const osc = ctx.createOscillator();
+    osc.type = voice.wave;
+    osc.frequency.setValueAtTime(pitch * from, start);
+    osc.frequency.exponentialRampToValueAtTime(pitch * to, start + length);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.02);
+    gain.gain.setValueAtTime(volume, start + length * 0.6);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + length);
+    for (const formant of voice.formants) {
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = formant;
+      filter.Q.value = 3;
+      osc.connect(filter).connect(gain);
+    }
+    gain.connect(out);
+    osc.start(start);
+    osc.stop(start + length + 0.05);
+    if (line === 'tell' || line === 'death') this.burst(out, length * 0.5, 500, volume * 0.6);
+  }
+
+  /** Starts the field's ambient emitters (see spatial.ts), nearest the Warden first. */
+  startEmitters(emitters: readonly Emitter[]): void {
+    this.stopEmitters();
+    const ctx = this.ctx;
+    if (!ctx || !this.ambience) return;
+    for (const emitter of emitters) {
+      const loop = this.emitterLoop(emitter.kind);
+      if (!loop) continue;
+      const source = ctx.createBufferSource();
+      source.buffer = loop;
+      source.loop = true;
+      const filter = ctx.createBiquadFilter();
+      const settings: Record<EmitterKind, [BiquadFilterType, number, number]> = {
+        stream: ['bandpass', 900, 0.09],
+        wind: ['bandpass', 420, 0.05],
+        drip: ['highpass', 600, 0.25],
+        buzz: ['bandpass', 1800, 0.035],
+        crackle: ['highpass', 1500, 0.12],
+      };
+      const [type, hz, level] = settings[emitter.kind];
+      filter.type = type;
+      filter.frequency.value = hz;
+      const out = this.channel({ at: emitter, gain: level }, this.ambience);
+      source.connect(filter).connect(out);
+      source.start(ctx.currentTime + Math.random() * 0.5, Math.random() * loop.duration);
+      this.emitters.push(source);
+    }
+  }
+
+  stopEmitters(): void {
+    for (const source of this.emitters) {
+      try {
+        source.stop();
+      } catch {
+        // Already stopped.
+      }
+    }
+    this.emitters = [];
+  }
+
+  /** A two-second loop for each kind of emitter, made once. */
+  private emitterLoop(kind: EmitterKind): AudioBuffer | null {
+    const ctx = this.ctx;
+    if (!ctx) return null;
+    const cached = this.loops.get(kind);
+    if (cached) return cached;
+    const rate = ctx.sampleRate;
+    const buffer = ctx.createBuffer(1, rate * 2, rate);
+    const data = buffer.getChannelData(0);
+    let low = 0;
+    for (let i = 0; i < data.length; i++) {
+      const t = i / rate;
+      const white = Math.random() * 2 - 1;
+      low = low * 0.97 + white * 0.03;
+      if (kind === 'stream') data[i] = (white * 0.6 + low * 4) * (0.7 + 0.3 * Math.sin(t * 9));
+      else if (kind === 'wind') data[i] = low * 6 * (0.5 + 0.5 * Math.sin(t * Math.PI));
+      else if (kind === 'buzz') data[i] = (((t * 120) % 1) * 2 - 1) * 0.6 + white * 0.1;
+      else if (kind === 'crackle') data[i] = Math.random() < 0.002 ? white * 3 : white * 0.05;
+      else {
+        // A drip: a falling ping now and then, plus a little hiss.
+        const since = t % 0.9;
+        data[i] =
+          Math.sin(2 * Math.PI * (1400 - since * 900) * since) * Math.exp(-since * 30) +
+          white * 0.02;
+      }
+    }
+    this.loops.set(kind, buffer);
+    return buffer;
+  }
+
   play(name: SoundName, options?: PlayOptions): void {
     const ctx = this.ctx;
     if (!ctx || !this.sfx || ctx.state !== 'running') return;
+    // At most a few of one sound at once, so a crowd never becomes a wall of noise; a threat's
+    // warning always gets through.
+    const ends = this.active.get(name) ?? [];
+    this.active.set(name, ends);
+    if (!admit(ends, ctx.currentTime, PRIORITY.has(name))) return;
+    ends.push(ctx.currentTime + 0.6);
     const last = this.lastPlayed.get(name);
     if (last !== undefined && ctx.currentTime - last < MIN_REPEAT_SECONDS) return;
     this.lastPlayed.set(name, ctx.currentTime);
     const out = this.channel(options, this.sfx);
     // A few percent of pitch drift keeps repeated sounds from sounding stamped out.
     const d = rand(0.96, 1.04);
+    // The big sounds ring on: a soft tail of falling noise after the hit.
+    const tail = TAILS[name];
+    if (tail) this.burst(out, tail * rand(0.85, 1.15), 900 * d, 0.05, 0.06, 'lowpass', 180);
 
     switch (name) {
       case 'throw':
@@ -738,6 +926,13 @@ class AudioManager {
         break;
       case 'uiClick':
         this.tone(out, 660, 990, 0.05, 'triangle', 0.12);
+        break;
+      case 'uiType':
+        this.burst(out, 0.025, 3500, 0.05, 0, 'bandpass');
+        this.tone(out, 1800 * d, 1500, 0.02, 'square', 0.015);
+        break;
+      case 'unlock':
+        [784, 1047, 1319, 1568].forEach((hz, i) => this.bell(out, hz, 0.6, 0.13, i * 0.09));
         break;
       case 'uiHover':
         this.tone(out, 880, 880, 0.025, 'sine', 0.04);

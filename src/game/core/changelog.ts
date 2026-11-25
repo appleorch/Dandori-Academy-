@@ -8,6 +8,16 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.31.0',
+    date: '2026-11-25',
+    changes: [
+      'Sound in space: everything you hear comes from where it happens round the Warden, and fades with distance.',
+      'Every beast has its own voice: a call when it spots you, a yelp when hurt, a cry when it falls, and an attack warning of its own you can hear off screen, so a charge can be dodged by ear.',
+      'Fields come alive with sound placed from their features: running water, rustling hedges, dripping caves, buzzing coils and crackling vents.',
+      'Big hits ring on; a crowd of one sound is kept from becoming noise, but a threat’s warning always gets through. Menus tick under the pointer, typing clicks, and achievements chime.',
+    ],
+  },
+  {
     version: '0.30.0',
     date: '2026-11-25',
     changes: [

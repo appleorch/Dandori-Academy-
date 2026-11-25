@@ -425,11 +425,14 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
     if (!stinger) return;
     const fanfare = window.setTimeout(() => audio.play(stinger), 1050);
     const thump = window.setTimeout(() => audio.play('logPlaced'), 1500);
+    // An achievement unlocked gets its own chime, once the stamp has landed.
+    const unlocked = (result?.achievements.length ?? 0) > 0;
+    const chime = window.setTimeout(() => unlocked && audio.play('unlock'), 2100);
     const ticks = [0.1, 0.3, 0.5, 0.7, 0.9, 1.1].map((at) =>
       window.setTimeout(() => audio.play('tick', { gain: 0.5 }), at * 1000),
     );
-    return () => [fanfare, thump, ...ticks].forEach((timer) => window.clearTimeout(timer));
-  }, [stinger]);
+    return () => [fanfare, thump, chime, ...ticks].forEach((timer) => window.clearTimeout(timer));
+  }, [stinger, result]);
   // Focus the main button for keyboard players without scrolling the stamp out of view.
   useEffect(() => {
     document.querySelector<HTMLElement>('.results [data-primary]')?.focus({ preventScroll: true });

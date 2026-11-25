@@ -138,6 +138,22 @@ export function App() {
     const onClick = (event: MouseEvent): void => {
       if (event.target instanceof Element && event.target.closest('button')) audio.play('uiClick');
     };
+    // A soft tick as the pointer reaches a new button, and a key click typing in a text box.
+    let hovered: Element | null = null;
+    const onOver = (event: PointerEvent): void => {
+      const button = event.target instanceof Element ? event.target.closest('button') : null;
+      if (button && button !== hovered && !(button as HTMLButtonElement).disabled)
+        audio.play('uiHover');
+      hovered = button;
+    };
+    const onType = (event: KeyboardEvent): void => {
+      const field = event.target;
+      if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
+        if (event.key.length === 1 || event.key === 'Backspace') audio.play('uiType');
+      }
+    };
+    document.addEventListener('pointerover', onOver);
+    document.addEventListener('keydown', onType);
     const onKey = (event: KeyboardEvent): void => {
       const store = useGameStore.getState();
       if (store.phase === 'playing' || store.pokerOpen || event.key.length !== 1) return;
@@ -151,6 +167,8 @@ export function App() {
     window.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('click', onClick);
+      document.removeEventListener('pointerover', onOver);
+      document.removeEventListener('keydown', onType);
       window.removeEventListener('keydown', onKey);
     };
   }, []);

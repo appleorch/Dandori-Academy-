@@ -31,6 +31,7 @@ import { LINE_SECONDS, openingScene, partScene } from '../story/scenes';
 import { allPartsHome, currentSection } from '../campaign/campaign';
 import type { DayPhase } from '../audio/music';
 import { STORY_SUNSET_SECONDS } from './SkyLight';
+import { ambientEmitters, nearestEmitters } from '../audio/spatial';
 import type { SproutKind } from '../workers/sprouts';
 
 const HUD_INTERVAL_FRAMES = 6;
@@ -163,6 +164,10 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
   const sceneLine = useRef(-1);
   const sceneOf = useRef('');
   const partsToday = useRef(0);
+  const heard = useRef(new Map<number, { alert: boolean; state: string; hp: number }>());
+  const emitting = useRef<Simulation | null>(null);
+  // The field's ambient emitters stop with the day.
+  useEffect(() => () => audio.stopEmitters(), []);
   const heaveBeat = useRef(-1);
   const walked = useRef(0);
   const lastSpot = useRef({ x: surface.captainTransform.x, z: surface.captainTransform.z });
@@ -291,6 +296,14 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
     const steps = fx.hitstop > 0 ? 0 : clock.advance(delta * (fast ? FAST_FORWARD : 1));
     fx.listenerX = sim.captainTransform.x;
     fx.listenerZ = sim.captainTransform.z;
+    audio.setListener(sim.captainTransform.x, sim.captainTransform.z);
+    // The place being played's ambient emitters, placed from its own features.
+    if (emitting.current !== sim) {
+      emitting.current = sim;
+      heard.current.clear();
+      const all = ambientEmitters(sim.level);
+      audio.startEmitters(nearestEmitters(all, sim.captainTransform.x, sim.captainTransform.z));
+    }
     let switched = false;
     const stepStart = performance.now();
     for (let i = 0; i < steps && !sim.ended; i++) {
@@ -317,6 +330,25 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
       }
     }
     recordSteps(performance.now() - stepStart, steps);
+    // The beasts, heard: a call when one notices you, its tell as it winds up, a yelp when hurt,
+    // and now and then an idle grumble.
+    if (steps > 0) {
+      for (const [entity, enemy] of sim.enemies.entries()) {
+        if (enemy.shape || enemy.kind === 'mound' || enemy.kind === 'rootknot') continue;
+        const at = sim.transforms.require(entity);
+        const was = heard.current.get(entity);
+        if (was) {
+          if (enemy.alert && !was.alert) audio.creature(enemy.kind, 'alert', at);
+          if (enemy.state === 'windup' && was.state !== 'windup')
+            audio.creature(enemy.kind, 'tell', at);
+          if (enemy.hp < was.hp - 4 && enemy.hp > 0) audio.creature(enemy.kind, 'hurt', at);
+          if (enemy.hp <= 0 && was.hp > 0) audio.creature(enemy.kind, 'death', at);
+        }
+        if (!enemy.alert && enemy.hp > 0 && Math.random() < 0.0015)
+          audio.creature(enemy.kind, 'idle', at);
+        heard.current.set(entity, { alert: enemy.alert, state: enemy.state, hp: enemy.hp });
+      }
+    }
     fx.update(delta);
     if (switched) {
       audio.play('doorOpen');
