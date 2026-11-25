@@ -19,6 +19,7 @@ import { ModeTargets } from './ModeTargets';
 import { SprocketPortrait } from './Portrait';
 import { t } from '../i18n/i18n';
 import type { MessageKey } from '../i18n/en';
+import { timeMedal } from '../game/modes/timeAttack';
 import { ActionPrompt } from './Glyph';
 
 const HEADLINES: Record<DayEnd, string> = {
@@ -219,6 +220,39 @@ function StoryBody({ result, level }: { result: DayResult; level: LevelDefinitio
               ? ` · your fastest yet, ${(result.previousBest - result.clearTime).toFixed(1)}s faster`
               : ` · fastest ${formatTime(result.previousBest)} (+${(result.clearTime - result.previousBest).toFixed(1)}s)`}
         </p>
+      )}
+      {result.clearTime !== null && (
+        <p className={`time-medal ${timeMedal(level, result.clearTime).toLowerCase()}`}>
+          Time medal: <strong>{timeMedal(level, result.clearTime)}</strong>
+        </p>
+      )}
+      {result.clearTime !== null && result.splits.length > 1 && (
+        <table className="splits">
+          <thead>
+            <tr>
+              <th scope="col">Sunshard</th>
+              <th scope="col">Today</th>
+              <th scope="col">Fastest before</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.splits.map((time, i) => {
+              const best = result.previousSplits?.[i];
+              const diff = best === undefined ? null : time - best;
+              return (
+                <tr key={i} className={diff !== null && diff < 0 ? 'met' : undefined}>
+                  <th scope="row">{i + 1}</th>
+                  <td>{formatTime(time)}</td>
+                  <td>
+                    {best === undefined
+                      ? '–'
+                      : `${formatTime(best)} (${diff !== null && diff <= 0 ? '' : '+'}${(diff ?? 0).toFixed(1)}s)`}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       )}
       {!tally.cleared && (
         <p className="day-stats">

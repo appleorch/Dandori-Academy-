@@ -8,6 +8,16 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.33.0',
+    date: '2026-11-25',
+    changes: [
+      'Time Attack remastered: every clear earns a time medal from Bronze to Diamond, shown on the map, which also adds up your Academy time over every lesson.',
+      'Ghost runs: the ghost of your fastest clear runs the lesson beside you. Turn it off in the settings.',
+      'Press R to restart a lesson at once, even mid-day, straight back in without the briefing. Results show each Sunshard’s split against your fastest clear.',
+      'The lessons are dressed for their settings. Nothing about how they play has changed.',
+    ],
+  },
+  {
     version: '0.32.0',
     date: '2026-11-25',
     changes: [

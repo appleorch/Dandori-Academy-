@@ -381,6 +381,16 @@ Sunshard is timed against the same shard on your fastest clear, and the results 
 time against your best and the Academy's own pace (the lesson's Platinum time). Hard is a Time
 Attack setting and opens on a lesson once it is cleared on Normal.
 
+Every clear earns a **time medal** (Diamond and Platinum by the lesson's own times, Gold within a
+quarter over Platinum, Silver within 60%, Bronze otherwise), shown as the badge on its map node,
+and the map adds up the **Academy time** over every lesson cleared. The fastest clear's path is
+kept (`ghosts` in the save, a few kilobytes) and walked again beside you as a pale **ghost**
+(Settings: Ghost runs). R restarts at once, even mid-day, and a restart of the same lesson skips
+the briefing. Results show a **split table**: each Sunshard today against the fastest clear
+before. The simulation is deterministic, and a day's inputs, packed by run length
+(`encodeInputs` in `src/game/modes/timeAttack.ts`), replay it to the same clear time exactly
+(tested), ready for verified boards. The lessons are dressed for their settings (art only).
+
 **Challenges.** Each challenge has **twelve fields of its own**, built for its rule
 (`src/game/world/levels/challenges/`), for a medal (Bronze, Silver, Gold, Platinum, Diamond) and
 a place on that field's Academy board. The first three fields of each are open; each one after

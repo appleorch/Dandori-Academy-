@@ -14,6 +14,7 @@ import { updateBlooms } from '../carry/bloomSystem';
 import { applySeparation } from '../flocking/separation';
 import { updateKiln } from '../kiln/kilnSystem';
 import { updateConveyors } from '../world/conveyorSystem';
+import { TRACK_EVERY } from '../modes/timeAttack';
 import { updateDewdrops } from '../workers/growth';
 import { emptyFog, reveal } from '../campaign/fog';
 import type { Ability } from '../campaign/upgrades';
@@ -236,6 +237,8 @@ export class Simulation {
   readonly abilities: ReadonlySet<Ability>;
   /** Story only: the fog-of-war map of what the Warden has seen (see campaign/fog.ts). */
   readonly explored: Uint8Array | null;
+  /** The Warden's path through the day, (x, z) every TRACK_EVERY steps: a best run's ghost. */
+  readonly track: number[] = [];
   /** Treasure the telescope has yet to show, and whether it has been looked through today. */
   readonly hiddenTreasures: TreasureSpawn[] = [];
   telescopeAimed = false;
@@ -446,6 +449,12 @@ export class Simulation {
     applySeparation(this);
     updateCarrying(this, dt);
     updateConveyors(this, dt);
+    if (this.tick % TRACK_EVERY === 0) {
+      this.track.push(
+        Math.round(this.captainTransform.x * 10) / 10,
+        Math.round(this.captainTransform.z * 10) / 10,
+      );
+    }
     updateKiln(this, dt);
     updateDewdrops(this);
     // The fog lifts round the Warden: a few times a second is plenty.

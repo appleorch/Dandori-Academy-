@@ -15,6 +15,7 @@ import { FIELD_WORK } from './levels/fieldWork';
 import { KINDLING } from './levels/kindling';
 import { LONG_ROAD } from './levels/longRoad';
 import { WILD_MARCHES } from './levels/wildMarches';
+import { dressField } from './levels/challenges/field';
 import { CHALLENGE_SPECS } from './levels/challenges';
 
 export type * from './levelTypes';
@@ -165,7 +166,8 @@ export const LEVELS: readonly LevelDefinition[] = [
   ...DEPTHS.filter((spec) => !spec.side),
   ...CURRICULUM,
   ...DEPTHS.filter((spec) => spec.side),
-].map((spec) => withPar(spec));
+  // Lessons written without dressing of their own are dressed for their setting (art only).
+].map((spec) => withPar(spec.props ? spec : { ...dressField(spec), ...spec }));
 
 /**
  * Every challenge's own fields, in each challenge's order. They are not lessons: they have no

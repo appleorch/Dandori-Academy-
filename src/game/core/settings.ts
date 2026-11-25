@@ -32,6 +32,8 @@ export interface Settings {
   tiltShift: boolean;
   /** Story: no day limit, and so no deadline for the Great Clock (see campaign/endings.ts). */
   relaxedStory: boolean;
+  /** Time Attack: the ghost of your fastest clear runs alongside you. */
+  ghosts: boolean;
   /** The language of the menus and the game's text. */
   locale: Locale;
   /** Mode chosen on the lesson list. */
@@ -106,6 +108,7 @@ export const DEFAULT_SETTINGS: Settings = {
   graphicsTuned: false,
   tiltShift: true,
   relaxedStory: false,
+  ghosts: true,
   locale: 'en',
   difficulty: 'normal',
   carrierCounts: true,
@@ -162,6 +165,7 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
     'graphicsTuned',
     'tiltShift',
     'relaxedStory',
+    'ghosts',
     'aimAssist',
     'reducedMotion',
     'highContrast',

@@ -41,6 +41,7 @@ import { Dewdrops } from './Dewdrops';
 import { Fallen } from './Fallen';
 import { Conveyors } from './Conveyors';
 import { Telescope } from './Telescope';
+import { GhostWarden } from './GhostWarden';
 import { WorkerInstances } from './WorkerInstances';
 import { PerfProbe, ShadowBudget } from './perf';
 import { QualityTuner } from './QualityTuner';
@@ -185,7 +186,10 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
       const story = store.playMode === 'campaign';
       if (
         keys.restart.includes(event.code) &&
-        (store.phase === 'results' || (store.paused && !story))
+        (store.phase === 'results' ||
+          (store.paused && !story) ||
+          // Time Attack restarts at once, mid-day too.
+          (store.playMode === 'lessons' && store.phase === 'playing' && !store.briefing))
       ) {
         store.startDay(store.levelId);
         return;
@@ -284,6 +288,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
             <Fallen sim={sim} />
             <Conveyors sim={sim} />
             <Telescope sim={sim} />
+            <GhostWarden sim={sim} />
             <Butterflies sim={sim} />
             <CarryableMeshes sim={sim} />
             <EnemyMeshes sim={sim} />

@@ -20,6 +20,17 @@ import {
 import { Controls } from './Controls';
 import { lockReason, nextStoryLesson } from './lessonAccess';
 import { MenuNav } from './MenuNav';
+import { academyTime, timeMedal, type TimeMedal } from '../game/modes/timeAttack';
+import { splitKey } from '../game/save/saveManager';
+
+/** The badge colour of each time medal on the map. */
+const MEDAL_COLOURS: Record<TimeMedal, string> = {
+  Diamond: '#b8f0ff',
+  Platinum: '#eceff6',
+  Gold: '#ffd257',
+  Silver: '#c8ccd4',
+  Bronze: '#c88a52',
+};
 import { OptionalTreasure } from './SquadRoster';
 
 const HARD_SUMMARY = `Enemies have ${Math.round((HARD.enemyHp - 1) * 100)}% more health and strike sooner, the Warden has ${HARD.captainHp} hearts, drips are deadly and the day is ${Math.round((1 - HARD.dayLength) * 100)}% shorter.`;
@@ -157,6 +168,16 @@ export function StoryMap() {
   const chapter = chapterOf(selected.stage);
   const cleared = MAIN_LEVELS.filter((level) => storyCleared(save, level.id)).length;
   const hard = difficulty === 'hard';
+  const academy = academyTime(
+    MAIN_LEVELS.map((level) => ({ id: splitKey(level.id, difficulty) })),
+    save.bestSplits,
+  );
+  /** The time medal of a lesson's fastest clear, or null if it is not cleared. */
+  const medalOf = (level: (typeof LEVELS)[number]): TimeMedal | null => {
+    const best = save.bestSplits[splitKey(level.id, difficulty)];
+    if (!best || best.length === 0) return null;
+    return timeMedal(forDifficulty(level, difficulty), best[best.length - 1]);
+  };
 
   const visible = LEVELS.filter((level) => !level.side || save.discovered.includes(level.id));
   const trail = MAIN_LEVELS.map((level) => NODES[level.id]).filter(Boolean);
@@ -202,6 +223,12 @@ export function StoryMap() {
             The Academy’s lessons in order. Bring every Sunshard home to clear one; every clear is
             timed against your best.
           </span>
+          {academy.lessons > 0 && (
+            <span>
+              Academy time <strong>{formatTime(academy.seconds)}</strong> over {academy.lessons}{' '}
+              {academy.lessons === 1 ? 'lesson' : 'lessons'}
+            </span>
+          )}
         </p>
         <div className="story-map">
           <svg
@@ -298,7 +325,14 @@ export function StoryMap() {
                   </text>
                   {done && (
                     <g transform="translate(13 -13)">
-                      <circle r={8} fill="#ffd257" stroke="#6b5636" strokeWidth={1.5} />
+                      <circle
+                        r={8}
+                        fill={MEDAL_COLOURS[medalOf(level) ?? 'Gold']}
+                        stroke="#6b5636"
+                        strokeWidth={1.5}
+                      >
+                        <title>{`${medalOf(level) ?? ''} time medal`}</title>
+                      </circle>
                       <path d="M-4 0 L-1 3 L4 -3" fill="none" stroke="#3a2e22" strokeWidth={2} />
                     </g>
                   )}

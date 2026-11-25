@@ -51,6 +51,8 @@ import { CHAIN, TWIN } from './config';
 import { twinStyle } from '../world/twins';
 import { penaltyPerLoss, type Difficulty } from './difficulty';
 import type { Scene } from '../story/scenes';
+import { encodeTrack } from '../modes/timeAttack';
+import { splitKey } from '../save/saveManager';
 import {
   loadSettings,
   newPlayerId,
@@ -172,6 +174,9 @@ export interface DayResult {
   /** Clear time of this day when every shard came home, and the record it was measured against. */
   clearTime: number | null;
   previousBest: number | null;
+  /** Time Attack: when each Sunshard came home today, and on the fastest clear before today. */
+  splits: readonly number[];
+  previousSplits: readonly number[] | null;
   bestChain: number;
   /** Relics brought up from caves on the way: for the Field Guide, not the rank. */
   caveRelics: number;
@@ -454,8 +459,14 @@ export const useGameStore = create<GameStore>((set, get) => {
         paused: false,
         // Challenges and battles always open on their rules; Time Attack's and the story's
         // briefings can be turned off.
+        // A Time Attack restart of the same lesson goes straight back in.
         briefing:
-          state.settings.briefings ||
+          (state.settings.briefings &&
+            !(
+              (mode ?? state.playMode) === 'lessons' &&
+              levelId === state.levelId &&
+              (state.phase === 'playing' || state.phase === 'results')
+            )) ||
           ((mode ?? state.playMode) !== 'lessons' && (mode ?? state.playMode) !== 'campaign'),
         race: null,
         hint: null,
@@ -703,6 +714,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         beastsBeaten: stats.beatenKinds,
         bloomsCollected: stats.bloomsCollected,
         splits: cleared ? stats.deliveryTimes : undefined,
+        track: cleared && mode === 'lessons' ? encodeTrack(sim.track) : undefined,
         extraTreasures: haul?.relics ?? [],
         feats: dayFeats(sim, tally, haul),
         campaign: settled?.state,
@@ -762,6 +774,11 @@ export const useGameStore = create<GameStore>((set, get) => {
           clearTime: cleared ? sim.elapsed : null,
           previousBest:
             mode === 'lessons' ? bestClearTime(previous, level.id, level.difficulty) : null,
+          splits: stats.deliveryTimes,
+          previousSplits:
+            mode === 'lessons'
+              ? (previous.bestSplits[splitKey(level.id, level.difficulty)] ?? null)
+              : null,
           bestChain: stats.bestChain,
           caveRelics: haul?.relics.length ?? 0,
           run: day.run ?? null,

@@ -108,6 +108,8 @@ export interface SaveData {
   bossIntros: string[];
   /** Story scenes already played (see story/scenes.ts): each plays once per save. */
   scenesSeen: string[];
+  /** Time Attack: the Warden's path through the fastest clear, by split key, for its ghost. */
+  ghosts: Record<string, string>;
   /** Kinds of beast beaten at least once, which open their Field Guide entries. */
   beastsBeaten: string[];
 }
@@ -171,6 +173,8 @@ export function markPosted(save: SaveData, run: RunEntry): SaveData {
 export const RUNS_KEPT = 10;
 
 export interface DayRecord {
+  /** Time Attack: the Warden's path, packed (see modes/timeAttack.ts), kept if a best clear. */
+  track?: string;
   /** Kinds of beast beaten today, for the Field Guide. */
   beastsBeaten?: readonly string[];
   levelId: string;
@@ -250,6 +254,7 @@ export function emptySave(): SaveData {
     bossIntros: [],
     scenesSeen: [],
     beastsBeaten: [],
+    ghosts: {},
   };
 }
 
@@ -387,6 +392,7 @@ export function parseSave(value: unknown): SaveData | null {
     bossIntros: Array.isArray(value.bossIntros)
       ? value.bossIntros.filter((id): id is string => typeof id === 'string')
       : [],
+    ghosts: isStringRecord(value.ghosts) ? value.ghosts : {},
     scenesSeen: Array.isArray(value.scenesSeen)
       ? value.scenesSeen.filter((id): id is string => typeof id === 'string')
       : [],
@@ -655,6 +661,11 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
     campaign: day.campaign ?? save.campaign,
     bossIntros: save.bossIntros,
     scenesSeen: save.scenesSeen,
+    // A new fastest clear keeps its path for the ghost.
+    ghosts:
+      story && day.track && fasterSplits(save.bestSplits, key, day.splits) !== save.bestSplits
+        ? { ...save.ghosts, [key]: day.track }
+        : save.ghosts,
     beastsBeaten: [...new Set([...save.beastsBeaten, ...(day.beastsBeaten ?? [])])],
     totals: {
       days: save.totals.days + 1,

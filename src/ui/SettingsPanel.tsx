@@ -31,7 +31,8 @@ type ToggleKey =
   | 'alwaysShowArc'
   | 'aimAssist'
   | 'tiltShift'
-  | 'relaxedStory';
+  | 'relaxedStory'
+  | 'ghosts';
 
 type Toggle = readonly [ToggleKey, string, string];
 
@@ -49,6 +50,11 @@ const PLAY_TOGGLES: readonly Toggle[] = [
     'briefings',
     'Briefings',
     'Show the briefing and the day’s goals before each story and Time Attack day begins.',
+  ],
+  [
+    'ghosts',
+    'Ghost runs',
+    'In Time Attack, the ghost of your fastest clear runs the lesson alongside you.',
   ],
   [
     'relaxedStory',
