@@ -86,6 +86,18 @@ ramp and a warm rim light (`src/game/rendering/toon.ts`); medium and high graphi
 drawn from the scene's depth (`PostFx.tsx`). Many Hands, Over the Wall, Seedbed and Pod Orchard are
 the dressed reference fields; before and after pictures are in `docs-design/art/`.
 
+**The score.** The music (`src/game/audio/music.ts`) is written as scale-degree patterns and
+played on a small instrument set (soft piano, pizzicato, harp, celesta, marimba, flute, clarinet,
+upright bass, brushes) rendered in the browser into sample buffers at start-up
+(`src/game/audio/instruments.ts`: plucked strings by Karplus-Strong, mallets and bells as
+decaying partials, winds as shaped harmonics), so it downloads nothing; the old synth voices are
+the fallback. Four leitmotifs (the Clock, Ashwick, Sprocket, the Sproutlings) are woven into
+the area songs, one bar in eight, and the Clock's theme rings as a stinger for every part home;
+the characters' motifs answer them when they speak. Every song has a morning, a working-day and a
+sunset arrangement (`ARRANGEMENTS`), chosen by the day clock; intensity changes land on the bar
+line. Music, effects, ambience and voices have buses of their own into a limiter, and the music
+ducks under voices and big stingers.
+
 **The ground and the weather.** The field's ground blends three covers by a splat map painted once
 per field (`src/game/rendering/ground.ts`): the setting's turf, bare soil worn along the paths from
 the Kiln to each treasure and round the feet of walls and banks of water, and moss in the shade on

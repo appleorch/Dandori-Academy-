@@ -1,5 +1,5 @@
 import type { SproutKind } from '../workers/sprouts';
-import { MusicPlayer, type Intensity, type TrackName } from './music';
+import { MusicPlayer, type DayPhase, type Intensity, type Motif, type TrackName } from './music';
 
 /**
  * All game audio, synthesised with Web Audio so the game ships no sound files.
@@ -214,6 +214,10 @@ class AudioManager {
   /** Music, mood and ambience asked for before the context existed; started on unlock. */
   private wanted: TrackName | null = null;
   private bossMusic = { key: 0, phase: 0 };
+  private voices: GainNode | null = null;
+  private ducker: GainNode | null = null;
+  private dayPhase: DayPhase = 'day';
+  private lastMotif = new Map<string, number>();
   private mood: { intensity: Intensity; urgent: boolean } = { intensity: 1, urgent: false };
   private ambienceWanted = false;
 
@@ -231,12 +235,17 @@ class AudioManager {
     limiter.threshold.value = -14;
     limiter.ratio.value = 6;
     limiter.connect(ctx.destination);
+    // Four buses into the limiter: effects, music (through a ducker that dips it under voices
+    // and big stingers), ambience, and the characters' voices.
     this.sfx = ctx.createGain();
     this.music = ctx.createGain();
     this.ambience = ctx.createGain();
+    this.voices = ctx.createGain();
+    this.ducker = ctx.createGain();
     this.sfx.connect(limiter);
-    this.music.connect(limiter);
+    this.music.connect(this.ducker).connect(limiter);
     this.ambience.connect(limiter);
+    this.voices.connect(limiter);
     this.noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const samples = this.noise.getChannelData(0);
     for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
@@ -247,6 +256,9 @@ class AudioManager {
     this.ambience.connect(this.reverbSend);
     this.reverbSend.connect(this.convolver).connect(limiter);
     this.player = new MusicPlayer(ctx, this.music, this.noise);
+    // The instruments are rendered a little after the first menu is up, a few at a time.
+    window.setTimeout(() => this.player?.loadInstruments(), 1500);
+    this.player.setDayPhase(this.dayPhase);
     this.applyVolumes();
     this.applyScene();
     this.player.setMood(this.mood.intensity, this.mood.urgent);
@@ -265,6 +277,7 @@ class AudioManager {
     if (this.sfx) this.sfx.gain.value = this.sfxVolume;
     if (this.music) this.music.gain.value = this.musicVolume;
     if (this.ambience) this.ambience.gain.value = this.sfxVolume * 1.3;
+    if (this.voices) this.voices.gain.value = this.sfxVolume;
   }
 
   /** Changes the setting: reverb size and the ambience underneath everything. */
@@ -476,9 +489,16 @@ class AudioManager {
     const ctx = this.ctx;
     const voice = SPEAKERS[who];
     if (!ctx || !this.sfx || ctx.state !== 'running' || !voice) return;
-    const out = this.channel(undefined, this.sfx);
+    const out = this.channel(undefined, this.voices ?? this.sfx);
     const syllables = Math.min(14, Math.max(3, Math.round(text.split(/\s+/).length * 0.9)));
     const now = ctx.currentTime;
+    // The music steps back while someone speaks; a character's motif now and then, not always.
+    this.duck(syllables * voice.gap + 0.3, 0.6);
+    const motif = (['ashwick', 'sprocket'] as const).find((m) => m === who);
+    if (motif && now - (this.lastMotif.get(motif) ?? -99) > 20) {
+      this.lastMotif.set(motif, now);
+      this.player?.sting(motif);
+    }
     for (let i = 0; i < syllables; i++) {
       const start = now + i * voice.gap * rand(0.85, 1.15);
       const pitch = voice.pitch * rand(0.85, 1.2) * (i === syllables - 1 ? 0.85 : 1);
@@ -995,6 +1015,29 @@ class AudioManager {
   setMusicMood(intensity: Intensity, urgent: boolean): void {
     this.mood = { intensity, urgent };
     this.player?.setMood(intensity, urgent);
+  }
+
+  /** Dips the music for a while, under a voice or a big stinger, and brings it back. */
+  duck(seconds: number, depth = 0.45): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.ducker) return;
+    const gain = this.ducker.gain;
+    gain.cancelScheduledValues(ctx.currentTime);
+    gain.setTargetAtTime(depth, ctx.currentTime, 0.05);
+    gain.setTargetAtTime(1, ctx.currentTime + seconds, 0.3);
+  }
+
+  /** Arranges the music for the part of the day: morning, the working day, or sunset. */
+  setDayPhase(phase: DayPhase): void {
+    this.dayPhase = phase;
+    this.player?.setDayPhase(phase);
+  }
+
+  /** A stinger over the music: a part home, a boss, or a character's motif. */
+  sting(kind: 'part' | 'boss' | Motif): void {
+    if (!this.player) return;
+    this.duck(kind === 'part' || kind === 'boss' ? 2.4 : 1.4, kind === 'part' ? 0.35 : 0.55);
+    this.player.sting(kind);
   }
 
   /** Boss music: the boss's own key and the fight's phase (see MusicPlayer.setBoss). */

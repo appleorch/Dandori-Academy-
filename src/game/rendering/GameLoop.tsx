@@ -29,6 +29,8 @@ const HEAVE_RANGE = 16;
 import { PLUCK_INTERVAL, pluckNearest, sproutInReach } from '../workers/growth';
 import { LINE_SECONDS, openingScene, partScene } from '../story/scenes';
 import { allPartsHome, currentSection } from '../campaign/campaign';
+import type { DayPhase } from '../audio/music';
+import { STORY_SUNSET_SECONDS } from './SkyLight';
 import type { SproutKind } from '../workers/sprouts';
 
 const HUD_INTERVAL_FRAMES = 6;
@@ -72,6 +74,17 @@ interface GameLoopProps {
   fx: Feedback;
   /** Called when the Warden goes down a way down or comes back up: the scene follows. */
   onSwitch: (sim: Simulation) => void;
+}
+
+/** The part of the day the music is arranged for, by the day clock. */
+function musicPhase(sim: Simulation): DayPhase {
+  const length = sim.level.dayLength;
+  if (length <= 0 || sim.visit) return 'day';
+  const gone = 1 - sim.timeLeft / length;
+  const sunset = sim.story ? STORY_SUNSET_SECONDS : length * 0.15;
+  if (sim.timeLeft <= sunset) return 'sunset';
+  if (gone < 0.12) return 'morning';
+  return 'day';
 }
 
 /** Seconds a boss's intro holds the day. */
@@ -263,6 +276,7 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
         z: roused.z,
       });
       audio.play('bossSting');
+      audio.sting('boss');
       audio.playMusic('boss');
       return;
     }
@@ -321,6 +335,7 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
         partsToday.current++;
         const count = allPartsHome(store.save.campaign) + partsToday.current;
         store.playScene(partScene(count, relic.name));
+        audio.sting('part');
       }
     }
     // Each Sunshard home is compared with the same shard on the best story clear (surface only).
@@ -488,6 +503,8 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
         audio.setBossMusic(BOSS_KEYS[fight.kind] ?? 0, phase);
       }
       audio.setMusicMood(intensity, sim.timeLeft <= LAST_CALL_SECONDS);
+      // The music follows the day: a morning arrangement, the working day, then sunset.
+      audio.setDayPhase(musicPhase(sim));
     }
   }, -1);
 

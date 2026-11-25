@@ -126,6 +126,7 @@ export function App() {
       audio.startAmbience();
     } else {
       audio.setScene('menu');
+      audio.setDayPhase('day');
       audio.playMusic('menu');
       audio.setMusicMood(1, false);
     }

@@ -8,6 +8,16 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.30.0',
+    date: '2026-11-25',
+    changes: [
+      'A new score: the music is played on real-sounding instruments (piano, pizzicato strings, harp, celesta, marimba, flute, clarinet and upright bass), made in the game itself, so nothing extra is downloaded.',
+      'Leitmotifs: a theme for the Great Clock, heard on the menu and whenever a part comes home, and motifs for Ashwick, the Headmaster and the Sproutlings, woven into every area’s song.',
+      'Every area’s music changes with the day: a gentle morning, the working day, and a slower, warmer sunset. Changes of mood now wait for the end of the bar.',
+      'The music steps back when someone speaks and under big moments, and every sound now runs through its own channel.',
+    ],
+  },
+  {
     version: '0.29.1',
     date: '2026-11-25',
     changes: [

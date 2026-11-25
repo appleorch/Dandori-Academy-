@@ -4,11 +4,74 @@
  * lowest intensity it plays at, which is how the tune thickens when a fight starts.
  */
 
+import { INSTRUMENTS, renderInstrument, SAMPLE_HZ, type Instrument } from './instruments';
+
 export type TrackName =
   'menu' | 'meadow' | 'autumn' | 'marsh' | 'dusk' | 'cave' | 'terrarium' | 'boss' | 'poker';
 
 /** 0: calm (briefings, quiet moments). 1: a normal working day. 2: danger close by. */
 export type Intensity = 0 | 1 | 2;
+
+/** The part of the day a song is arranged for. */
+export type DayPhase = 'morning' | 'day' | 'sunset';
+
+/**
+ * How each part of the day re-arranges a song: mornings sparse and a touch slower, with the
+ * tune on the flute and no drums; the working day as written; sunset slower again, warmer (the
+ * arpeggio on the harp, the tune on the clarinet), only the kick left of the kit.
+ */
+export const ARRANGEMENTS: Record<
+  DayPhase,
+  {
+    tempo: number;
+    drums: 'none' | 'kick' | 'all';
+    pad: number;
+    lead?: Instrument;
+    arp?: Instrument;
+  }
+> = {
+  morning: { tempo: 0.94, drums: 'none', pad: 1.3, lead: 'flute', arp: 'celesta' },
+  day: { tempo: 1, drums: 'all', pad: 1 },
+  sunset: { tempo: 0.9, drums: 'kick', pad: 1.5, lead: 'clarinet', arp: 'harp' },
+};
+
+/**
+ * The leitmotifs, as [scale step above the song's root, length in sixteenths]. The Clock's
+ * theme opens the menu and the base camp and rings for every part home; Ashwick's is low and
+ * level; Sprocket's skips about; the Sproutlings' runs up and hops.
+ */
+export const MOTIFS = {
+  clock: [
+    [4, 4],
+    [2, 2],
+    [3, 2],
+    [1, 2],
+    [0, 6],
+  ],
+  ashwick: [
+    [0, 4],
+    [0, 2],
+    [-1, 2],
+    [-3, 8],
+  ],
+  sprocket: [
+    [2, 2],
+    [4, 2],
+    [3, 2],
+    [5, 2],
+    [4, 4],
+    [2, 4],
+  ],
+  sproutling: [
+    [0, 2],
+    [2, 2],
+    [4, 2],
+    [7, 4],
+    [4, 2],
+    [7, 4],
+  ],
+} as const satisfies Record<string, readonly (readonly [number, number])[]>;
+export type Motif = keyof typeof MOTIFS;
 
 type Steps = readonly (number | null)[];
 type Voice = 'pluck' | 'bell' | 'lead' | 'keys' | 'mallet' | 'sax';
@@ -43,6 +106,8 @@ interface Song {
   drums?: { kick?: Drum; snare?: Drum; hat?: Drum; ride?: Drum };
   /** Send level into the echo. */
   echo: number;
+  /** The leitmotif woven into the tune: it takes the lead's place once in every eight bars. */
+  motif?: Motif;
 }
 
 interface Drum {
@@ -70,6 +135,7 @@ const SONGS: Record<TrackName, Song> = {
     bars: [0, 3, 5, 4, 0, 3, 1, 4],
     chord: TRIAD,
     echo: 0.35,
+    motif: 'clock',
     pad: { from: 0, volume: 0.05, octave: -1, cutoff: 900 },
     bass: {
       from: 0,
@@ -109,6 +175,7 @@ const SONGS: Record<TrackName, Song> = {
     bars: [0, 4, 5, 3, 0, 4, 1, 4],
     chord: TRIAD,
     echo: 0.3,
+    motif: 'clock',
     pad: { from: 0, volume: 0.04, octave: -1, cutoff: 1000 },
     bass: {
       from: 1,
@@ -151,6 +218,7 @@ const SONGS: Record<TrackName, Song> = {
     bars: [0, 5, 3, 4, 0, 5, 1, 4],
     chord: TRIAD,
     echo: 0.22,
+    motif: 'sproutling',
     pad: { from: 0, volume: 0.04, octave: -1, cutoff: 1100 },
     bass: {
       from: 1,
@@ -193,6 +261,7 @@ const SONGS: Record<TrackName, Song> = {
     bars: [0, 3, 6, 0, 0, 3, 4, 0],
     chord: TRIAD,
     echo: 0.2,
+    motif: 'sprocket',
     pad: { from: 0, volume: 0.04, octave: -1, cutoff: 1000 },
     bass: {
       from: 1,
@@ -235,6 +304,7 @@ const SONGS: Record<TrackName, Song> = {
     bars: [0, 5, 2, 6, 0, 5, 3, 4],
     chord: TRIAD,
     echo: 0.4,
+    motif: 'sproutling',
     pad: { from: 0, volume: 0.05, octave: -1, cutoff: 800 },
     bass: {
       from: 1,
@@ -277,6 +347,7 @@ const SONGS: Record<TrackName, Song> = {
     bars: [0, 4, 5, 3, 0, 4, 1, 4],
     chord: TRIAD,
     echo: 0.25,
+    motif: 'ashwick',
     pad: { from: 0, volume: 0.045, octave: -1, cutoff: 1200 },
     bass: {
       from: 1,
@@ -319,6 +390,7 @@ const SONGS: Record<TrackName, Song> = {
     bars: [0, 0, 1, 0, 0, 6, 1, 0],
     chord: TRIAD,
     echo: 0.6,
+    motif: 'ashwick',
     pad: { from: 0, volume: 0.06, octave: -2, cutoff: 500 },
     bass: {
       from: 1,
@@ -359,6 +431,7 @@ const SONGS: Record<TrackName, Song> = {
     bars: [0, 0, 5, 6, 0, 0, 3, 4],
     chord: TRIAD,
     echo: 0.15,
+    motif: 'clock',
     pad: { from: 0, volume: 0.05, octave: -1, cutoff: 1400 },
     bass: {
       from: 0,
@@ -438,6 +511,38 @@ const STEPS_PER_BAR = 16;
 /** How far ahead of the clock notes are scheduled, and how often the scheduler wakes. */
 const LOOKAHEAD = 0.35;
 const TICK_MS = 90;
+
+/** A motif laid out as a bar of sixteen steps, as a lead phrase is. */
+export function motifSteps(motif: Motif): (number | null)[] {
+  const steps: (number | null)[] = Array(STEPS_PER_BAR).fill(null);
+  let at = 0;
+  for (const [step, length] of MOTIFS[motif]) {
+    if (at < STEPS_PER_BAR) steps[at] = step;
+    at += length;
+  }
+  return steps;
+}
+
+/** The synth voice to fall back on for each instrument, and the instrument for each voice. */
+const FALLBACK: Record<Instrument, Voice> = {
+  piano: 'keys',
+  pizzicato: 'pluck',
+  harp: 'pluck',
+  celesta: 'bell',
+  marimba: 'mallet',
+  flute: 'lead',
+  clarinet: 'sax',
+  upright: 'pluck',
+  brush: 'pluck',
+};
+const INSTRUMENT_FOR: Record<Voice, Instrument> = {
+  pluck: 'pizzicato',
+  bell: 'celesta',
+  mallet: 'marimba',
+  keys: 'piano',
+  lead: 'flute',
+  sax: 'clarinet',
+};
 /** Tempo multiplier for the last stretch of a day. */
 const URGENT_TEMPO = 1.12;
 /** How much faster boss music gets with each phase of the fight. */
@@ -449,6 +554,11 @@ function midiToHz(note: number): number {
 
 /** Plays songs through `out`. Create it once the audio context exists. */
 export class MusicPlayer {
+  /** Rendered instrument samples (see instruments.ts); missing ones fall back to synth voices. */
+  private readonly samples = new Map<Instrument, AudioBuffer>();
+  private phase: DayPhase = 'day';
+  /** Intensity asked for, applied at the next bar line so changes never land mid-phrase. */
+  private wantedIntensity: Intensity = 1;
   private timer: number | null = null;
   private song: Song | null = null;
   private pending: TrackName | null = null;
@@ -517,8 +627,93 @@ export class MusicPlayer {
   }
 
   setMood(intensity: Intensity, urgent: boolean): void {
-    this.intensity = intensity;
+    this.wantedIntensity = intensity;
     this.urgent = urgent;
+    if (this.timer === null) this.intensity = intensity;
+  }
+
+  /** Re-arranges whatever plays for the part of the day (see ARRANGEMENTS). */
+  setDayPhase(phase: DayPhase): void {
+    this.phase = phase;
+  }
+
+  /**
+   * Renders the instrument samples a few at a time while the menu is up, so nothing stalls.
+   * Without a way to make buffers, the synthesised voices simply carry on.
+   */
+  loadInstruments(): void {
+    const queue = INSTRUMENTS.filter((name) => !this.samples.has(name));
+    const next = () => {
+      const name = queue.shift();
+      if (!name) return;
+      try {
+        const data = renderInstrument(name, this.ctx.sampleRate);
+        const buffer = this.ctx.createBuffer(1, data.length, this.ctx.sampleRate);
+        buffer.getChannelData(0).set(data);
+        this.samples.set(name, buffer);
+      } catch {
+        return;
+      }
+      window.setTimeout(next, 30);
+    };
+    window.setTimeout(next, 30);
+  }
+
+  /** Whether an instrument's sample is ready. */
+  hasSample(name: Instrument): boolean {
+    return this.samples.has(name);
+  }
+
+  /**
+   * A stinger over the music, starting on the next beat: a part home (the Clock's theme on
+   * the celesta), a boss (its theme low on the clarinet over the bass), or a character's motif.
+   */
+  sting(kind: 'part' | 'boss' | Motif): void {
+    const song = this.song ?? SONGS.menu;
+    const bpm = song.bpm;
+    const sixteenth = 60 / bpm / 4;
+    const start = this.ctx.currentTime + 0.05;
+    const motif: Motif = kind === 'part' ? 'clock' : kind === 'boss' ? 'clock' : kind;
+    const instrument: Instrument =
+      kind === 'part'
+        ? 'celesta'
+        : kind === 'boss'
+          ? 'clarinet'
+          : kind === 'ashwick'
+            ? 'clarinet'
+            : kind === 'sprocket'
+              ? 'marimba'
+              : 'pizzicato';
+    const octave = kind === 'boss' ? -1 : kind === 'ashwick' ? 0 : 1;
+    let at = start;
+    for (const [step, length] of MOTIFS[motif]) {
+      const hz = midiToHz(this.note(song, step, octave));
+      this.playNote(instrument, hz, at, length * sixteenth * 1.1, kind === 'part' ? 0.16 : 0.12);
+      if (kind === 'boss') this.playNote('upright', hz / 4, at, length * sixteenth, 0.14);
+      at += length * sixteenth;
+    }
+  }
+
+  /** One note on a sampled instrument, or the closest synth voice if its sample is not ready. */
+  private playNote(name: Instrument, hz: number, time: number, length: number, volume: number) {
+    const buffer = this.samples.get(name);
+    if (!buffer) {
+      this.voice(FALLBACK[name], hz, time, length, volume);
+      return;
+    }
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = hz / SAMPLE_HZ[name];
+    const sustained = name === 'flute' || name === 'clarinet';
+    const ring = sustained ? Math.max(0.15, length) : buffer.duration / source.playbackRate.value;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(volume, time);
+    if (sustained) gain.gain.setTargetAtTime(0.0001, time + ring, 0.08);
+    gain.connect(this.out);
+    gain.connect(this.echoSend);
+    source.connect(gain);
+    source.start(time);
+    source.stop(time + Math.min(buffer.duration / source.playbackRate.value, ring + 0.4));
   }
 
   private begin(track: TrackName): void {
@@ -531,11 +726,17 @@ export class MusicPlayer {
 
   private pump(): void {
     while (this.nextTime < this.ctx.currentTime + LOOKAHEAD) {
-      if (this.step % STEPS_PER_BAR === 0 && this.pending) this.begin(this.pending);
+      if (this.step % STEPS_PER_BAR === 0) {
+        if (this.pending) this.begin(this.pending);
+        // Intensity changes land on the bar line.
+        this.intensity = this.wantedIntensity;
+      }
       const song = this.song;
       if (!song) return;
       const phaseTempo = this.current === 'boss' ? 1 + this.bossPhase * BOSS_PHASE_TEMPO : 1;
-      const stepTime = 60 / (song.bpm * phaseTempo * (this.urgent ? URGENT_TEMPO : 1)) / 4;
+      const arrangement = ARRANGEMENTS[this.phase];
+      const stepTime =
+        60 / (song.bpm * phaseTempo * arrangement.tempo * (this.urgent ? URGENT_TEMPO : 1)) / 4;
       // Swing delays the second eighth of each beat.
       const inBeat = this.step % 4;
       const swung = inBeat === 2 ? (song.swing - 0.5) * stepTime * 4 : 0;
@@ -557,6 +758,7 @@ export class MusicPlayer {
     const beat = step % STEPS_PER_BAR;
     const chordRoot = song.bars[barIndex];
     const level = this.intensity;
+    const arrangement = ARRANGEMENTS[this.phase];
     /** Chord tone `index`, continuing up through the octaves. */
     const tone = (index: number, octave: number): number => {
       const size = song.chord.length;
@@ -573,7 +775,7 @@ export class MusicPlayer {
           midiToHz(tone(i, song.pad.octave)),
           time,
           stepTime * 17,
-          song.pad.volume,
+          song.pad.volume * arrangement.pad,
           song.pad.cutoff,
         );
       }
@@ -581,14 +783,17 @@ export class MusicPlayer {
     if (song.bass && level >= song.bass.from) {
       const index = song.bass.steps[beat];
       if (index !== null) {
-        this.bass(midiToHz(tone(index, song.bass.octave)), time, stepTime * 3.4, song.bass.volume);
+        const hz = midiToHz(tone(index, song.bass.octave));
+        if (this.samples.has('upright'))
+          this.playNote('upright', hz, time, stepTime * 3.4, song.bass.volume * 1.2);
+        else this.bass(hz, time, stepTime * 3.4, song.bass.volume);
       }
     }
     if (song.arp && level >= song.arp.from) {
       const index = song.arp.steps[beat];
       if (index !== null) {
-        this.voice(
-          song.arp.voice,
+        this.playNote(
+          arrangement.arp ?? INSTRUMENT_FOR[song.arp.voice],
           midiToHz(tone(index, song.arp.octave)),
           time,
           stepTime * 3,
@@ -611,8 +816,8 @@ export class MusicPlayer {
     }
     if (song.comp && level >= song.comp.from && song.comp.steps.includes(beat)) {
       for (let i = 0; i < song.chord.length; i++) {
-        this.voice(
-          song.comp.voice,
+        this.playNote(
+          INSTRUMENT_FOR[song.comp.voice],
           midiToHz(tone(i, song.comp.octave)),
           time,
           stepTime * 2.5,
@@ -621,19 +826,27 @@ export class MusicPlayer {
       }
     }
     if (song.lead && level >= song.lead.from) {
-      const phrase = song.lead.phrases[song.lead.order[barIndex % song.lead.order.length]];
+      const instrument = arrangement.lead ?? INSTRUMENT_FOR[song.lead.voice];
+      // Once in every eight bars the song's leitmotif takes the tune, from its own root.
+      const motifBar = song.motif !== undefined && barIndex % 8 === 4;
+      const phrase = motifBar
+        ? motifSteps(song.motif as Motif)
+        : song.lead.phrases[song.lead.order[barIndex % song.lead.order.length]];
       const offset = phrase[beat];
       if (offset !== null) {
         // The note rings until the phrase's next one.
         let length = 1;
         while (beat + length < STEPS_PER_BAR && phrase[beat + length] === null) length++;
-        const pitch = midiToHz(this.note(song, chordRoot + offset, song.lead.octave));
-        this.voice(song.lead.voice, pitch, time, stepTime * Math.min(length, 6), song.lead.volume);
+        const base = motifBar ? 0 : chordRoot;
+        const pitch = midiToHz(this.note(song, base + offset, song.lead.octave));
+        this.playNote(instrument, pitch, time, stepTime * Math.min(length, 6), song.lead.volume);
       }
     }
     const { drums } = song;
-    if (drums) {
+    if (drums && arrangement.drums !== 'none') {
       this.drum(drums.kick, beat, level, (v) => this.kick(time, v));
+    }
+    if (drums && arrangement.drums === 'all') {
       this.drum(drums.snare, beat, level, (v) => this.snare(time, v));
       this.drum(drums.hat, beat, level, (v) => this.hat(time, v, 0.04, 7000));
       this.drum(drums.ride, beat, level, (v) => this.hat(time, v, 0.22, 9000));
