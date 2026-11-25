@@ -177,3 +177,41 @@ export function partScene(count: number, partName: string): Scene {
     ],
   };
 }
+
+/** The first of each kind brought into the story: a word from Tindle and Ashwick. */
+export const KIND_SCENES: Record<'dew' | 'stone' | 'spark', Scene> = {
+  dew: {
+    id: 'kind-dew',
+    lines: [
+      {
+        who: 'tindle',
+        camera: 'kiln',
+        text: 'A Dewling! Look at it, all damp and pleased with itself.',
+      },
+      {
+        who: 'ashwick',
+        text: 'Dewlings wade where the rest of you drown. The pond is theirs. So are the drips.',
+      },
+    ],
+  },
+  stone: {
+    id: 'kind-stone',
+    lines: [
+      { who: 'tindle', camera: 'kiln', text: 'That one is heavy. That one is a Stoneling.' },
+      {
+        who: 'ashwick',
+        text: 'Stonelings lift like two, and they are the only ones who crack crystal. Mind the vault.',
+      },
+    ],
+  },
+  spark: {
+    id: 'kind-spark',
+    lines: [
+      { who: 'tindle', camera: 'kiln', text: 'Ow. It bit me. It is crackling.' },
+      {
+        who: 'ashwick',
+        text: 'A Sparkling. Sparks cannot hurt it, and it flies farthest when thrown. Use that.',
+      },
+    ],
+  },
+};

@@ -1,3 +1,4 @@
+import { adviceFor } from '../game/campaign/advice';
 import { useState } from 'react';
 import {
   allPartsHome,
@@ -10,6 +11,7 @@ import {
   sectionProgress,
   stockTotal,
   totalParts,
+  STORY_DIFFICULTIES,
   type CampaignState,
 } from '../game/campaign/campaign';
 import { CAMPAIGN_SECTIONS } from '../game/campaign/sections';
@@ -203,7 +205,11 @@ export function CampScreen() {
   const startDay = useGameStore((store) => store.startDay);
   const chooseSection = useGameStore((store) => store.chooseSection);
   const dismissEnding = useGameStore((store) => store.dismissEnding);
-  const relaxed = useGameStore((store) => store.settings.relaxedStory);
+  const setDifficulty = useGameStore((store) => store.setStoryDifficulty);
+  const skipTutorial = useGameStore((store) => store.skipTutorial);
+  const showScreen = useGameStore((store) => store.showScreen);
+  const relaxed = state.difficulty === 'relaxed';
+  const advice = adviceFor(state);
   const setPlan = useGameStore((store) => store.setPlan);
   const pinAt = useGameStore((store) => store.togglePin);
   const restartCampaign = useGameStore((store) => store.restartCampaign);
@@ -310,12 +316,62 @@ export function CampScreen() {
                 <p className="note">{t('camp.overflow', { going, waiting: total - going })}</p>
               )}
             </div>
+            {state.day === 0 ? (
+              <fieldset className="story-difficulty">
+                <legend>{t('camp.difficulty')}</legend>
+                {STORY_DIFFICULTIES.map((difficulty) => (
+                  <label key={difficulty}>
+                    <input
+                      type="radio"
+                      name="story-difficulty"
+                      checked={state.difficulty === difficulty}
+                      onChange={() => setDifficulty(difficulty)}
+                    />
+                    <strong>{t(`camp.diff.${difficulty}` as MessageKey)}</strong>
+                    <small>{t(`camp.diff.${difficulty}Text` as MessageKey)}</small>
+                  </label>
+                ))}
+                <p className="note">{t('camp.difficultyNote')}</p>
+                {state.tutorial !== 'done' && (
+                  <>
+                    <label className="skip-guide">
+                      <input
+                        type="checkbox"
+                        checked={state.tutorial === 'skipped'}
+                        onChange={(event) => skipTutorial(event.target.checked)}
+                      />
+                      {t('camp.skipGuide')}
+                    </label>
+                    {state.tutorial === 'pending' && <p className="note">{t('camp.guideNote')}</p>}
+                  </>
+                )}
+              </fieldset>
+            ) : (
+              <p className="note">
+                {t('camp.diffShown', { name: t(`camp.diff.${state.difficulty}` as MessageKey) })}
+              </p>
+            )}
             <button type="button" onClick={() => startDay(section.level.id, 'campaign')} autoFocus>
               {state.day === 0 ? t('camp.begin') : t('camp.startDay', { day: state.day + 1 })}
             </button>
             <p className="note">{t('camp.sunsetNote')}</p>
           </aside>
         </div>
+        {advice && (
+          <section className="camp-advice">
+            <h2>{t('camp.advice.title')}</h2>
+            <p>{t(`camp.advice.${advice.weakness}` as MessageKey)}</p>
+            <button
+              type="button"
+              className="secondary small"
+              onClick={() =>
+                advice.lesson ? startDay(advice.lesson, 'lessons') : showScreen(advice.screen)
+              }
+            >
+              {t('camp.advice.go')}
+            </button>
+          </section>
+        )}
         <section className="camp-parts">
           <h2>{t('camp.grounds')}</h2>
           <ol>

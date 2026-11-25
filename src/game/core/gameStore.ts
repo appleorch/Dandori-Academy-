@@ -43,6 +43,7 @@ import {
   togglePin,
   type CampaignReport,
   type CampaignState,
+  type StoryDifficulty,
 } from '../campaign/campaign';
 import { sectionById } from '../campaign/sections';
 import { dayFeats } from '../progression/feats';
@@ -229,6 +230,9 @@ interface GameStore {
   briefing: boolean;
   /** Proctor Ashwick's current line of advice, or null. */
   hint: string | null;
+  /** The guided morning's prompt, or a kind's first try, while one is up. */
+  guide: { text: string; step: number; of: number; skippable: boolean } | null;
+  setGuide: (guide: GameStore['guide']) => void;
   /** The Headmaster's latest remark; `id` changes with every new one. */
   sprocket: (Line & { id: number }) | null;
   /** True while the Warden stands at the little door. */
@@ -297,7 +301,11 @@ interface GameStore {
   saveBackup: string | null;
   dismissSaveBackup: () => void;
   /** Gives up the story's expedition and starts it again from the first day. */
-  restartCampaign: () => void;
+  restartCampaign: (difficulty?: StoryDifficulty) => void;
+  /** Chooses the story's difficulty: only before its first day. */
+  setStoryDifficulty: (difficulty: StoryDifficulty) => void;
+  /** Skips the guided morning (or takes it back, before the first day). */
+  skipTutorial: (skip: boolean) => void;
   /** Story: pins a spot on the current section's map, or takes a pin away. */
   togglePin: (x: number, z: number) => void;
   /** Story: sets how many of each kind go out each morning (null: everyone). */
@@ -382,8 +390,8 @@ function snapshot(sim: Simulation): HudSnapshot {
 }
 
 /** A settled story day, with the ending it reaches (once) noted on the expedition. */
-function withEnding<T extends { state: CampaignState }>(settled: T, relaxed: boolean): T {
-  const ending = campaignEnding(settled.state, relaxed);
+function withEnding<T extends { state: CampaignState }>(settled: T): T {
+  const ending = campaignEnding(settled.state, settled.state.difficulty === 'relaxed');
   if (!ending || ending === settled.state.ending) return settled;
   return { ...settled, state: { ...settled.state, ending, endingShown: false } };
 }
@@ -427,9 +435,22 @@ export const useGameStore = create<GameStore>((set, get) => {
   };
   // Grant anything an older save already qualifies for, such as rank milestones.
   const stored = storage ? loadSaveChecked(storage) : { save: emptySave(), backupKey: null };
-  const initial = unlockAchievements(stored.save, null, new Date());
-  if (initial.unlocked.length > 0) persist(initial.save);
-  const loaded = storage ? loadSettings(storage, deviceDefaults()) : deviceDefaults();
+  const granted = unlockAchievements(stored.save, null, new Date());
+  if (granted.unlocked.length > 0) persist(granted.save);
+  const read = storage ? loadSettings(storage, deviceDefaults()) : deviceDefaults();
+  // The old "relaxed story" setting is now the story's own difficulty: moved over once.
+  const initial = read.relaxedStory
+    ? {
+        ...granted,
+        save: {
+          ...granted.save,
+          campaign: { ...granted.save.campaign, difficulty: 'relaxed' as const },
+        },
+      }
+    : granted;
+  if (read.relaxedStory) persist(initial.save);
+  const loaded = read.relaxedStory ? { ...read, relaxedStory: false } : read;
+  if (storage && loaded !== read) writeSettings(storage, loaded);
   // Every browser gets its own player id for the board, made once and kept with the settings.
   const settings = loaded.playerId ? loaded : { ...loaded, playerId: newPlayerId() };
   if (storage && settings !== loaded) writeSettings(storage, settings);
@@ -447,6 +468,12 @@ export const useGameStore = create<GameStore>((set, get) => {
     paused: false,
     briefing: false,
     hint: null,
+    guide: null,
+    setGuide: (guide) => {
+      const was = get().guide;
+      if (was?.text === guide?.text && was?.step === guide?.step) return;
+      set({ guide });
+    },
     sprocket: null,
     nearSecret: false,
     nearSprout: false,
@@ -625,8 +652,28 @@ export const useGameStore = create<GameStore>((set, get) => {
     saveBackup: stored.backupKey,
     dismissSaveBackup: () => set({ saveBackup: null }),
 
-    restartCampaign: () => {
-      const save = { ...get().save, campaign: newCampaign() };
+    restartCampaign: (difficulty) => {
+      const save = {
+        ...get().save,
+        campaign: newCampaign(difficulty ?? get().save.campaign.difficulty),
+      };
+      persist(save);
+      set({ save });
+    },
+    setStoryDifficulty: (difficulty) => {
+      const campaign = get().save.campaign;
+      if (campaign.day > 0) return;
+      const save = { ...get().save, campaign: { ...campaign, difficulty } };
+      persist(save);
+      set({ save });
+    },
+    skipTutorial: (skip) => {
+      const campaign = get().save.campaign;
+      if (campaign.tutorial === 'done' || (!skip && campaign.day > 0)) return;
+      const save = {
+        ...get().save,
+        campaign: { ...campaign, tutorial: skip ? ('skipped' as const) : ('pending' as const) },
+      };
       persist(save);
       set({ save });
     },
@@ -714,7 +761,6 @@ export const useGameStore = create<GameStore>((set, get) => {
                 sim,
                 haul?.relics ?? [],
               ),
-              get().settings.relaxedStory,
             )
           : null;
       const facts = isChallenge(mode) ? challengeFacts(sim) : null;

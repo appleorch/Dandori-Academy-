@@ -8,6 +8,17 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.37.0',
+    date: '2026-11-25',
+    changes: [
+      'Story: the first morning is guided. A fenced lawn round the Kiln, one step at a time, each waiting for you; bring the first Clock part home and the gate opens to the Quad. Returning players can skip it.',
+      'Story: the first of each kind you bring in gets a short scene and something to try.',
+      'Story: on the first day Ashwick warns you three minutes before sunset, rings show where your Sproutlings are safe, and nobody is lost that night. The rings show over the last minute of every day.',
+      'Story: from the third day, the base camp suggests where to sharpen your dandori, by what your days show: idle hands, losses or slow hauls.',
+      'Story: choose Relaxed, Normal or Hard when the story begins. It is kept with the story (the old relaxed setting moves into it).',
+    ],
+  },
+  {
     version: '0.36.0',
     date: '2026-11-25',
     changes: [

@@ -485,6 +485,32 @@ function MoundBody({ r, glint }: { r: number; glint: string }) {
   );
 }
 
+/** The guided morning's fence: white pickets on two rails, opened by itself, never broken. */
+function FenceBody({ box }: { box: Box }) {
+  const long = box.w >= box.d;
+  const length = long ? box.w : box.d;
+  const posts = Math.max(2, Math.round(length / 1.6));
+  return (
+    <>
+      {[0.45, 1.05].map((y) => (
+        <mesh key={y} position={[0, y, 0]} castShadow>
+          <boxGeometry args={[long ? length : 0.14, 0.14, long ? 0.14 : length]} />
+          <meshStandardMaterial color="#f2ead8" roughness={0.8} />
+        </mesh>
+      ))}
+      {Array.from({ length: posts }, (_, i) => {
+        const along = (i / (posts - 1) - 0.5) * length;
+        return (
+          <mesh key={i} position={[long ? along : 0, 0.7, long ? 0 : along]} castShadow>
+            <boxGeometry args={[0.22, 1.4, 0.22]} />
+            <meshStandardMaterial color="#fffaf0" roughness={0.8} />
+          </mesh>
+        );
+      })}
+    </>
+  );
+}
+
 /** A wall of thorny bramble filling a gate's box. */
 /** A weak stretch of wall: old brick like the rest, but for a crack running through it. */
 function HiddenWallBody({ box }: { box: Box }) {
@@ -1445,6 +1471,8 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
         {enemy.shape &&
           ((enemy.shape as GateSpawn).style === 'crystal' ? (
             <CrystalGateBody box={enemy.shape} />
+          ) : (enemy.shape as GateSpawn).style === 'fence' ? (
+            <FenceBody box={enemy.shape} />
           ) : (enemy.shape as GateSpawn).style === 'hidden' ? (
             <HiddenWallBody box={enemy.shape} />
           ) : (

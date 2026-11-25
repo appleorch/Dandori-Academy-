@@ -27,12 +27,22 @@ import { recordSteps } from './perf';
 const HEAVE_SECONDS = 1.1;
 const HEAVE_RANGE = 16;
 import { PLUCK_INTERVAL, pluckNearest, sproutInReach } from '../workers/growth';
-import { LINE_SECONDS, openingScene, partScene } from '../story/scenes';
+import { KIND_SCENES, LINE_SECONDS, openingScene, partScene } from '../story/scenes';
+import {
+  advanceGuide,
+  FIRST_DAY_WARNING,
+  GUIDE_STEPS,
+  guideText,
+  KIND_TRIES,
+  newGuide,
+  SUNSET_WARNING,
+  type GuideProgress,
+} from '../story/guide';
 import { allPartsHome, currentSection } from '../campaign/campaign';
 import type { DayPhase } from '../audio/music';
 import { STORY_SUNSET_SECONDS } from './SkyLight';
 import { ambientEmitters, nearestEmitters } from '../audio/spatial';
-import type { SproutKind } from '../workers/sprouts';
+import { SPROUT_KINDS, type SproutKind } from '../workers/sprouts';
 
 const HUD_INTERVAL_FRAMES = 6;
 /** A chime sounds when this much of the day is left, and the music picks up. */
@@ -138,6 +148,10 @@ function mood(sim: Simulation): { boss: boolean; intensity: Intensity } {
   return { boss, intensity: danger ? 2 : 1 };
 }
 
+/** How long a new kind's first try stays up, at most, and the first sunset's warning. */
+const KIND_TRY_SECONDS = 40;
+const WARNING_SECONDS = 12;
+
 /**
  * The main loop. Each rendered frame it projects the pointer onto the ground, runs
  * the fixed simulation steps that are due, hands their events to the feedback layer,
@@ -164,6 +178,13 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
   const sceneLine = useRef(-1);
   const sceneOf = useRef('');
   const partsToday = useRef(0);
+  // The guided morning (undefined until the day's first look), kinds already met, a new
+  // kind's first try, and the first day's sunset warning.
+  const guide = useRef<GuideProgress | null | undefined>(undefined);
+  const known = useRef(new Set<SproutKind>());
+  const kindTry = useRef<{ kind: 'dew' | 'stone' | 'spark'; shown: number } | null>(null);
+  const warned = useRef(false);
+  const warnFor = useRef(0);
   const heard = useRef(new Map<number, { alert: boolean; state: string; hp: number }>());
   const emitting = useRef<Simulation | null>(null);
   // The field's ambient emitters stop with the day.
@@ -183,6 +204,66 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
   );
 
   useEffect(() => input.attach(element), [input, element]);
+
+  /** The story's teaching: the guided morning, each new kind, and the first sunset. */
+  const storyGuide = (sim: Simulation, seconds: number): void => {
+    const store = useGameStore.getState();
+    const campaign = store.save.campaign;
+    // A returning player may skip the guided morning, even partway through.
+    if (campaign.tutorial === 'skipped' && sim.fenceUp) {
+      sim.openFence();
+      guide.current = null;
+    }
+    if (guide.current === undefined) {
+      guide.current = sim.fenceUp ? newGuide(sim) : null;
+      known.current = new Set([
+        'ember',
+        ...SPROUT_KINDS.filter((kind) => campaign.stock[kind] > 0),
+      ]);
+    }
+    if (guide.current) guide.current = advanceGuide(guide.current, sim, seconds);
+    // The first of a kind brought in: a short scene, then something to try with it.
+    for (const [, worker] of sim.workers.entries()) {
+      const kind = worker.kind;
+      if (kind === 'ember' || known.current.has(kind)) continue;
+      known.current.add(kind);
+      if (!store.save.scenesSeen.includes(KIND_SCENES[kind].id)) {
+        store.playScene(KIND_SCENES[kind]);
+        kindTry.current = { kind, shown: 0 };
+      }
+    }
+    if (kindTry.current) {
+      const trying = kindTry.current;
+      trying.shown += seconds;
+      let tried = false;
+      for (const [, worker] of sim.workers.entries()) {
+        if (worker.kind === trying.kind && worker.state === 'thrown') tried = true;
+      }
+      if (tried || trying.shown > KIND_TRY_SECONDS) kindTry.current = null;
+    }
+    // The first day: a gentle warning three minutes before sunset.
+    if (campaign.day === 0 && sim.timeLeft <= FIRST_DAY_WARNING && !warned.current) {
+      warned.current = true;
+      warnFor.current = WARNING_SECONDS;
+      audio.speak('ashwick', SUNSET_WARNING);
+    }
+    warnFor.current = Math.max(0, warnFor.current - seconds);
+    if (warnFor.current > 0) {
+      store.setGuide({ text: SUNSET_WARNING, step: 0, of: 0, skippable: false });
+    } else if (guide.current) {
+      const step = guide.current.step;
+      store.setGuide({
+        text: guideText(GUIDE_STEPS[step], liveControls, coach.touch),
+        step: step + 1,
+        of: GUIDE_STEPS.length,
+        skippable: GUIDE_STEPS[step] !== 'open',
+      });
+    } else if (kindTry.current) {
+      store.setGuide({ text: KIND_TRIES[kindTry.current.kind], step: 0, of: 0, skippable: false });
+    } else {
+      store.setGuide(null);
+    }
+  };
 
   useFrame(({ camera }, delta) => {
     const sim = expedition.active;
@@ -535,6 +616,7 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
       // Ashwick and the Headmaster watch the surface; below, the Warden is on their own.
       if (sim === surface) {
         store.setHint(store.settings.hints ? coach.update(sim, seconds) : null);
+        if (sim.story) storyGuide(sim, seconds);
         const line = headmaster.update(seconds);
         if (line && store.settings.commentary) store.say(line);
       }

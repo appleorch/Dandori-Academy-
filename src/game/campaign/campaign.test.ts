@@ -126,7 +126,9 @@ describe('a story day', () => {
   });
 
   it('loses at sunset whoever is out in the field, and keeps the squad and those by the Kiln', () => {
-    const { field, sim } = story(newCampaign());
+    // A later night: on the first, nobody is lost (see onboarding.test.ts).
+    const later = { ...newCampaign(), tutorial: 'done' as const, day: 1 };
+    const { field, sim } = story(later);
     const workers = [...sim.workers.entries()];
     // Two wander off into the far east and are left idle there.
     for (const [entity, worker] of workers.slice(0, 2)) {
@@ -142,12 +144,12 @@ describe('a story day', () => {
     at.x = field.level.kiln.x + SAFE_RADIUS / 2;
     at.z = field.level.kiln.z;
     sim.ended = 'timeUp';
-    const { state, report } = settleDay(newCampaign(), field, sim);
+    const { state, report } = settleDay(later, field, sim);
     expect(report.leftBehind).toBe(2);
     expect(report.survivors.ember).toBe(8);
     expect(state.stock.ember).toBe(8);
     expect(state.totals.leftBehind).toBe(2);
-    expect(state.day).toBe(1);
+    expect(state.day).toBe(2);
     sim.dispose();
   });
 

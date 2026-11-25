@@ -54,6 +54,8 @@ export function Hud({
   const phase = useGameStore((state) => state.phase);
   const pause = useGameStore((state) => state.pause);
   const hint = useGameStore((state) => state.hint);
+  const guide = useGameStore((state) => state.guide);
+  const skipTutorial = useGameStore((state) => state.skipTutorial);
   const sprocket = useGameStore((state) => state.sprocket);
   const nearSecret = useGameStore((state) => state.nearSecret);
   const nearSprout = useGameStore((state) => state.nearSprout);
@@ -401,7 +403,27 @@ export function Hud({
               Go back up {!touch && <ActionPrompt action="interact" />}
             </button>
           )}
-          {hint ? (
+          {guide ? (
+            <div className="guide-panel" role="status">
+              {guide.of > 0 && (
+                <small className="guide-step">
+                  Guided morning · step {guide.step} of {guide.of}
+                </small>
+              )}
+              <p>
+                <strong>Ashwick</strong> {guide.text}
+              </p>
+              {guide.skippable && (
+                <button
+                  type="button"
+                  className="chip knock guide-skip"
+                  onClick={() => skipTutorial(true)}
+                >
+                  Skip the guide
+                </button>
+              )}
+            </div>
+          ) : hint ? (
             <p className="coach" role="status">
               <strong>Ashwick</strong> {hint}
             </p>

@@ -2,6 +2,7 @@ import { WORKER } from '../core/config';
 import type { Simulation } from '../simulation/Simulation';
 import { SPROUT_KINDS, type Squad, type SproutKind } from '../workers/sprouts';
 import { defineLevel, type LevelDefinition, type LevelSpec } from '../world/level';
+import type { GateSpawn } from '../world/levelTypes';
 import { decodeFog, encodeFog, mergeFog } from './fog';
 import { CAMPAIGN_SECTIONS, sectionById, type CampaignSection } from './sections';
 import { endingFor, type Ending } from './endings';
@@ -29,7 +30,30 @@ export const STARTING_STOCK: Readonly<Record<SproutKind, number>> = {
   spark: 0,
 };
 
+/** How hard the story is, chosen when it begins (see `settleDay` and `dayField`). */
+export type StoryDifficulty = 'relaxed' | 'normal' | 'hard';
+export const STORY_DIFFICULTIES: readonly StoryDifficulty[] = ['relaxed', 'normal', 'hard'];
+
+/** Relaxed: at sunset only idle Sproutlings this far from safety are lost. */
+export const RELAXED_FAR = 40;
+/** Hard: the safe ring is this much smaller, and following the Warden is no protection. */
+export const HARD_SAFE = 0.7;
+
+/**
+ * The guided morning's fence round the Kiln's lawn in the Wild Quad: it stands until the
+ * first Clock part is home, then opens (the simulation's `openFence`).
+ */
+export const LAWN_FENCE: readonly GateSpawn[] = [
+  { x: -75, z: -42, w: 50, d: 1, hp: 9999, style: 'fence' },
+  { x: -50, z: -16, w: 1, d: 51, hp: 9999, style: 'fence' },
+  { x: -75, z: 10, w: 50, d: 1, hp: 9999, style: 'fence' },
+];
+
 export interface CampaignState {
+  /** How hard this story is. */
+  difficulty: StoryDifficulty;
+  /** The guided morning: still to do, done, or skipped by a returning player. */
+  tutorial: 'pending' | 'done' | 'skipped';
   /** Days played so far. */
   day: number;
   /** The section being explored. */
@@ -75,7 +99,22 @@ export interface CampaignState {
   history: number[];
   /** The player's own pins on each section's map, by section id. */
   pins: Record<string, { x: number; z: number }[]>;
+  /** How the last few days went, oldest first: for the base camp's advice (see advice.ts). */
+  form: DayForm[];
 }
+
+/** One day's dandori in three numbers. */
+export interface DayForm {
+  /** Share of Sproutling-time spent idle, 0 to 1. */
+  idle: number;
+  /** Sproutlings lost in the day and left out at sunset. */
+  lost: number;
+  /** Hauls brought home per minute of the day. */
+  hauls: number;
+}
+
+/** Days of form kept. */
+export const FORM_KEPT = 5;
 
 /** A section's own progress, kept while another section is being explored. */
 export interface SectionRecord {
@@ -86,8 +125,10 @@ export interface SectionRecord {
   seen: string;
 }
 
-export function newCampaign(): CampaignState {
+export function newCampaign(difficulty: StoryDifficulty = 'normal'): CampaignState {
   return {
+    difficulty,
+    tutorial: 'pending',
     day: 0,
     section: CAMPAIGN_SECTIONS[0].id,
     stock: { ...STARTING_STOCK },
@@ -106,6 +147,7 @@ export function newCampaign(): CampaignState {
     plan: null,
     history: [],
     pins: {},
+    form: [],
   };
 }
 
@@ -313,6 +355,11 @@ function remaining<T>(items: readonly T[] | undefined, key: string, done: Readon
   return { kept, origin };
 }
 
+/** Whether the next day is the guided morning: the tutorial not yet done, in the Quad. */
+export function guidedDay(state: CampaignState): boolean {
+  return state.tutorial === 'pending' && state.section === CAMPAIGN_SECTIONS[0].id;
+}
+
 /** The field for the story's next day: the section with everything already done taken out. */
 export function dayField(state: CampaignState): DayField {
   const section = currentSection(state);
@@ -340,10 +387,14 @@ export function dayField(state: CampaignState): DayField {
       (treasure) => !done.has(`treasure:${treasure.id}`) && !outOfReach.has(treasure.id),
     ),
     enemies: enemies.kept,
-    gates: gates.kept.map((gate, i) => {
-      const left = state.wear[`gate:${gates.origin[i]}`];
-      return left === undefined ? gate : { ...gate, left };
-    }),
+    gates: [
+      ...gates.kept.map((gate, i) => {
+        const left = state.wear[`gate:${gates.origin[i]}`];
+        return left === undefined ? gate : { ...gate, left };
+      }),
+      // The guided morning's fence, on the Quad until the tutorial is done.
+      ...(guidedDay(state) ? LAWN_FENCE : []),
+    ],
     pods: pods.kept,
     logs: logs.kept,
     saps: saps.kept,
@@ -359,12 +410,15 @@ export function dayField(state: CampaignState): DayField {
       lit: done.has(`beacon:${index}`),
     })),
   };
+  const level = defineLevel(spec);
   return {
-    level: defineLevel(spec),
+    // Hard: the beasts are tougher and the Warden more fragile, as in Time Attack's Hard.
+    level: state.difficulty === 'hard' ? { ...level, difficulty: 'hard' } : level,
     section,
     origin: {
       enemies: enemies.origin,
-      gates: gates.origin,
+      // The fence is no part of the section: it has no place in its list.
+      gates: [...gates.origin, ...(guidedDay(state) ? LAWN_FENCE.map(() => -1) : [])],
       pods: pods.origin,
       logs: logs.origin,
       saps: saps.origin,
@@ -390,6 +444,8 @@ export interface CampaignReport {
   /** Sproutlings lost during the day, and those left out in the field at sunset. */
   lost: number;
   leftBehind: number;
+  /** Out in the field at sunset but brought home all the same (the first night). */
+  rescued: number;
   grown: number;
   /** Beasts beaten for good, gates broken, bridges finished and beacons lit today. */
   beasts: number;
@@ -491,6 +547,7 @@ export function settleDay(
   });
   let gates = 0;
   (field.level.gates ?? []).forEach((gate, index) => {
+    if ((origin.gates[index] ?? -1) < 0) return;
     const key = `gate:${origin.gates[index]}`;
     const left = gatesUp.get(index);
     if (left === undefined) {
@@ -536,12 +593,24 @@ export function settleDay(
   const survivors: Record<SproutKind, number> = { ember: 0, dew: 0, stone: 0, spark: 0 };
   const grownHome: Record<SproutKind, number[]> = { ember: [], dew: [], stone: [], spark: [] };
   let leftBehind = 0;
+  let rescued = 0;
+  const { difficulty } = state;
+  const radius = difficulty === 'hard' ? homeRadius * HARD_SAFE : homeRadius;
+  // The first night nobody is lost: Ashwick goes out with a lantern for the stragglers.
+  const firstNight = state.day === 0;
   if (sim.ended !== 'wipedOut') {
     for (const [entity, worker] of sim.workers.entries()) {
       const at = sim.transforms.require(entity);
-      if (worker.state === 'follow' || safe(sim, at.x, at.z, homeRadius)) {
+      const home =
+        (worker.state === 'follow' && difficulty !== 'hard') || safe(sim, at.x, at.z, radius);
+      // Relaxed: only an idle Sproutling far from any safety is lost to the night.
+      const spared =
+        difficulty === 'relaxed' &&
+        !(worker.state === 'idle' && !safe(sim, at.x, at.z, RELAXED_FAR));
+      if (home || spared || firstNight) {
         survivors[worker.kind]++;
         grownHome[worker.kind].push(worker.growth);
+        if (!home && !spared) rescued++;
       } else {
         leftBehind++;
       }
@@ -574,6 +643,8 @@ export function settleDay(
   const partsHome = section.parts.filter((id) => parts[id] !== undefined).length;
   const finishedToday = state.finished === null && partsHome === section.parts.length;
   const next: CampaignState = {
+    difficulty: state.difficulty,
+    tutorial: state.tutorial === 'pending' && sim.fenceOpened ? 'done' : state.tutorial,
     day,
     section: state.section,
     stock,
@@ -588,6 +659,14 @@ export function settleDay(
     plan: state.plan,
     history: [...state.history, stockTotal(stock)].slice(-LOG_KEPT),
     pins: state.pins,
+    form: [
+      ...state.form,
+      {
+        idle: sim.workload.all > 0 ? sim.workload.idle / sim.workload.all : 0,
+        lost: sim.stats.workersLost + leftBehind,
+        hauls: sim.elapsed > 0 ? sim.stats.treasuresCollected.length / (sim.elapsed / 60) : 0,
+      },
+    ].slice(-FORM_KEPT),
     log: [
       ...state.log,
       {
@@ -640,6 +719,7 @@ export function settleDay(
       stock,
       lost: sim.stats.workersLost,
       leftBehind,
+      rescued,
       grown: sim.stats.grown,
       beasts,
       gates,
@@ -748,6 +828,12 @@ export function parseCampaign(value: unknown): CampaignState | null {
   };
   const endings: readonly Ending[] = ['golden', 'late', 'silent'];
   return {
+    difficulty: STORY_DIFFICULTIES.find((d) => d === raw.difficulty) ?? 'normal',
+    // A story saved before the guided morning existed is well past it.
+    tutorial:
+      raw.tutorial === 'pending' || raw.tutorial === 'skipped' || raw.tutorial === 'done'
+        ? raw.tutorial
+        : 'done',
     // Saves from before sections (0.19 to 0.25) are the Wild Quad's record, as they were.
     seen: typeof raw.seen === 'string' ? raw.seen : '',
     others: records(raw.others),
@@ -765,6 +851,16 @@ export function parseCampaign(value: unknown): CampaignState | null {
         : null,
     history: Array.isArray(raw.history) ? raw.history.map(count) : [],
     pins: parsePins(raw.pins),
+    form: Array.isArray(raw.form)
+      ? raw.form
+          .filter((f): f is Record<string, unknown> => typeof f === 'object' && f !== null)
+          .map((f) => ({
+            idle: Math.min(1, Math.max(0, Number(f.idle) || 0)),
+            lost: count(f.lost),
+            hauls: Math.max(0, Number(f.hauls) || 0),
+          }))
+          .slice(-FORM_KEPT)
+      : [],
     log: Array.isArray(raw.log)
       ? raw.log
           .filter(

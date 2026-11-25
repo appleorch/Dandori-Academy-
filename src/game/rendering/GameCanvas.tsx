@@ -28,6 +28,7 @@ import { Feedback } from './feedback';
 import { GameLoop } from './GameLoop';
 import { HazardMeshes } from './HazardMeshes';
 import { Minimap } from './Minimap';
+import { SafeRings } from './SafeRings';
 import { ParticleField } from './ParticleField';
 import { OverlayInMainPass } from './OverlayInMainPass';
 import { PostFx } from './PostFx';
@@ -300,6 +301,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
             <EnemyMeshes sim={sim} />
             <WaterAndBridges sim={sim} />
             <Beacons sim={sim} />
+            <SafeRings sim={sim} />
             <Minimap sim={sim} mapHeld={() => input.held('map')} />
             {battle && <Minimap sim={battle.rival} rival={RIVAL_NAMES[battle.rivalLevel]} />}
             <HazardMeshes sim={sim} />

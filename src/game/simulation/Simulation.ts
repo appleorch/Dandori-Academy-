@@ -2,7 +2,7 @@ import { updateCaptain } from '../captain/captainSystem';
 import { updateCarrying } from '../carry/carrySystem';
 import type { InputState } from '../commands/input';
 import { CAPTAIN, KILN, SIM_DT } from '../core/config';
-import type { TreasureSpawn } from '../world/levelTypes';
+import type { GateSpawn, TreasureSpawn } from '../world/levelTypes';
 import { HARD } from '../core/difficulty';
 import { EcsWorld, type Entity, type Store } from '../core/ecs';
 import { Rng } from '../core/rng';
@@ -159,6 +159,8 @@ export interface WorkerCounts {
  */
 /** How often the day's timeline is noted, in steps: every five seconds. */
 export const TIMELINE_EVERY = 300;
+/** How often idle hands are counted, in steps. */
+const WORKLOAD_EVERY = 30;
 
 export class Simulation {
   readonly ecs = new EcsWorld();
@@ -260,6 +262,11 @@ export class Simulation {
   /** Story only: sprays in hand today, and seconds left of an Emberbrew. */
   readonly items = { emberbrew: 0, stillwater: 0 };
   brewTimer = 0;
+  /** Worker-seconds spent idle and in all, sampled through the day: the share left idle. */
+  readonly workload = { idle: 0, all: 0 };
+  /** Story only: whether the guided morning's fence was standing, and has been opened. */
+  fenceUp = false;
+  fenceOpened = false;
   /** The Warden's path through the day, (x, z) every TRACK_EVERY steps: a best run's ghost. */
   readonly track: number[] = [];
   /** The day as it went, every TIMELINE_EVERY steps: Sproutlings on the field and hauls home. */
@@ -288,6 +295,7 @@ export class Simulation {
     this.explored = this.story ? (options.explored ?? emptyFog(level)) : null;
     this.dewdrops = [];
     this.hard = level.difficulty === 'hard';
+    this.fenceUp = (level.gates ?? []).some((gate) => gate.style === 'fence');
     this.captainMaxHp = this.hard ? HARD.captainHp : CAPTAIN.maxHp;
     this.captainState.hp = this.captainMaxHp;
     this.walls = [
@@ -438,6 +446,18 @@ export class Simulation {
     return (this.tick - 1) * SIM_DT;
   }
 
+  /** Opens the guided morning's fence: every fence gate gives way at once. */
+  openFence(): void {
+    if (!this.fenceUp) return;
+    for (const [, enemy] of this.enemies.entries()) {
+      if (enemy.kind === 'gate' && (enemy.shape as GateSpawn | null)?.style === 'fence') {
+        enemy.hp = 0;
+      }
+    }
+    this.fenceUp = false;
+    this.fenceOpened = true;
+  }
+
   /** Takes a wall out of the world (a broken gate) and reroutes everything around the change. */
   removeWall(box: Box): void {
     const index = this.walls.indexOf(box);
@@ -482,6 +502,15 @@ export class Simulation {
     applySeparation(this);
     updateCarrying(this, dt);
     updateConveyors(this, dt);
+    // The guided morning's fence opens once the first Clock part is home.
+    if (this.fenceUp && this.stats.treasuresCollected.some((id) => id.startsWith('part-'))) {
+      this.openFence();
+    }
+    if (this.tick % WORKLOAD_EVERY === 0) {
+      const counts = this.countWorkers();
+      this.workload.idle += counts.idle * WORKLOAD_EVERY * SIM_DT;
+      this.workload.all += counts.total * WORKLOAD_EVERY * SIM_DT;
+    }
     if (this.tick % TIMELINE_EVERY === 0) {
       this.timeline.field.push(this.workers.size);
       this.timeline.home.push(this.stats.treasuresCollected.length);

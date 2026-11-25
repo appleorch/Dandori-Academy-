@@ -149,7 +149,7 @@ export interface GateSpawn extends Box {
   hp: number;
   /** Bramble by default; crystal gates are the Academy's own, grown over the old doorways. */
   /** `hidden`: a weak wall that looks like any other, but for a crack: a secret way in. */
-  style?: 'bramble' | 'crystal' | 'hidden';
+  style?: 'bramble' | 'crystal' | 'hidden' | 'fence';
   /** Health it has left, when worn down on an earlier day of the story; `hp` otherwise. */
   left?: number;
 }

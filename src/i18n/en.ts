@@ -77,6 +77,30 @@ export const EN = {
   'camp.kilnEmpty': 'The Kiln is empty. It will coax out a single Emberling to start again with.',
   'camp.overflow': '{going} go out (the field holds no more); {waiting} wait in the Kiln.',
   'camp.begin': 'Begin the expedition',
+  'camp.difficulty': 'How hard a story?',
+  'camp.difficultyNote': 'Chosen now, kept for this story.',
+  'camp.diff.relaxed': 'Relaxed',
+  'camp.diff.relaxedText':
+    'No day limit. At sunset only idle Sproutlings far from safety are lost.',
+  'camp.diff.normal': 'Normal',
+  'camp.diff.normalText':
+    'Thirty days until term. Anyone away from the Kiln or a lit beacon at sunset is lost.',
+  'camp.diff.hard': 'Hard',
+  'camp.diff.hardText':
+    'Tougher beasts, a smaller safe ring at sunset, and following the Warden is no protection.',
+  'camp.diffShown': 'Difficulty: {name}',
+  'camp.skipGuide': 'Skip the guided morning (for returning players)',
+  'camp.guideNote':
+    'Your first morning is guided: a fenced lawn round the Kiln, and the gate opens once the first Clock part is home.',
+  'camp.advice.title': 'Sharpen your dandori',
+  'camp.advice.idle':
+    'Your Sproutlings stood idle a lot lately. Time Attack’s first lesson, Many Hands, is all about keeping every pair of hands busy.',
+  'camp.advice.losses':
+    'You have been losing Sproutlings. The challenges teach how to fight and come home without losses.',
+  'camp.advice.slow':
+    'Hauls have been coming home slowly. A Treasure Hunt challenge will sharpen your carrying.',
+  'camp.advice.none': 'Your dandori is sound. Time Attack’s lessons will make it sharper still.',
+  'camp.advice.go': 'Go there',
   'camp.startDay': 'Start day {day}',
   'camp.sunsetNote': 'Bring your Sproutlings back to the Kiln or a lit beacon before the sun sets.',
   'camp.clock': 'The Great Clock',

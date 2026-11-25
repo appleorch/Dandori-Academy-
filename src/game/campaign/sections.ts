@@ -211,8 +211,8 @@ const WILD_QUAD: LevelSpec = {
     { x: 50, z: 10, kind: 'stone' },
   ],
   enemies: [
-    // The lawn.
-    { x: -60, z: -30, kind: 'mossback' },
+    // The lawn's edge: just beyond the guided morning's fence.
+    { x: -40, z: -26, kind: 'mossback' },
     { x: -86, z: -28, kind: 'mound', reveals: 'pod' },
     { x: -64, z: 30, kind: 'mound', drop: 2 },
     { x: -92, z: 14, kind: 'mound', reveals: 'sap' },

@@ -144,3 +144,18 @@ describe.each(['foundry', 'observatory'])('the %s over three days', (id) => {
     expect(found[2], found.join(', ')).toBeGreaterThanOrEqual(6);
   }, 900_000);
 });
+
+describe('the guided morning, played', () => {
+  it('lets the test player bring the first part home and open the lawn within five minutes', () => {
+    const state = newCampaign();
+    const { sim } = story(state);
+    expect(sim.fenceUp).toBe(true);
+    let openedAt: number | null = null;
+    playGreedy(sim, () => {
+      if (openedAt === null && sim.fenceOpened) openedAt = sim.elapsed;
+    });
+    sim.dispose();
+    expect(openedAt).not.toBeNull();
+    expect(openedAt ?? Infinity).toBeLessThan(300);
+  });
+});

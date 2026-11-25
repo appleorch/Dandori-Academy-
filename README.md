@@ -376,6 +376,20 @@ camp**, which shows a map of the Quad, the Kiln's stock by kind and the Clock's 
   seconds). The HUD shows them in hand.
 - **The Kiln's plan.** At the base camp, choose how many of each kind go out tomorrow; the rest
   wait. A graph shows the Kiln's stock day by day.
+- **The first hour.** A new story's first day is a guided morning (`story/guide.ts`): a white
+  fence (`LAWN_FENCE`, gates of style `fence` that nothing can break) closes the Kiln's lawn,
+  and one prompt at a time, each waiting for the action, teaches walking, plucking, throwing,
+  carrying home, whistling and seed pods, then the Clock part on the lawn; once it is home the
+  fence opens (`Simulation.openFence`). Returning players can skip it at the base camp or from
+  the prompt. The first of each new kind carried in gets a short scene and something to try. On
+  the first day Ashwick warns of sunset three minutes out, the safe rings round the Kiln and lit
+  beacons light up (`SafeRings`), and nobody is lost that night. From the third day the base
+  camp suggests where to sharpen your dandori, by what the last days showed most: idle hands,
+  losses or slow hauls (`advice.ts`, from `CampaignState.form`).
+- **Story difficulty**, chosen before the first day and kept with the story: Relaxed (no day
+  limit; at sunset only idle Sproutlings far from safety are lost), Normal, and Hard (tougher
+  beasts and Warden as in Time Attack's Hard, a smaller safe ring, and following the Warden is
+  no protection). The old "relaxed story" setting is moved over into it.
 - **Exploration and secrets.** Every section hides a glade behind a cracked stretch of wall
   (a `hidden` gate, last in its list so saved stories keep every other gate's place) with a
   relic found nowhere else (`SECRET_RELICS`). The base camp map shows parts seen through the fog,
