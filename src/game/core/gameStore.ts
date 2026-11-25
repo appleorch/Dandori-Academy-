@@ -22,7 +22,7 @@ import type { DayEnd, Simulation } from '../simulation/Simulation';
 import { bonusParts, LEVELS } from '../world/level';
 import type { Line } from '../story/headmaster';
 import type { Haul } from '../simulation/expedition';
-import { makeChallengeRun, type RunEntry } from '../leaderboard/runCode';
+import { makeChallengeRun, makeTimeRun, type RunEntry } from '../leaderboard/runCode';
 import {
   isBattle,
   isChallenge,
@@ -917,23 +917,39 @@ export const useGameStore = create<GameStore>((set, get) => {
         extraTreasures: haul?.relics ?? [],
         feats: dayFeats(sim, tally, haul),
         campaign: settled?.state,
-        // Co-op days have no board of their own yet: they are not posted.
+        // A challenge day goes on its board by score; a Time Attack clear by its time.
         run:
-          isChallenge(mode) && facts && challenge
-            ? (makeChallengeRun(
-                {
-                  levelId: level.id,
-                  difficulty: level.difficulty,
-                  mode,
-                  facts,
-                  score: challenge,
-                  elapsed: sim.elapsed,
-                  coop: coopDay(get().coop, mode),
-                },
-                GAME_VERSION,
-                now,
-              ) ?? undefined)
-            : undefined,
+          mode === 'lessons'
+            ? cleared && !sim.coop
+              ? (makeTimeRun(
+                  {
+                    levelId: level.id,
+                    difficulty: level.difficulty,
+                    elapsed: sim.elapsed,
+                    timeLeft: sim.timeLeft,
+                    shardsTotal: stats.treasuresTotal,
+                    alive: workersAlive,
+                    lost: stats.workersLost,
+                  },
+                  GAME_VERSION,
+                  now,
+                ) ?? undefined)
+              : undefined
+            : isChallenge(mode) && facts && challenge
+              ? (makeChallengeRun(
+                  {
+                    levelId: level.id,
+                    difficulty: level.difficulty,
+                    mode,
+                    facts,
+                    score: challenge,
+                    elapsed: sim.elapsed,
+                    coop: coopDay(get().coop, mode),
+                  },
+                  GAME_VERSION,
+                  now,
+                ) ?? undefined)
+              : undefined,
       };
       const previous = get().save;
       const recorded = recordDay(previous, day);

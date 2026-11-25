@@ -28,6 +28,7 @@ import {
   type ChallengeId,
   type ChallengeScore,
 } from '../modes/modes';
+import { timeMedal } from '../modes/timeAttack';
 
 /**
  * A finished day, written down so it can be shared: the numbers behind its score, which
@@ -65,9 +66,10 @@ export interface RunEntry {
   at: string;
   /**
    * The challenge the run was played in. Missing on runs from before the challenges, which were
-   * story days scored the way the story was then (the board calls them Classic).
+   * story days scored the way the story was then (the board calls them Classic). 'lessons' is a
+   * Time Attack clear: ranked by its time, its rank the medal that time earned.
    */
-  mode?: ChallengeId;
+  mode?: ChallengeId | 'lessons';
   /** Challenge runs: weight brought home, of it carcasses, beasts left standing, and whether
    * everything was collected and the Warden and squad made it to the end. */
   weight?: number;
@@ -265,12 +267,15 @@ const isCount = (value: unknown): value is number =>
  * against the clock and against what is humanly possible.
  */
 export function checkRun(run: RunEntry): string | null {
-  // A challenge field is checked as it is now; a lesson as it was when its board closed.
-  const level = levelById(run.level)?.challenge
-    ? lessonOf(run.level, run.difficulty)
-    : boardLesson(run.level, run.difficulty);
+  // A challenge field or a Time Attack clear is checked as it is now; a lesson's scored runs as
+  // they were when its board closed.
+  const level =
+    levelById(run.level)?.challenge || run.mode === 'lessons'
+      ? lessonOf(run.level, run.difficulty)
+      : boardLesson(run.level, run.difficulty);
   if (!level) return 'unknown lesson';
   if (!playedOnThisLesson(run)) return 'played on another version of this lesson';
+  if (run.mode === 'lessons') return checkTimeRun(run, level);
   if (run.mode !== undefined) return checkChallengeRun(run, run.mode, level);
   // A run from 0.17.0 has no Glowcap count: it was ranked on its whole score, against that
   // version's par, which counted every Glowcap.
@@ -318,8 +323,14 @@ export function checkRun(run: RunEntry): string | null {
   return null;
 }
 
-/** The order runs are ranked in: higher score, then quicker clear, then whoever was first. */
+/**
+ * The order runs are ranked in: higher score, then quicker clear, then whoever was first. Time
+ * Attack clears go by time alone.
+ */
 export function compareRuns(a: RunEntry, b: RunEntry): number {
+  if (a.mode === 'lessons' && b.mode === 'lessons') {
+    return a.time - b.time || a.at.localeCompare(b.at);
+  }
   return b.score - a.score || a.time - b.time || a.at.localeCompare(b.at);
 }
 
@@ -571,5 +582,68 @@ function checkChallengeRun(
   if (run.rank !== scored.rank) return 'wrong rank for the score';
   const fastest = mode === 'growing' ? 0 : level.diamondTime * 0.5;
   if (run.everything && run.time < fastest) return 'faster than possible';
+  return null;
+}
+
+/** A cleared Time Attack day as a run for the board; null for a lesson this build lacks. */
+export function makeTimeRun(
+  day: {
+    levelId: string;
+    difficulty: Difficulty;
+    elapsed: number;
+    timeLeft: number;
+    shardsTotal: number;
+    alive: number;
+    lost: number;
+  },
+  game: string,
+  at: Date,
+): RunEntry | null {
+  const print = lessonPrint(day.levelId, day.difficulty);
+  const level = lessonOf(day.levelId, day.difficulty);
+  if (!print || !level) return null;
+  const time = Math.round(day.elapsed * 100) / 100;
+  return {
+    v: 1,
+    game,
+    level: day.levelId,
+    difficulty: day.difficulty,
+    print,
+    mode: 'lessons',
+    score: 0,
+    rank: timeMedal(level, time),
+    treasure: 0,
+    timeBonus: 0,
+    workerBonus: 0,
+    lossPenalty: 0,
+    shards: day.shardsTotal,
+    shardsTotal: day.shardsTotal,
+    time,
+    timeLeft: Math.max(0, Math.ceil(day.timeLeft)),
+    alive: day.alive,
+    lost: day.lost,
+    at: at.toISOString(),
+  };
+}
+
+/** Why a Time Attack run cannot be right, or null: a clear, in time, with the medal it earned. */
+function checkTimeRun(run: RunEntry, level: LevelDefinition): string | null {
+  if (level.challenge) return 'Time Attack is played on the lessons';
+  const counts = [run.score, run.shards, run.shardsTotal, run.timeLeft, run.alive, run.lost];
+  if (!counts.every(isCount)) return 'malformed numbers';
+  if (typeof run.time !== 'number' || !Number.isFinite(run.time) || run.time <= 0) {
+    return 'malformed time';
+  }
+  if (run.score !== 0 || run.treasure !== 0 || run.timeBonus !== 0 || run.workerBonus !== 0) {
+    return 'a Time Attack run has no score';
+  }
+  if (run.lossPenalty !== 0) return 'a Time Attack run has no score';
+  if (run.shardsTotal !== shardCount(level)) return 'wrong Sunshard count';
+  if (run.shards !== run.shardsTotal) return 'a Time Attack run is a clear';
+  if (run.time > level.dayLength + 0.01) return 'longer than the day';
+  if (Math.abs(run.time + run.timeLeft - level.dayLength) > 1.01) return 'clock does not add up';
+  if (run.alive > WORKER.maxOnField) return 'more Sproutlings than the field holds';
+  if (run.rank !== timeMedal(level, run.time)) return 'wrong medal for the time';
+  if (run.time < level.diamondTime * 0.5) return 'faster than possible';
   return null;
 }

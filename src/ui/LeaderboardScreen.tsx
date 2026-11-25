@@ -10,13 +10,7 @@ import {
   type BoardEntry,
   type BoardMode,
 } from '../game/leaderboard/board';
-import {
-  CHALLENGE_IDS,
-  challengeOpen,
-  isChallenge,
-  MODES,
-  type ChallengeId,
-} from '../game/modes/modes';
+import { CHALLENGE_IDS, challengeOpen, isChallenge, MODES, type ModeId } from '../game/modes/modes';
 import { challengeFieldsOf } from './lessonAccess';
 import { fieldTitle } from './format';
 import type { RunEntry } from '../game/leaderboard/runCode';
@@ -37,7 +31,7 @@ function WatchBest({
 }: {
   level: string;
   difficulty: Difficulty;
-  mode: ChallengeId;
+  mode: ModeId;
   title: string;
 }) {
   const watchReplay = useGameStore((state) => state.watchReplay);
@@ -151,6 +145,7 @@ let cached: {
 } | null = null;
 
 function timeText(run: RunEntry): string {
+  if (run.mode === 'lessons') return `${run.time.toFixed(2)}s`;
   if (run.mode === 'growing') return `${run.alive} at sunset`;
   // A Trial on its own field has no clock: what it is judged by is who was lost.
   if (run.mode === 'trial' && levelById(run.level)?.untimed) {
@@ -167,11 +162,14 @@ function timeText(run: RunEntry): string {
   return cleared ? `${run.time.toFixed(1)}s` : `${run.shards}/${run.shardsTotal} shards`;
 }
 
-const BOARD_MODES: readonly BoardMode[] = [...CHALLENGE_IDS, 'classic'];
+const BOARD_MODES: readonly BoardMode[] = [...CHALLENGE_IDS, 'lessons', 'classic'];
 
 function boardName(mode: BoardMode): string {
   return mode === 'classic' ? 'Classic' : MODES[mode].name;
 }
+
+/** Boards kept on the lessons alone: Time Attack, and the closed Classic board. */
+const onLessons = (mode: BoardMode) => mode === 'classic' || mode === 'lessons';
 
 function dateText(iso: string): string {
   const date = new Date(iso);
@@ -193,14 +191,17 @@ export function LeaderboardScreen() {
     [save.discovered],
   );
   const lastMode = useGameStore((state) => state.playMode);
-  const [mode, setMode] = useState<BoardMode>(() => (isChallenge(lastMode) ? lastMode : 'hunt'));
+  const [mode, setMode] = useState<BoardMode>(() =>
+    isChallenge(lastMode) || lastMode === 'lessons' ? lastMode : 'hunt',
+  );
+  const timed = mode === 'lessons';
   // A challenge's board is per field; its runs on the lessons from 0.18.0 are kept as well.
   const daily = levelById(dailyId(dailyKey(new Date())));
   const fields =
-    mode === 'classic'
+    mode === 'classic' || mode === 'lessons'
       ? []
       : [...(mode === 'hunt' && daily ? [daily] : []), ...challengeFieldsOf(mode)];
-  const choices = mode === 'classic' ? lessons : [...fields, ...lessons];
+  const choices = onLessons(mode) ? lessons : [...fields, ...lessons];
   const [picked, setLevelId] = useState(
     () => (choices.find((level) => level.id === lastPlayed) ?? choices[0]).id,
   );
@@ -246,11 +247,13 @@ export function LeaderboardScreen() {
   useEffect(() => refresh(false), [refresh]);
 
   const level = levelById(levelId) ?? LEVELS[0];
-  // Challenges are played on the Normal day; only the Classic board has Hard runs.
-  const shownDifficulty: Difficulty = mode === 'classic' ? difficulty : 'normal';
+  // Challenges are played on the Normal day; Time Attack and Classic have Hard runs too.
+  const shownDifficulty: Difficulty = onLessons(mode) ? difficulty : 'normal';
+  // Time Attack is played alone.
+  const coopShown = coopBoard && !onLessons(mode);
   const board =
     load.state === 'ready'
-      ? standings(load.entries, levelId, shownDifficulty, mode, coopBoard && mode !== 'classic')
+      ? standings(load.entries, levelId, shownDifficulty, mode, coopShown)
       : [];
   const mine =
     save.runs[
@@ -258,9 +261,10 @@ export function LeaderboardScreen() {
         mode: mode === 'classic' ? undefined : mode,
         level: levelId,
         difficulty: shownDifficulty,
+        coop: coopShown,
       })
     ] ?? [];
-  const offered = mode === 'classic' || challengeOpen(mode, level);
+  const offered = onLessons(mode) || challengeOpen(mode, level);
   const age = load.state === 'ready' ? Math.round((Date.now() - load.at) / 60000) : 0;
   const shownName = cleanWardenName(settings.wardenName) ?? defaultWardenName(settings.playerId);
   const nameOk = nameDraft.trim() === '' || cleanWardenName(nameDraft) !== null;
@@ -336,6 +340,10 @@ export function LeaderboardScreen() {
             Classic keeps the runs from before the challenges, when lesson days were scored. It is
             closed to new runs.
           </p>
+        ) : timed ? (
+          <p className="note">
+            Each lesson has its own board for each difficulty, ranked by clear time.
+          </p>
         ) : (
           <p className="note">
             Each field has its own board. Runs from 0.18.0, when challenges were played on the
@@ -344,7 +352,7 @@ export function LeaderboardScreen() {
         )}
         <div className="board-pick">
           <label>
-            {mode === 'classic' ? 'Lesson' : 'Field'}
+            {onLessons(mode) ? 'Lesson' : 'Field'}
             <select value={levelId} onChange={(event) => setLevelId(event.target.value)}>
               {fields.length > 0 && (
                 <optgroup label={`${boardName(mode)} fields`}>
@@ -355,7 +363,7 @@ export function LeaderboardScreen() {
                   ))}
                 </optgroup>
               )}
-              <optgroup label={mode === 'classic' ? 'Lessons' : 'Lessons (0.18.0, closed)'}>
+              <optgroup label={onLessons(mode) ? 'Lessons' : 'Lessons (0.18.0, closed)'}>
                 {lessons.map((choice) => (
                   <option key={choice.id} value={choice.id}>
                     {choice.side ? `Below. ${choice.name}` : fieldTitle(choice)}
@@ -364,7 +372,7 @@ export function LeaderboardScreen() {
               </optgroup>
             </select>
           </label>
-          {mode !== 'classic' && (
+          {!onLessons(mode) && (
             <div className="board-difficulty" role="group" aria-label="Players">
               {[false, true].map((option) => (
                 <button
@@ -379,7 +387,7 @@ export function LeaderboardScreen() {
               ))}
             </div>
           )}
-          {mode === 'classic' && (
+          {onLessons(mode) && (
             <div className="board-difficulty" role="group" aria-label="Difficulty">
               {DIFFICULTIES.map((option) => (
                 <button
@@ -398,8 +406,7 @@ export function LeaderboardScreen() {
 
         <section className="board">
           <h2>
-            {boardName(mode)} {coopBoard && mode !== 'classic' ? 'co-op ' : ''}board{' '}
-            <small>{level.name}</small>
+            {boardName(mode)} {coopShown ? 'co-op ' : ''}board <small>{level.name}</small>
           </h2>
           {load.state === 'loading' && <p className="note">Reading the board…</p>}
           {load.state === 'error' && (
@@ -410,7 +417,7 @@ export function LeaderboardScreen() {
           {load.state === 'ready' &&
             (board.length === 0 ? (
               <p className="note">
-                {offered && level.challenge
+                {offered && (level.challenge || timed)
                   ? 'No runs on this field yet. Be the first.'
                   : offered
                     ? 'No runs from 0.18.0 on this lesson.'
@@ -422,9 +429,9 @@ export function LeaderboardScreen() {
                   <tr>
                     <th scope="col">#</th>
                     <th scope="col">Warden</th>
-                    <th scope="col">Score</th>
-                    <th scope="col">Rank</th>
-                    <th scope="col">Time</th>
+                    <th scope="col">{timed ? 'Clear' : 'Score'}</th>
+                    <th scope="col">{timed ? 'Medal' : 'Rank'}</th>
+                    {!timed && <th scope="col">Time</th>}
                     <th scope="col">Lost</th>
                     <th scope="col">
                       <span className="sr-only">Replay</span>
@@ -444,9 +451,9 @@ export function LeaderboardScreen() {
                           #{entry.player.slice(0, 4)}
                         </small>
                       </th>
-                      <td>{entry.score}</td>
+                      <td>{timed ? timeText(entry) : entry.score}</td>
                       <td className={`rank-${entry.rank.toLowerCase()}`}>{entry.rank}</td>
-                      <td>{timeText(entry)}</td>
+                      {!timed && <td>{timeText(entry)}</td>}
                       <td>{entry.lost}</td>
                       <td className="board-replay">
                         {entry.verified && (
@@ -493,7 +500,7 @@ export function LeaderboardScreen() {
           {mode !== 'classic' && (
             <WatchBest
               level={level.id}
-              difficulty={difficulty}
+              difficulty={shownDifficulty}
               mode={mode}
               title={fieldTitle(level)}
             />
@@ -502,16 +509,18 @@ export function LeaderboardScreen() {
             <p className="note">
               {mode === 'classic'
                 ? 'No runs from before the challenges on this lesson.'
-                : `Play ${boardName(mode)} on this lesson and your runs are kept here.`}
+                : timed
+                  ? 'Clear this lesson in Time Attack and your fastest clears are kept here.'
+                  : `Play ${boardName(mode)} on this lesson and your runs are kept here.`}
             </p>
           ) : (
             <table className="board-table">
               <thead>
                 <tr>
                   <th scope="col">#</th>
-                  <th scope="col">Score</th>
-                  <th scope="col">Rank</th>
-                  <th scope="col">Time</th>
+                  {!timed && <th scope="col">Score</th>}
+                  <th scope="col">{timed ? 'Medal' : 'Rank'}</th>
+                  <th scope="col">{timed ? 'Clear' : 'Time'}</th>
                   <th scope="col">Played</th>
                   <th scope="col">Board</th>
                 </tr>
@@ -520,7 +529,7 @@ export function LeaderboardScreen() {
                 {mine.map((run, i) => (
                   <tr key={run.at}>
                     <td>{i + 1}</td>
-                    <td>{run.score}</td>
+                    {!timed && <td>{run.score}</td>}
                     <td className={`rank-${run.rank.toLowerCase()}`}>{run.rank}</td>
                     <td>{timeText(run)}</td>
                     <td>{dateText(run.at)}</td>
@@ -546,11 +555,11 @@ export function LeaderboardScreen() {
         </section>
 
         <p className="note">
-          Each challenge keeps its own board, and it never resets. Each new personal best in a
-          challenge is posted by itself to the Academy&apos;s board server, with your Warden name
-          and a random player id and nothing else. The server checks every run against the
-          lesson&apos;s own rules and keeps the best run per Warden per lesson, so new runs show
-          here at once. Runs from an older version of a lesson are left off.
+          Each challenge and Time Attack keeps its own board, and it never resets. Each new personal
+          best is posted by itself to the Academy&apos;s board server, with your Warden name and a
+          random player id and nothing else. The server checks every run against the lesson&apos;s
+          own rules and keeps the best run per Warden per lesson, so new runs show here at once.
+          Runs from an older version of a lesson are left off.
         </p>
       </div>
     </main>

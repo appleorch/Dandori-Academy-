@@ -1,4 +1,4 @@
-import { makeChallengeRun, type RunEntry } from '../leaderboard/runCode';
+import { makeChallengeRun, makeTimeRun, type RunEntry } from '../leaderboard/runCode';
 import type { BoardEntry, Verdict } from '../leaderboard/board';
 import { challengeFacts } from '../modes/facts';
 import { isChallenge, scoreChallenge } from '../modes/modes';
@@ -23,7 +23,8 @@ export async function verifyRun(entry: BoardEntry | RunEntry, log: DayLog): Prom
   if (log.sim !== SIM_VERSION) return 'unchecked';
   if (log.level !== entry.level || log.difficulty !== entry.difficulty) return 'different';
   const mode = entry.mode;
-  if (!mode || log.mode !== mode || !isChallenge(mode)) return 'different';
+  if (!mode || log.mode !== mode) return 'different';
+  if (mode !== 'lessons' && !isChallenge(mode)) return 'different';
   let replay;
   try {
     replay = await replayToEnd(log);
@@ -32,6 +33,27 @@ export async function verifyRun(entry: BoardEntry | RunEntry, log: DayLog): Prom
   }
   if (!replay) return 'unchecked';
   const sim = replay.expedition.surface;
+  if (mode === 'lessons') {
+    // A Time Attack run is a clear: its replay must bring every Sunshard home in that time.
+    const cleared = sim.stats.treasuresCollected.length === sim.stats.treasuresTotal;
+    const again = cleared
+      ? makeTimeRun(
+          {
+            levelId: entry.level,
+            difficulty: entry.difficulty,
+            elapsed: sim.elapsed,
+            timeLeft: sim.timeLeft,
+            shardsTotal: sim.stats.treasuresTotal,
+            alive: sim.workers.size,
+            lost: sim.stats.workersLost,
+          },
+          entry.game,
+          new Date(entry.at),
+        )
+      : null;
+    replay.dispose();
+    return again && claim(again) === claim(entry) ? 'same' : 'different';
+  }
   const facts = challengeFacts(sim);
   const again = makeChallengeRun(
     {

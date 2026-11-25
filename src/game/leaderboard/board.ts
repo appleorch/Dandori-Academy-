@@ -88,8 +88,11 @@ export async function entryOf(code: string): Promise<BoardEntry | null> {
   return { ...post.run, player: post.player, name: post.name, code, logHash: post.log };
 }
 
-/** Which board a run belongs on: its challenge, or 'classic' for runs from the scored story. */
-export type BoardMode = ChallengeId | 'classic';
+/**
+ * Which board a run belongs on: its challenge, 'lessons' for Time Attack, or 'classic' for runs
+ * from the scored story.
+ */
+export type BoardMode = ChallengeId | 'lessons' | 'classic';
 
 export function boardMode(entry: Pick<BoardEntry, 'mode'>): BoardMode {
   return entry.mode ?? 'classic';
