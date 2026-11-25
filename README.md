@@ -499,6 +499,29 @@ the seconds left to bring the other half for the bonus.
 
 Before and after: `docs-design/art/ui-*-before.jpg` and `ui-*-after.jpg`.
 
+## Playing together
+
+- **Local co-op** (the story and the challenges; the switch is on the base camp and the
+  challenges screen). A second player on a gamepad (the last one plugged in; the first player
+  keeps the keyboard and mouse, and the first pad if there are two) gets a Warden of their own
+  and half the squad. Each simulation step runs the Warden phase (walk, aim, whistle, throw,
+  orders) once for each player, swapping the two Wardens' state in between
+  (`Simulation.swapSides`), so it stays deterministic; the world then steps once. The camera
+  frames both, drawing back as they part (up to a limit). Not yet: a split screen when they are
+  far apart, co-op boards (co-op runs are not posted), co-op replays, and beasts going for the
+  second Warden (they only target the first).
+- **Online battles** (Marble Race, Bingo Race and Dandori Duel; _Play online_ on the Battles
+  screen). One player hosts and reads out a six-letter room code; the other joins with it. The
+  two browsers are introduced through the same public relay the board uses (one offer and one
+  answer, with every network candidate gathered first) and then talk directly over a WebRTC data
+  channel, found through a free public STUN server: there is no game server. Both browsers run
+  both fields in lockstep (`net/lockstep.ts`): each side's input is decided six steps (about a
+  tenth of a second) ahead and sent at once, a step is played only when both inputs for it are
+  there, and every second each side sends a hash of both fields, so a desync is noticed and
+  shown. The guest plays the second bingo card, so both agree on whose is whose. If the two
+  cannot connect directly (some networks block it), the screen says so; if one leaves, the other
+  is told.
+
 ## Lessons and progression
 
 | #   | Lesson               | Teaches                                                    |

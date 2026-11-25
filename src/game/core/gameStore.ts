@@ -27,6 +27,7 @@ import {
   isBattle,
   isChallenge,
   scoreChallenge,
+  type BattleId,
   type ChallengeScore,
   type ModeId,
 } from '../modes/modes';
@@ -53,6 +54,7 @@ import { CHAIN, TWIN } from './config';
 import { twinStyle } from '../world/twins';
 import { penaltyPerLoss, type Difficulty } from './difficulty';
 import type { DayLog } from '../replay/replay';
+import { Lockstep, type Transport } from '../net/lockstep';
 import type { Scene } from '../story/scenes';
 import { encodeTrack } from '../modes/timeAttack';
 import { splitKey } from '../save/saveManager';
@@ -252,6 +254,14 @@ interface GameStore {
   nearAscent: boolean;
   /** True while the back room is open, over whatever screen was showing. */
   pokerOpen: boolean;
+  /** An online battle: the lockstep with the other browser, which side this is, and news. */
+  online: { lockstep: Lockstep; host: boolean; status: string | null } | null;
+  startOnline: (transport: Transport, host: boolean, levelId: string, mode: BattleId) => void;
+  endOnline: () => void;
+  setNetStatus: (status: string | null) => void;
+  /** Local co-op: a second player on a gamepad, in the story and challenges. */
+  coop: boolean;
+  setCoop: (coop: boolean) => void;
   /** The replay being watched, and the screen to go back to after. */
   replay: { log: DayLog; title: string; back: GamePhase } | null;
   watchReplay: (log: DayLog, title: string) => void;
@@ -398,6 +408,11 @@ function snapshot(sim: Simulation): HudSnapshot {
 }
 
 /** A settled story day, with the ending it reaches (once) noted on the expedition. */
+/** Whether a day of this mode is played in co-op, given the co-op switch. */
+export function coopDay(coop: boolean, mode: ModeId): boolean {
+  return coop && (mode === 'campaign' || isChallenge(mode));
+}
+
 function withEnding<T extends { state: CampaignState }>(settled: T): T {
   const ending = campaignEnding(settled.state, settled.state.difficulty === 'relaxed');
   if (!ending || ending === settled.state.ending) return settled;
@@ -493,6 +508,22 @@ export const useGameStore = create<GameStore>((set, get) => {
     pokerOpen: false,
     titleDone: false,
     replay: null,
+    coop: false,
+    online: null,
+    startOnline: (transport, host, levelId, mode) => {
+      get().online?.lockstep.close();
+      set({ online: { lockstep: new Lockstep(transport), host, status: null } });
+      get().startDay(levelId, mode);
+    },
+    endOnline: () => {
+      get().online?.lockstep.close();
+      set({ online: null });
+    },
+    setNetStatus: (status) => {
+      const online = get().online;
+      if (online && online.status !== status) set({ online: { ...online, status } });
+    },
+    setCoop: (coop) => set({ coop }),
     watchReplay: (log, title) =>
       set((state) => ({
         replay: {
@@ -571,7 +602,10 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     endDay: () => set({ endRequested: true, paused: false }),
 
-    leaveDay: () => get().showScreen(screenFor(get().playMode)),
+    leaveDay: () => {
+      get().endOnline();
+      get().showScreen(screenFor(get().playMode));
+    },
 
     showStory: (kind) =>
       set({
@@ -833,8 +867,9 @@ export const useGameStore = create<GameStore>((set, get) => {
         extraTreasures: haul?.relics ?? [],
         feats: dayFeats(sim, tally, haul),
         campaign: settled?.state,
+        // Co-op days have no board of their own yet: they are not posted.
         run:
-          isChallenge(mode) && facts && challenge
+          isChallenge(mode) && facts && challenge && !coopDay(get().coop, mode)
             ? (makeChallengeRun(
                 {
                   levelId: level.id,

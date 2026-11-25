@@ -1,3 +1,4 @@
+import type { InputState } from '../commands/input';
 import { Rng } from '../core/rng';
 import { ENEMY_SPECS, type EnemyKind } from '../enemies/enemyKinds';
 import type { Carryable } from '../simulation/components';
@@ -239,11 +240,20 @@ export class Battle {
     readonly mode: BattleId,
     readonly level: LevelDefinition,
     readonly rivalLevel: RivalLevel,
+    /**
+     * Online: the rival is another player, stepped by their inputs (`stepRival`), not the test
+     * player. The guest plays the second bingo card, so both sides agree on whose is whose.
+     */
+    readonly online: { host: boolean } | null = null,
   ) {
     const spec = MODES[mode];
     this.rival = new Simulation(level, { endsWhen: spec.endsWhen, growth: spec.growth });
     this.marbles = new Set(mode === 'marble' ? marblesOf(level) : []);
-    this.cards = mode === 'bingo' ? { you: bingoCard(level, 0), rival: bingoCard(level, 1) } : null;
+    const guest = online !== null && !online.host;
+    this.cards =
+      mode === 'bingo'
+        ? { you: bingoCard(level, guest ? 1 : 0), rival: bingoCard(level, guest ? 0 : 1) }
+        : null;
     const card = this.cards?.rival;
     const wanted = (carryable: Carryable): boolean => {
       if (mode === 'marble') return carryable.kind === 'treasure' && this.marbles.has(carryable.id);
@@ -262,8 +272,14 @@ export class Battle {
     this.speed = RIVAL_SPEED[rivalLevel];
   }
 
+  /** Online: steps the other player's field with their input for this step. */
+  stepRival(input: InputState): void {
+    if (!this.rival.ended) this.rival.step(input);
+  }
+
   /** Runs the rival on for as many of its steps as `steps` of the player's are worth. */
   advance(steps: number): void {
+    if (this.online) return;
     this.owed += steps * this.speed;
     while (this.owed >= 1 && !this.rival.ended) {
       this.rival.step(this.bot.input(this.tick++));
@@ -354,6 +370,11 @@ export class Battle {
     });
     if (you.ended === 'captainDown') return result('lost', 'The Warden is down.');
     if (you.ended === 'wipedOut') return result('lost', 'No Sproutlings remain.');
+    // Online the other side's disasters count too, so both sides see the same end.
+    if (this.online && this.rival.ended === 'captainDown')
+      return result('won', 'Your rival’s Warden is down.');
+    if (this.online && this.rival.ended === 'wipedOut')
+      return result('won', 'Your rival has no Sproutlings left.');
     if (this.mode === 'duel') {
       // Ends at sunset, or as soon as either side has collected everything.
       if (you.ended || mine.doneAt !== null || theirs.doneAt !== null || this.rival.ended) {

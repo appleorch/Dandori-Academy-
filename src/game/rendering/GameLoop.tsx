@@ -8,7 +8,9 @@ import { assistAim, jobSpots } from '../commands/aimAssist';
 import { connectedPads } from '../commands/gamepad';
 import { FixedClock } from '../core/clock';
 import { CAPTAIN, SIM_DT } from '../core/config';
-import { useGameStore } from '../core/gameStore';
+import { coopDay, useGameStore } from '../core/gameStore';
+import { PartnerPad } from '../commands/partner';
+import { battleHash } from '../net/lockstep';
 import { splitKey } from '../save/saveManager';
 import { ENEMY_SPECS, type EnemyKind } from '../enemies/enemyKinds';
 import type { Battle, BattleOutcome } from '../modes/battle';
@@ -174,6 +176,8 @@ async function keepReplay(recorder: Recorder, sim: Simulation, mode: ModeId): Pr
 
 /** How long a new kind's first try stays up, at most, and the first sunset's warning. */
 const KIND_TRY_SECONDS = 40;
+/** Frames waited on the other player before the HUD says so. */
+const STALL_FRAMES = 30;
 const WARNING_SECONDS = 12;
 
 /**
@@ -203,9 +207,13 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
   const sceneOf = useRef('');
   const partsToday = useRef(0);
   // The day's inputs, noted for its replay (every day but the story's and battles).
-  const [recorder] = useState(() =>
-    replayable(useGameStore.getState().playMode) ? new Recorder() : null,
-  );
+  const [recorder] = useState(() => {
+    const { playMode, coop } = useGameStore.getState();
+    // A co-op day has two players' inputs; its replay is not kept (yet).
+    return replayable(playMode) && !coopDay(coop, playMode) ? new Recorder() : null;
+  });
+  const [partnerPad] = useState(() => new PartnerPad());
+  const stalled = useRef(0);
   // The guided morning (undefined until the day's first look), kinds already met, a new
   // kind's first try, and the first day's sunset warning.
   const guide = useRef<GuideProgress | null | undefined>(undefined);
@@ -301,7 +309,10 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
     const live = store.phase === 'playing' && !store.paused && !store.briefing && !surface.ended;
     if (!live) input.clearPresses();
     input.live = live;
-    input.pollPads(connectedPads(), delta);
+    // Co-op: the last pad plugged in is the second player's; the first keeps the rest.
+    const pads = connectedPads();
+    const shared = surface.coop ? PartnerPad.share(pads) : { first: pads, partner: null };
+    input.pollPads(shared.first, delta);
     input.update(delta);
     probe.set(input.pointerX, input.pointerY, 0.5).unproject(camera).sub(camera.position);
     // Where the pointer meets the ground: first the flat floor, then the height found there,
@@ -420,8 +431,29 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
     const stepStart = performance.now();
     for (let i = 0; i < steps && !sim.ended; i++) {
       const sample = input.sample(cursorX, cursorZ);
-      // Recorded days are played on the log's grid, so the log replays them exactly.
-      sim.step(recorder ? recorder.input(sample) : sample);
+      const online = store.online;
+      if (online && battle && sim === surface) {
+        // Online: this side's input is decided a few steps ahead and sent; a step is played
+        // only once the other side's input for it is here, on both fields at once.
+        online.lockstep.submit(sample);
+        if (!online.lockstep.ready()) {
+          stalled.current++;
+          break;
+        }
+        stalled.current = 0;
+        const both = online.lockstep.take();
+        sim.step(both.mine);
+        battle.stepRival(both.theirs);
+        online.lockstep.check(() =>
+          online.host ? battleHash(sim, battle.rival) : battleHash(battle.rival, sim),
+        );
+      } else {
+        const partner = sim.partnerWarden;
+        const second =
+          partner && live ? partnerPad.sample(shared.partner, partner.x, partner.z) : undefined;
+        // Recorded days are played on the log's grid, so the log replays them exactly.
+        sim.step(recorder ? recorder.input(sample) : sample, second);
+      }
       // The rival keeps pace step by step, and the battle is called the moment it is won.
       if (battle && sim === surface && !surface.ended) {
         battle.advance(1);
@@ -444,6 +476,19 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
       }
     }
     recordSteps(performance.now() - stepStart, steps);
+    // Online news for the HUD: waiting on the other side, out of step, or left.
+    const session = store.online;
+    if (session) {
+      store.setNetStatus(
+        session.lockstep.left
+          ? 'The other player has left.'
+          : session.lockstep.desync !== null
+            ? 'Out of step with the other player: the result may differ on their screen.'
+            : stalled.current > STALL_FRAMES
+              ? 'Waiting for the other player…'
+              : null,
+      );
+    }
     // The beasts, heard: a call when one notices you, its tell as it winds up, a yelp when hurt,
     // and now and then an idle grumble.
     if (steps > 0) {

@@ -474,6 +474,7 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
   const startDay = useGameStore((state) => state.startDay);
   const leaveDay = useGameStore((state) => state.leaveDay);
   const showStory = useGameStore((state) => state.showStory);
+  const online = useGameStore((state) => state.online !== null);
   const stinger = result ? stingerFor(result) : null;
   // The fanfare lands with the stamp, after the tally has counted up.
   useEffect(() => {
@@ -566,19 +567,21 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
                 Next lesson: {next.name}
               </button>
             )}
-            <button
-              type="button"
-              className={next && nextUnlocked && result.tally.cleared ? 'secondary' : undefined}
-              onClick={() => startDay(level.id)}
-              data-primary={!(next && nextUnlocked && result.tally.cleared) || undefined}
-            >
-              {campaign
-                ? `Start day ${(result.campaign?.day ?? 0) + 1}`
-                : result.battle
-                  ? 'Rematch'
-                  : 'Try again'}{' '}
-              <ActionPrompt action="restart" />
-            </button>
+            {!online && (
+              <button
+                type="button"
+                className={next && nextUnlocked && result.tally.cleared ? 'secondary' : undefined}
+                onClick={() => startDay(level.id)}
+                data-primary={!(next && nextUnlocked && result.tally.cleared) || undefined}
+              >
+                {campaign
+                  ? `Start day ${(result.campaign?.day ?? 0) + 1}`
+                  : result.battle
+                    ? 'Rematch'
+                    : 'Try again'}{' '}
+                <ActionPrompt action="restart" />
+              </button>
+            )}
             {below && (
               <button
                 type="button"

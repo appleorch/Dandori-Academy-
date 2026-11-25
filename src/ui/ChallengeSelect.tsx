@@ -12,6 +12,7 @@ import { modeBest, modeRank } from '../game/save/saveManager';
 import { formatPoints, formatTime } from './format';
 import { challengeFieldsOf, challengeLock, hasMedal } from './lessonAccess';
 import { MenuNav } from './MenuNav';
+import { CoopSwitch } from './CoopSwitch';
 import { t } from '../i18n/i18n';
 import { levelBrief, levelName, modeName, modeRules, modeSummary } from '../i18n/gameText';
 
@@ -61,6 +62,7 @@ export function ChallengeSelect() {
             </button>
           ))}
         </nav>
+        <CoopSwitch />
         <section className="mode-rules">
           <p className="mode-summary">{modeSummary(mode)}</p>
           <ul>

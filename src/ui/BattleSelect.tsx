@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import type { Transport } from '../game/net/lockstep';
+import { cleanRoomCode, hostRoom, joinRoom, newRoomCode } from '../game/net/rtc';
 import { useGameStore } from '../game/core/gameStore';
 import {
   battleLevel,
@@ -22,6 +24,130 @@ const RIVAL_BLURB: Record<RivalLevel, string> = {
  * Battles: pick a race, a rival and a lesson. The rival works their own copy of the same field
  * at the same time, shown on a second map in the corner.
  */
+type Online =
+  | { state: 'off' }
+  | { state: 'hosting'; code: string; status: string; cancel: () => void }
+  | { state: 'joining'; status: string; cancel: () => void }
+  | { state: 'ready'; host: boolean; transport: Transport }
+  | { state: 'failed'; message: string };
+
+/**
+ * Online: host a room (a code to read out to a friend) or join one. Once joined, the host picks
+ * the field below and both go straight in; the guest waits for the host's pick.
+ */
+function OnlinePanel({
+  online,
+  setOnline,
+}: {
+  online: Online;
+  setOnline: (online: Online) => void;
+}) {
+  const startOnline = useGameStore((state) => state.startOnline);
+  const [typed, setTyped] = useState('');
+  const supported = typeof RTCPeerConnection !== 'undefined';
+  const connect = (host: boolean, code: string) => {
+    // The status may be reported before the attempt is in hand, so cancelling goes through this.
+    let cancelAttempt = (): void => {};
+    const cancel = () => cancelAttempt();
+    const status = (text: string) =>
+      setOnline(
+        host
+          ? { state: 'hosting', code, status: text, cancel }
+          : { state: 'joining', status: text, cancel },
+      );
+    const attempt = host ? hostRoom(code, status) : joinRoom(code, status);
+    cancelAttempt = attempt.cancel;
+    status(host ? 'Opening the room…' : 'Looking for the room…');
+    attempt.transport.then(
+      (transport) => {
+        setOnline({ state: 'ready', host, transport });
+        if (!host) {
+          // The guest waits for the host's pick of race and field.
+          transport.onMessage = (message) => {
+            if (message.t === 'start' && isBattle(message.mode as BattleId))
+              startOnline(transport, false, message.level, message.mode as BattleId);
+          };
+        }
+      },
+      (error: unknown) =>
+        setOnline({
+          state: 'failed',
+          message: error instanceof Error ? error.message : 'Could not connect.',
+        }),
+    );
+  };
+  return (
+    <section className="online-panel">
+      <h2>Play online</h2>
+      {!supported ? (
+        <p className="note">This browser cannot play online.</p>
+      ) : online.state === 'off' || online.state === 'failed' ? (
+        <>
+          <p className="note">
+            Race a friend on another computer: one hosts and reads out the room code, the other
+            joins with it. Nothing but your inputs is sent, straight between your two browsers.
+          </p>
+          <div className="button-row">
+            <button
+              type="button"
+              className="secondary small"
+              onClick={() => connect(true, newRoomCode())}
+            >
+              Host a room
+            </button>
+            <label className="room-code">
+              <span className="sr-only">Room code</span>
+              <input
+                value={typed}
+                maxLength={8}
+                placeholder="Room code"
+                onChange={(event) => setTyped(event.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="secondary small"
+              disabled={cleanRoomCode(typed) === null}
+              onClick={() => {
+                const code = cleanRoomCode(typed);
+                if (code) connect(false, code);
+              }}
+            >
+              Join
+            </button>
+          </div>
+          {online.state === 'failed' && <p className="note warn">{online.message}</p>}
+        </>
+      ) : online.state === 'ready' ? (
+        <p className="best" role="status">
+          {online.host
+            ? 'Connected. Pick the race above and a field below to start.'
+            : 'Connected. Waiting for the host to pick the race and field…'}
+        </p>
+      ) : (
+        <div role="status">
+          {online.state === 'hosting' && (
+            <p>
+              Room code: <strong className="room-code-shown">{online.code}</strong>
+            </p>
+          )}
+          <p className="note">{online.status}</p>
+          <button
+            type="button"
+            className="secondary small"
+            onClick={() => {
+              online.cancel();
+              setOnline({ state: 'off' });
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function BattleSelect() {
   const save = useGameStore((state) => state.save);
   const startDay = useGameStore((state) => state.startDay);
@@ -29,6 +155,10 @@ export function BattleSelect() {
   const lastRival = useGameStore((state) => state.rival);
   const [mode, setMode] = useState<BattleId>(isBattle(lastMode) ? lastMode : 'marble');
   const [rival, setRival] = useState<RivalLevel>(lastRival);
+  const [online, setOnline] = useState<Online>({ state: 'off' });
+  const startOnline = useGameStore((state) => state.startOnline);
+  const hostReady = online.state === 'ready' && online.host ? online : null;
+  const guestWaiting = online.state === 'ready' && !online.host;
   const spec = MODES[mode];
   const lessons = openLessons(save).filter((level) => battleOpen(mode, level));
   const record = save.battles[mode] ?? { won: 0, lost: 0, drawn: 0 };
@@ -63,22 +193,25 @@ export function BattleSelect() {
             Your record: {record.won} won, {record.lost} lost, {record.drawn} drawn.
           </p>
         </section>
-        <div className="rival-pick" role="radiogroup" aria-label="Rival">
-          {RIVAL_LEVELS.map((level) => (
-            <button
-              key={level}
-              type="button"
-              role="radio"
-              aria-checked={rival === level}
-              className={rival === level ? 'rival-card active' : 'rival-card'}
-              onClick={() => setRival(level)}
-            >
-              <strong>{RIVAL_NAMES[level]}</strong>
-              <small>{RIVAL_BLURB[level]}</small>
-            </button>
-          ))}
-        </div>
-        {lessons.length === 0 ? (
+        <OnlinePanel online={online} setOnline={setOnline} />
+        {!hostReady && !guestWaiting && (
+          <div className="rival-pick" role="radiogroup" aria-label="Rival">
+            {RIVAL_LEVELS.map((level) => (
+              <button
+                key={level}
+                type="button"
+                role="radio"
+                aria-checked={rival === level}
+                className={rival === level ? 'rival-card active' : 'rival-card'}
+                onClick={() => setRival(level)}
+              >
+                <strong>{RIVAL_NAMES[level]}</strong>
+                <small>{RIVAL_BLURB[level]}</small>
+              </button>
+            ))}
+          </div>
+        )}
+        {guestWaiting ? null : lessons.length === 0 ? (
           <p className="note">No lesson Time Attack has opened suits this race yet.</p>
         ) : (
           <ol className="lessons">
@@ -87,7 +220,12 @@ export function BattleSelect() {
                 <button
                   type="button"
                   className="lesson"
-                  onClick={() => startDay(level.id, mode, rival)}
+                  onClick={() => {
+                    if (hostReady) {
+                      hostReady.transport.send({ t: 'start', level: level.id, mode });
+                      startOnline(hostReady.transport, true, level.id, mode);
+                    } else startDay(level.id, mode, rival);
+                  }}
                 >
                   <span className="lesson-number">{level.side ? '▼' : level.stage}</span>
                   <span className="lesson-text">

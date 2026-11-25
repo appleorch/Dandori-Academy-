@@ -1,4 +1,5 @@
 import { adviceFor } from '../game/campaign/advice';
+import { CoopSwitch } from './CoopSwitch';
 import { useState } from 'react';
 import {
   allPartsHome,
@@ -351,6 +352,7 @@ export function CampScreen() {
                 {t('camp.diffShown', { name: t(`camp.diff.${state.difficulty}` as MessageKey) })}
               </p>
             )}
+            <CoopSwitch />
             <button type="button" onClick={() => startDay(section.level.id, 'campaign')} autoFocus>
               {state.day === 0 ? t('camp.begin') : t('camp.startDay', { day: state.day + 1 })}
             </button>

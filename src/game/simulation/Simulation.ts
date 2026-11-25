@@ -1,6 +1,6 @@
 import { updateCaptain } from '../captain/captainSystem';
 import { updateCarrying } from '../carry/carrySystem';
-import type { InputState } from '../commands/input';
+import { NO_INPUT, type InputState } from '../commands/input';
 import { CAPTAIN, KILN, SIM_DT } from '../core/config';
 import type { GateSpawn, TreasureSpawn } from '../world/levelTypes';
 import { HARD } from '../core/difficulty';
@@ -106,6 +106,22 @@ export interface SimOptions {
   explored?: Uint8Array;
   /** Story only: sprays brought along. */
   items?: { emberbrew: number; stillwater: number };
+  /**
+   * Local co-op: a second Warden played by a second player at the same time, with half the
+   * squad. Each step takes both players' inputs (see `step`).
+   */
+  coop?: boolean;
+}
+
+/** What one Warden carries that the other does not: kept for the Warden not being stepped. */
+interface WardenSide {
+  x: number;
+  z: number;
+  facing: number;
+  state: Captain;
+  cursorX: number;
+  cursorZ: number;
+  selected: SproutKind;
 }
 
 export interface SimStats {
@@ -262,6 +278,9 @@ export class Simulation {
   /** Story only: sprays in hand today, and seconds left of an Emberbrew. */
   readonly items = { emberbrew: 0, stillwater: 0 };
   brewTimer = 0;
+  /** Local co-op: whether both Wardens are played at once, and the one not being stepped. */
+  readonly coop: boolean;
+  private partner: WardenSide | null = null;
   /** Worker-seconds spent idle and in all, sampled through the day: the share left idle. */
   readonly workload = { idle: 0, all: 0 };
   /** Story only: whether the guided morning's fence was standing, and has been opened. */
@@ -369,7 +388,8 @@ export class Simulation {
     });
     this.anchor = { ...level.captain };
     if (this.explored) reveal(this.explored, level, level.captain.x, level.captain.z);
-    if (this.abilities.has('secondWarden')) {
+    this.coop = options.coop === true;
+    if (this.abilities.has('secondWarden') || this.coop) {
       // The second Warden starts beside the Kiln, ready to be switched to.
       this.otherWarden = this.nav.nearestWalkable(level.kiln.x + 4, level.kiln.z + 4);
     }
@@ -400,6 +420,11 @@ export class Simulation {
       spawnWorker(this, spot.x, spot.z, 'follow', kind, growth);
     });
     this.selected = kinds[0] ?? 'ember';
+    // Co-op: every other Sproutling of the starting squad goes with the second player.
+    if (this.coop) {
+      let i = 0;
+      for (const [, worker] of this.workers.entries()) if (i++ % 2 === 1) worker.party = 1;
+    }
     if (this.story) {
       (level.berries ?? []).forEach((berry, index) => spawnBerry(this, berry, index, berry.kind));
       for (const drop of level.dewdrops ?? [])
@@ -446,6 +471,72 @@ export class Simulation {
     return (this.tick - 1) * SIM_DT;
   }
 
+  /** What a Warden does with a step's input: walk, aim, whistle, throw, dismiss, charge. */
+  private wardenPhase(input: InputState, dt: number): void {
+    updateSelection(this, input);
+    updateCaptain(this, input, dt);
+    updateBeacons(this);
+    updateWhistle(this, input, dt);
+    updateThrowing(this, input, dt);
+    if (input.dismiss) dismissSquad(this);
+    if (input.rush) rushSquad(this);
+  }
+
+  /**
+   * Co-op: puts the other Warden in the first's place for their turn (position, hearts, aim,
+   * chosen kind, whistle), keeping the first's aside, and the other way round. The world sees
+   * one Warden at a time; the one aside stands where they are, their squad round them.
+   */
+  private swapSides(): void {
+    const here: WardenSide = {
+      x: this.captainTransform.x,
+      z: this.captainTransform.z,
+      facing: this.captainTransform.facing,
+      state: { ...this.captainState },
+      cursorX: this.cursor.x,
+      cursorZ: this.cursor.z,
+      selected: this.selected,
+    };
+    const other = this.otherWarden;
+    if (!other) return;
+    const side = this.partner ?? {
+      x: other.x,
+      z: other.z,
+      facing: 0,
+      state: { ...this.captainState, whistleRadius: 0, throwCooldown: 0, throwLatched: false },
+      cursorX: other.x,
+      cursorZ: other.z,
+      selected: this.selected,
+    };
+    this.captainTransform.x = side.x;
+    this.captainTransform.z = side.z;
+    this.captainTransform.facing = side.facing;
+    Object.assign(this.captainState, side.state);
+    this.cursor.x = side.cursorX;
+    this.cursor.z = side.cursorZ;
+    this.selected = side.selected;
+    this.physics.placeCaptain(this.captainTransform);
+    this.partner = here;
+    this.otherWarden = { x: here.x, z: here.z };
+    this.activeWarden = 1 - this.activeWarden;
+    // The squad's way to its Warden follows whoever is in place.
+    const anchor = this.nav.nearestWalkable(this.captainTransform.x, this.captainTransform.z);
+    this.anchor.x = anchor.x;
+    this.anchor.z = anchor.z;
+    this.squadField.compute(this.nav.cellIndexAt(anchor.x, anchor.z));
+  }
+
+  /** Co-op: where the second player's Warden is, and how they stand, between steps. */
+  get partnerWarden(): { x: number; z: number; hp: number; selected: SproutKind } | null {
+    if (!this.coop || !this.otherWarden) return null;
+    return {
+      x: this.otherWarden.x,
+      z: this.otherWarden.z,
+      hp: this.partner?.state.hp ?? this.captainState.hp,
+      selected: this.partner?.selected ?? this.selected,
+    };
+  }
+
   /** Opens the guided morning's fence: every fence gate gives way at once. */
   openFence(): void {
     if (!this.fenceUp) return;
@@ -481,18 +572,25 @@ export class Simulation {
   }
 
   /** Advances the day by one fixed step. Does nothing once the day has ended. */
-  step(input: InputState): void {
+  step(input: InputState, partner?: InputState): void {
     if (this.ended) return;
     const dt = SIM_DT;
     this.tick++;
     this.events.length = 0;
-    updateSelection(this, input);
-    updateCaptain(this, input, dt);
-    updateBeacons(this);
-    updateWhistle(this, input, dt);
-    updateThrowing(this, input, dt);
-    if (input.dismiss) dismissSquad(this);
-    if (input.rush) rushSquad(this);
+    this.wardenPhase(input, dt);
+    // Local co-op: the second player's Warden takes their turn, then the first is put back.
+    if (this.coop && this.otherWarden) {
+      this.swapSides();
+      this.wardenPhase(
+        partner ?? {
+          ...NO_INPUT,
+          cursorX: this.captainTransform.x,
+          cursorZ: this.captainTransform.z,
+        },
+        dt,
+      );
+      this.swapSides();
+    }
     updateEnemies(this, dt);
     updateDrips(this);
     updateVents(this);
@@ -524,8 +622,8 @@ export class Simulation {
     updateKiln(this, dt);
     updateDewdrops(this);
     this.brewTimer = Math.max(0, this.brewTimer - dt);
-    // Two Wardens close together merge their squads.
-    if (this.otherWarden) {
+    // Two Wardens close together merge their squads (never in co-op: each player keeps theirs).
+    if (this.otherWarden && !this.coop) {
       const { x, z } = this.otherWarden;
       if (Math.hypot(this.captainTransform.x - x, this.captainTransform.z - z) < ITEM.mergeRange) {
         for (const [, worker] of this.workers.entries()) worker.party = this.activeWarden;
@@ -601,7 +699,8 @@ export class Simulation {
    */
   switchWarden(): boolean {
     const other = this.otherWarden;
-    if (!other) return false;
+    // In co-op each player has their own Warden: there is nobody to switch to.
+    if (!other || this.coop) return false;
     const here = { x: this.captainTransform.x, z: this.captainTransform.z };
     this.physics.placeCaptain(other);
     this.captainTransform.x = other.x;

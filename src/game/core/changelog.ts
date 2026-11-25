@@ -8,6 +8,14 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.39.0',
+    date: '2026-11-25',
+    changes: [
+      'Local co-op in the story and the challenges: a second player on a gamepad gets a Warden of their own and half the squad, on the same screen.',
+      'Online battles: race a friend on another computer in Marble Race, Bingo Race or Dandori Duel. Host a room and read out its code; nothing but your inputs is sent, straight between your browsers.',
+    ],
+  },
+  {
     version: '0.38.0',
     date: '2026-11-25',
     changes: [

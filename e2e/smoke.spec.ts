@@ -131,6 +131,69 @@ test('once opened, the game loads and starts a day offline', async ({ page, cont
   await inDay(page);
 });
 
+test('two browsers can play a battle online, in step', async ({ browser }) => {
+  // The relay, kept in memory: the two pages find each other through it, then talk directly.
+  const topics = new Map<string, string[]>();
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  await context.route('https://ntfy.sh/**', async (route) => {
+    const url = new URL(route.request().url());
+    const [topic, rest] = url.pathname.slice(1).split('/');
+    const headers = { 'access-control-allow-origin': '*' };
+    if (route.request().method() === 'POST') {
+      topics.set(topic, [...(topics.get(topic) ?? []), route.request().postData() ?? '']);
+      await route.fulfill({ status: 200, headers, body: '{}' });
+    } else if (rest === 'json') {
+      const lines = (topics.get(topic) ?? []).map((message) =>
+        JSON.stringify({ event: 'message', topic, message }),
+      );
+      await route.fulfill({ status: 200, headers, body: lines.join('\n') });
+    } else await route.fulfill({ status: 200, headers, body: '' });
+  });
+  const host = await context.newPage();
+  const guest = await context.newPage();
+  const errors: string[] = [];
+  for (const page of [host, guest]) {
+    page.on('pageerror', (error) => errors.push(String(error)));
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'dandori-academy-settings',
+        JSON.stringify({
+          graphics: 'low',
+          graphicsTuned: true,
+          seenIntro: true,
+          commentary: false,
+        }),
+      );
+    });
+    await page.goto('./');
+    await passTitle(page);
+    await page.locator('.mode-card', { hasText: 'Battles' }).click();
+  }
+  await host.getByRole('button', { name: 'Host a room' }).click();
+  const code = (await host.locator('.room-code-shown').textContent({ timeout: 20_000 })) ?? '';
+  await guest.getByPlaceholder('Room code').fill(code);
+  await guest.getByRole('button', { name: 'Join' }).click();
+  await expect(host.getByText(/Connected\. Pick the race/)).toBeVisible({ timeout: 60_000 });
+  await host.locator('button.lesson').first().click();
+  for (const page of [host, guest]) {
+    await expect(page.getByRole('button', { name: /Begin the day/ })).toBeVisible({
+      timeout: 30_000,
+    });
+  }
+  await host.getByRole('button', { name: /Begin the day/ }).click();
+  await guest.getByRole('button', { name: /Begin the day/ }).click();
+  for (const page of [host, guest]) {
+    await expect(page.getByRole('button', { name: /^Pause/ })).toBeVisible();
+  }
+  await host.waitForTimeout(8000);
+  for (const page of [host, guest]) {
+    await expect(page.locator('.net-status', { hasText: 'Out of step' })).toHaveCount(0);
+    await expect(page.locator('.net-status', { hasText: 'left' })).toHaveCount(0);
+  }
+  expect(errors).toEqual([]);
+  await context.close();
+});
+
 /** Visible text on the page with two plain letters in a row: in the pseudo-locale, untranslated. */
 async function untranslated(page: Page): Promise<string[]> {
   return page.evaluate(() => {

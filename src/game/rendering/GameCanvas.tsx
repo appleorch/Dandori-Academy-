@@ -2,7 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import { useEffect, useState } from 'react';
 import { ACESFilmicToneMapping } from 'three';
 import { audio } from '../audio/audioManager';
-import { useGameStore } from '../core/gameStore';
+import { coopDay, useGameStore } from '../core/gameStore';
 import { CameraRig } from '../camera/CameraRig';
 import type { InputController } from '../commands/input';
 import { RESERVED_KEY } from '../commands/bindings';
@@ -127,13 +127,14 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   useEffect(() => {
     if (!ready) return;
     // The mode and rival are fixed when the day starts; the scene is rebuilt for every new day.
-    const { playMode, rival } = useGameStore.getState();
+    const { playMode, rival, coop, online } = useGameStore.getState();
     const rules = MODES[playMode];
     const created = new Expedition(
       new Simulation(level, {
         endsWhen: rules.endsWhen,
         growth: rules.growth,
         story: playMode === 'campaign',
+        coop: coopDay(coop, playMode),
         ...(playMode === 'campaign'
           ? storyOptions(useGameStore.getState().save.campaign, level)
           : {}),
@@ -143,7 +144,9 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
       const state = useGameStore.getState().save.campaign;
       created.caveFilter = (spec) => caveField(state, spec);
     }
-    const race = isBattle(playMode) ? new Battle(playMode, level, rival) : null;
+    const race = isBattle(playMode)
+      ? new Battle(playMode, level, rival, online ? { host: online.host } : null)
+      : null;
     setExpedition(created);
     setSim(created.active);
     setBattle(race);
@@ -192,6 +195,8 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
       const story = store.playMode === 'campaign';
       if (
         keys.restart.includes(event.code) &&
+        // An online battle cannot be restarted from one side alone.
+        !store.online &&
         (store.phase === 'results' ||
           (store.paused && !story) ||
           // Time Attack restarts at once, mid-day too.

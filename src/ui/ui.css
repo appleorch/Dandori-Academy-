@@ -3924,3 +3924,55 @@ button.chip.guide-skip {
   margin: 0;
   padding: 4px 8px;
 }
+
+.coop-switch {
+  margin: var(--space-3) 0;
+}
+.coop-switch label {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip.net-status {
+  align-self: center;
+  border: 1px solid var(--accent);
+}
+.online-panel {
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.online-panel h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+.online-panel .button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.online-panel .button-row button {
+  width: auto;
+  margin: 0;
+}
+.room-code input {
+  width: 9em;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--ink);
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.room-code-shown {
+  font-size: var(--text-xl);
+  letter-spacing: 0.15em;
+  color: var(--accent);
+}

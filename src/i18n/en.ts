@@ -77,6 +77,9 @@ export const EN = {
   'camp.kilnEmpty': 'The Kiln is empty. It will coax out a single Emberling to start again with.',
   'camp.overflow': '{going} go out (the field holds no more); {waiting} wait in the Kiln.',
   'camp.begin': 'Begin the expedition',
+  'coop.toggle': 'Co-op: a second player on a gamepad',
+  'coop.help':
+    'Player 2 (the last gamepad plugged in): left stick walks, right stick aims, RT throws, LT whistles, A charges, B dismisses, LB and RB change kind. Each player has a Warden and half the squad. Co-op runs are not posted to the board.',
   'camp.difficulty': 'How hard a story?',
   'camp.difficultyNote': 'Chosen now, kept for this story.',
   'camp.diff.relaxed': 'Relaxed',

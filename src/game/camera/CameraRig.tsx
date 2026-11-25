@@ -16,6 +16,9 @@ interface CameraRigProps {
 const LOOK_AHEAD = 0.28;
 /** How much closer a full camera punch brings the view, as a share of the zoom. */
 const PUNCH = 0.12;
+/** Co-op: the zoom needed per unit between the Wardens to keep both in view, and its limit. */
+const COOP_FRAME = 0.95;
+const COOP_MAX_ZOOM = 70;
 
 /** Middle of the idle Emberlings, or the Kiln when nobody is idle: where Tab looks. */
 function idleSpot(sim: Simulation): { x: number; z: number } {
@@ -93,13 +96,18 @@ export function CameraRig({ sim, input, fx }: CameraRigProps): null {
     const peek = input.peek;
     const tactical = input.tactical;
     // The tactical view looks down on the middle of the course, between it and the Warden.
+    // Co-op frames both Wardens: the point between them, drawn back far enough to see both.
+    const partner = sim.partnerWarden;
     const target = tactical
       ? { x: captain.x * 0.35, z: captain.z * 0.35 }
       : peek
         ? idleSpot(sim)
-        : captain;
+        : partner
+          ? { x: (captain.x + partner.x) / 2, z: (captain.z + partner.z) / 2 }
+          : captain;
+    const apart = partner ? Math.hypot(captain.x - partner.x, captain.z - partner.z) : 0;
     // The lean is eased on its own, so a flick of the mouse does not jerk the view.
-    const leanTo = peek || tactical ? 0 : LOOK_AHEAD;
+    const leanTo = peek || tactical || partner ? 0 : LOOK_AHEAD;
     const follow = 1 - Math.exp(-delta * 3);
     lean.current.x += ((sim.cursor.x - captain.x) * leanTo - lean.current.x) * follow;
     lean.current.z += ((sim.cursor.z - captain.z) * leanTo - lean.current.z) * follow;
@@ -107,7 +115,8 @@ export function CameraRig({ sim, input, fx }: CameraRigProps): null {
     const ease = cut.current ? 1 : 1 - Math.exp(-delta * (tactical ? 3 : 6));
     cut.current = false;
     const overview = Math.max(level.width * 0.5, level.depth * 0.75);
-    const zoom = (tactical ? overview : input.zoom) * (1 - fx.punch * PUNCH);
+    const framed = Math.min(COOP_MAX_ZOOM, Math.max(input.zoom, apart * COOP_FRAME));
+    const zoom = (tactical ? overview : framed) * (1 - fx.punch * PUNCH);
     const x = target.x + lean.current.x;
     const z = target.z + lean.current.z;
     // The view rises with the ground under it, so a terrace never fills the screen.

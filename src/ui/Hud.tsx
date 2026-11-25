@@ -55,6 +55,7 @@ export function Hud({
   const pause = useGameStore((state) => state.pause);
   const hint = useGameStore((state) => state.hint);
   const guide = useGameStore((state) => state.guide);
+  const netStatus = useGameStore((state) => state.online?.status ?? null);
   const skipTutorial = useGameStore((state) => state.skipTutorial);
   const sprocket = useGameStore((state) => state.sprocket);
   const nearSecret = useGameStore((state) => state.nearSecret);
@@ -324,6 +325,11 @@ export function Hud({
         </div>
       )}
       {race && phase === 'playing' && <RacePanel race={race} />}
+      {netStatus && (
+        <div className="chip net-status" role="status">
+          {netStatus}
+        </div>
+      )}
       {!hud.below && !untimed && (
         <div
           className="daybar"
