@@ -8,6 +8,16 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.27.0',
+    date: '2026-11-25',
+    changes: [
+      'A new story section: the Sunken Orchard, an old fruit orchard half drowned by a burst cistern. It opens once six Clock parts are home.',
+      'Ten more parts of the Great Clock to find, across the Crate Yard, Watering Can Island, the Root Cellar under the great tree, and the Mire Lord’s pond. Two of them need gifts from the Quad’s parts.',
+      'Water everywhere: bring Dewlings. Bridges to build, a bramble door, a hidden store, a cave, and twenty-odd beasts including Pike Newts, Pollen Moths and a wasp nest.',
+      'Treasure carried home in a story cave now counts for the section, and stays taken.',
+    ],
+  },
+  {
     version: '0.26.0',
     date: '2026-11-25',
     changes: [

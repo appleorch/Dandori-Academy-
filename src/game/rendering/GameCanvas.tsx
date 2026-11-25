@@ -43,7 +43,7 @@ import { WorkerInstances } from './WorkerInstances';
 import { PerfProbe, ShadowBudget } from './perf';
 import { QualityTuner } from './QualityTuner';
 import { t } from '../../i18n/i18n';
-import { campaignAbilities, type CampaignState } from '../campaign/campaign';
+import { campaignAbilities, caveField, type CampaignState } from '../campaign/campaign';
 import { decodeFog } from '../campaign/fog';
 
 /** The story's day: the Clock's gifts so far, and what has been seen of the section already. */
@@ -130,6 +130,10 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
           : {}),
       }),
     );
+    if (playMode === 'campaign') {
+      const state = useGameStore.getState().save.campaign;
+      created.caveFilter = (spec) => caveField(state, spec);
+    }
     const race = isBattle(playMode) ? new Battle(playMode, level, rival) : null;
     setExpedition(created);
     setSim(created.active);

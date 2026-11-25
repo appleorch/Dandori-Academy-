@@ -294,6 +294,18 @@ camp**, which shows a map of the Quad, the Kiln's stock by kind and the Clock's 
   burned to ash, sinking, jolted by a spark, or flattened; each releases a spirit in its kind's
   colour. Butterflies on outdoor fields are chased by idle Sproutlings (`Butterflies.tsx`).
 - The parts are named relics of their own (`CLOCK_PARTS` in `src/game/story/relics.ts`).
+- **The Sunken Orchard** (`src/game/campaign/orchard.ts`), the second section (220 × 160,
+  marsh), opens with six parts home. An old orchard half drowned by a burst cistern, where
+  Dewlings are the stars: the landing meadow and its first loop; the Crate Yard (a giant fallen
+  apple crate, its bramble door and a hidden store behind a weak board, with flooded drains
+  behind); Watering Can Island in a ring of water, with two bridges to build; and the Root
+  Hollow, whose great tree's roots are the way down into the Root Cellar (a cave with two
+  parts), with the Mire Lord's pond and the last part beyond. Ten parts (two need the Quad's
+  gifts: the bridge kit and the lantern), 29 other relics, 26 beasts and mounds including the
+  Pike Newt, Pollen Moth, Sleeper Slug, Thornback, Mimic Cap, Shellback and a wasp nest, and
+  Glowcaps, Sapdrops, Dewdrops, drips and four beacons. Treasure found in a section's caves
+  counts for the section (`settleDay`'s cave finds), and caves keep what was taken from them
+  (`caveField`). Pictures of each zone are in `docs-design/art/orchard-*.jpg`.
 - **Sections.** The story is built for several sections of the grounds (`CAMPAIGN_SECTIONS`).
   Each keeps its own record (what is done, worn, home and seen); the one being explored is held
   at the top of `CampaignState`, the others in `others`, and the base camp lists them all: a

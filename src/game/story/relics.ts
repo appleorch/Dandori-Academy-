@@ -369,6 +369,79 @@ export const CLOCK_PARTS: Readonly<Record<string, Relic>> = {
     material: 'glass',
     description: 'Glass, of all things. The founders liked to see the hours go by.',
   },
+  // The Sunken Orchard's parts: the Clock's striking train, which rang the hours.
+  'part-click-spring': {
+    id: 'part-click-spring',
+    name: 'The Click Spring',
+    shape: 'watch',
+    material: 'silver',
+    description: 'It clicks. Constantly. The Proctor would like a word with whoever designed it.',
+  },
+  'part-third-wheel': {
+    id: 'part-third-wheel',
+    name: 'The Third Wheel',
+    shape: 'gear',
+    material: 'brass',
+    description: 'Found sulking in the crate. Every clock needs one, and it knows it.',
+  },
+  'part-pinion': {
+    id: 'part-pinion',
+    name: 'The Lantern Pinion',
+    shape: 'lantern',
+    material: 'brass',
+    description: 'Fished out of a drain, dripping and faintly pleased with itself.',
+  },
+  'part-rack-hook': {
+    id: 'part-rack-hook',
+    name: 'The Rack Hook',
+    shape: 'key',
+    material: 'iron',
+    description: 'It counts the strokes. It has been counting the ripples instead, out of habit.',
+  },
+  'part-fly-fan': {
+    id: 'part-fly-fan',
+    name: 'The Fly Fan',
+    shape: 'compass',
+    material: 'brass',
+    description: 'It slows the strike to a dignified pace. Heavy, and very dignified.',
+  },
+  'part-going-barrel': {
+    id: 'part-going-barrel',
+    name: 'The Going Barrel',
+    shape: 'musicbox',
+    material: 'silver',
+    description: 'Half full of pond. Pour it out before fitting, the Headmaster insists.',
+  },
+  'part-cannon-pinion': {
+    id: 'part-cannon-pinion',
+    name: 'The Cannon Pinion',
+    shape: 'gear',
+    material: 'iron',
+    description: 'Not, despite its name, a cannon. The Sproutlings were disappointed.',
+  },
+  'part-pallet-fork': {
+    id: 'part-pallet-fork',
+    name: 'The Pallet Fork',
+    shape: 'key',
+    material: 'gold',
+    description: 'From the Root Cellar, where it had grown a fine beard of moss.',
+  },
+  'part-centre-arbor': {
+    id: 'part-centre-arbor',
+    name: 'The Centre Arbor',
+    shape: 'orrery',
+    material: 'brass',
+    description:
+      'Everything in the Clock turns round it. Down in the dark, it had nothing to turn.',
+  },
+  'part-strike-train': {
+    id: 'part-strike-train',
+    name: 'The Strike Train',
+    shape: 'bell',
+    material: 'gold',
+    description:
+      'Taken from beside the Mire Lord’s pond. It rang once when lifted, as if in thanks.',
+  },
 };
 
 function poolFor(variant: ShardVariant | undefined): readonly Relic[] {

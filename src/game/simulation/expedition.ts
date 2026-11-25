@@ -1,7 +1,8 @@
 import { WORKER } from '../core/config';
 import { removeWorker } from '../workers/squad';
 import type { SproutKind } from '../workers/sprouts';
-import { LEVELS } from '../world/level';
+import { LEVELS, type LevelDefinition } from '../world/level';
+import { STORY_CAVES } from '../campaign/sections';
 import { spawnWorker } from '../world/spawn';
 import { Simulation } from './Simulation';
 
@@ -46,6 +47,12 @@ export class Expedition {
   private readonly carried = new Map<string, Record<CarriedStat, number>>();
   readonly haul: Haul = { relics: [], value: 0, caves: [], emptied: [] };
 
+  /**
+   * Story only: shapes a cave before it is first entered today (its treasure already home, or
+   * out of reach, taken out). Elsewhere a cave is entered as written.
+   */
+  caveFilter: ((spec: LevelDefinition) => LevelDefinition) | null = null;
+
   constructor(surface: Simulation) {
     this.surface = surface;
     this.active = surface;
@@ -74,7 +81,10 @@ export class Expedition {
   descend(): boolean {
     const descent = this.surface.level.descent;
     if (!descent || this.blocked()) return false;
-    const spec = LEVELS.find((level) => level.id === descent.to);
+    const written =
+      LEVELS.find((level) => level.id === descent.to) ??
+      STORY_CAVES.find((level) => level.id === descent.to);
+    const spec = written && this.caveFilter ? this.caveFilter(written) : written;
     if (!spec) return false;
     const squad: Traveller[] = [];
     for (const [entity, worker] of [...this.surface.workers.entries()]) {

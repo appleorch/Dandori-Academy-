@@ -1,5 +1,7 @@
 import { terrace, terraces } from '../world/course';
-import type { LevelSpec } from '../world/levelTypes';
+import { defineLevel } from '../world/level';
+import type { LevelDefinition, LevelSpec } from '../world/levelTypes';
+import { ORCHARD_PARTS, ORCHARD_ROOTS, SUNKEN_ORCHARD } from './orchard';
 import type { Ability } from './upgrades';
 
 /**
@@ -20,6 +22,8 @@ export interface CampaignSection {
   opensAt?: number;
   /** Parts that cannot be reached without one of the Clock's gifts (a return trip later). */
   needs?: Readonly<Record<string, Ability>>;
+  /** Caves reached by the section's way down; their treasure counts as the section's. */
+  caves?: readonly LevelDefinition[];
 }
 
 const QUAD_TERRACES = terraces(
@@ -245,7 +249,23 @@ export const CAMPAIGN_SECTIONS: readonly CampaignSection[] = [
     // Two parts need one of the Clock's own gifts first: come back for them.
     needs: { 'part-fusee': 'lantern', 'part-bell-housing': 'bridgekit' },
   },
+  {
+    id: 'orchard',
+    name: 'The Sunken Orchard',
+    brief:
+      'Beyond the Quad’s south wall, an old fruit orchard lies half drowned by the burst cistern. Ten parts of the Clock’s striking train are scattered through the Crate Yard, round Watering Can Island, in the Root Cellar under the great tree, and beside the Mire Lord’s pond. Bring Dewlings: here the water is everywhere.',
+    level: SUNKEN_ORCHARD,
+    parts: ORCHARD_PARTS,
+    opensAt: 6,
+    needs: { 'part-going-barrel': 'bridgekit', 'part-centre-arbor': 'lantern' },
+    caves: [defineLevel(ORCHARD_ROOTS)],
+  },
 ];
+
+/** Every cave the story's sections lead down to. */
+export const STORY_CAVES: readonly LevelDefinition[] = CAMPAIGN_SECTIONS.flatMap(
+  (section) => section.caves ?? [],
+);
 
 export function sectionById(id: string): CampaignSection | undefined {
   return CAMPAIGN_SECTIONS.find((section) => section.id === id);

@@ -633,7 +633,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       const settled =
         mode === 'campaign'
           ? withEnding(
-              settleDay(get().save.campaign, dayField(get().save.campaign), sim),
+              settleDay(
+                get().save.campaign,
+                dayField(get().save.campaign),
+                sim,
+                haul?.relics ?? [],
+              ),
               get().settings.relaxedStory,
             )
           : null;

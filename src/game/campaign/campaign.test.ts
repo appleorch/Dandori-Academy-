@@ -10,9 +10,11 @@ import {
   parseCampaign,
   SAFE_RADIUS,
   settleDay,
+  switchSection,
   type CampaignState,
 } from './campaign';
 import { CAMPAIGN_SECTIONS } from './sections';
+import type { LevelDefinition } from '../world/levelTypes';
 
 beforeAll(async () => {
   await initPhysics();
@@ -27,42 +29,69 @@ const story = (state: CampaignState) => {
   return { field, sim };
 };
 
+/** A story with enough parts home to open a section, exploring it, with everything in reach. */
+function opened(section: (typeof CAMPAIGN_SECTIONS)[number]): CampaignState {
+  const parts = Object.fromEntries(CAMPAIGN_SECTIONS[0].parts.map((id) => [id, 1] as const));
+  const state = { ...newCampaign(), parts };
+  return section.id === CAMPAIGN_SECTIONS[0].id ? newCampaign() : switchSection(state, section.id);
+}
+
+/** Every spawn of a level stands on ground it can use, with a way back to the Kiln. */
+function checkSpawns(level: LevelDefinition) {
+  const sim = new Simulation(level);
+  for (const gate of level.gates ?? []) sim.removeWall(gate);
+  for (const bridge of level.bridges ?? []) sim.removeWall(bridge);
+  const spots = [
+    level.captain,
+    level.kiln,
+    ...level.treasures,
+    ...level.pods,
+    ...level.enemies,
+    ...(level.blooms ?? []),
+    ...(level.logs ?? []),
+    ...(level.saps ?? []),
+    ...(level.beacons ?? []),
+    ...(level.dewdrops ?? []),
+    ...(level.bridges ?? []).map((bridge) => bridge.bank),
+    ...(level.descent ? [level.descent] : []),
+  ];
+  for (const spot of spots) {
+    const wet = sim.inWater(spot.x, spot.z);
+    const nav = wet ? sim.wadeNav : sim.nav;
+    const home = wet ? sim.wadeKilnField : sim.kilnField;
+    expect(nav.isWalkable(spot.x, spot.z), `${level.id} ${spot.x},${spot.z}`).toBe(true);
+    expect(
+      Number.isFinite(home.dist[nav.cellIndexAt(spot.x, spot.z)]),
+      `${level.id} way home from ${spot.x},${spot.z}`,
+    ).toBe(true);
+  }
+  sim.dispose();
+}
+
 describe.each(CAMPAIGN_SECTIONS)('$name', (section) => {
-  it('has twelve Great Clock parts, all of them treasures on the field', () => {
-    expect(section.parts).toHaveLength(12);
+  it('has ten or more Great Clock parts, all of them treasures on the field or in its caves', () => {
+    expect(section.parts.length).toBeGreaterThanOrEqual(10);
+    const all = [
+      ...section.level.treasures,
+      ...(section.caves ?? []).flatMap((cave) => cave.treasures),
+    ];
     for (const id of section.parts) {
-      expect(section.level.treasures.some((treasure) => treasure.id === id)).toBe(true);
+      expect(
+        all.some((treasure) => treasure.id === id),
+        id,
+      ).toBe(true);
     }
   });
 
-  it('has every spawn on walkable ground with a way home', () => {
-    const { sim, field } = story(newCampaign());
-    const level = field.level;
-    for (const gate of level.gates ?? []) sim.removeWall(gate);
-    for (const bridge of level.bridges ?? []) sim.removeWall(bridge);
-    const spots = [
-      level.captain,
-      level.kiln,
-      ...level.treasures,
-      ...level.pods,
-      ...level.enemies,
-      ...(level.blooms ?? []),
-      ...(level.logs ?? []),
-      ...(level.saps ?? []),
-      ...(level.bridges ?? []).map((bridge) => bridge.bank),
-      ...(level.beacons ?? []),
-    ];
-    for (const spot of spots) {
-      const wet = sim.inWater(spot.x, spot.z);
-      const nav = wet ? sim.wadeNav : sim.nav;
-      const home = wet ? sim.wadeKilnField : sim.kilnField;
-      expect(nav.isWalkable(spot.x, spot.z), `${spot.x},${spot.z}`).toBe(true);
-      expect(
-        Number.isFinite(home.dist[nav.cellIndexAt(spot.x, spot.z)]),
-        `${spot.x},${spot.z}`,
-      ).toBe(true);
+  it('has every spawn on walkable ground with a way home, in the section and its caves', () => {
+    for (const level of [dayField(opened(section)).level, ...(section.caves ?? [])]) {
+      checkSpawns(level);
     }
-    sim.dispose();
+  });
+
+  it('is laid out on its own ground', () => {
+    const { field } = story(opened(section));
+    expect(field.section.id).toBe(section.id);
   });
 
   it('is very full: dozens of relics, beasts, pods and things to open up', () => {

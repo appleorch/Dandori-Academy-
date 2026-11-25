@@ -200,6 +200,16 @@ export function dayParty(stock: Record<SproutKind, number>): Squad {
   return party;
 }
 
+/** A story cave as it is today: its treasure already home, or out of reach, taken out. */
+export function caveField(state: CampaignState, cave: LevelDefinition): LevelDefinition {
+  const done = new Set(state.done);
+  const outOfReach = partsOutOfReach(state);
+  return {
+    ...cave,
+    treasures: cave.treasures.filter((t) => !done.has(`treasure:${t.id}`) && !outOfReach.has(t.id)),
+  };
+}
+
 /** A day's field and where each of its things sits in the section's own lists. */
 export interface DayField {
   level: LevelDefinition;
@@ -323,6 +333,8 @@ export function settleDay(
   state: CampaignState,
   field: DayField,
   sim: Simulation,
+  /** Treasure brought home in the section's caves today, as `<cave id>:<treasure id>`. */
+  caveFinds: readonly string[] = [],
 ): { state: CampaignState; report: CampaignReport } {
   const { section, origin } = field;
   const base = section.level;
@@ -347,6 +359,21 @@ export function settleDay(
     if (section.parts.includes(treasure.id)) {
       parts[treasure.id] = day;
       newParts.push(treasure.id);
+    } else {
+      relics++;
+    }
+  }
+
+  // Treasure brought home below, in the section's own caves.
+  const caveIds = new Set((section.caves ?? []).map((cave) => cave.id));
+  for (const find of caveFinds) {
+    const split = find.indexOf(':');
+    if (!caveIds.has(find.slice(0, split))) continue;
+    const id = find.slice(split + 1);
+    if (!add(`treasure:${id}`)) continue;
+    if (section.parts.includes(id)) {
+      parts[id] = day;
+      newParts.push(id);
     } else {
       relics++;
     }
@@ -517,7 +544,8 @@ export function sectionProgress(state: CampaignState): {
   const section = currentSection(state);
   const base = section.level;
   const done = new Set(state.done);
-  const others = base.treasures.filter((t) => !section.parts.includes(t.id));
+  const all = [...base.treasures, ...(section.caves ?? []).flatMap((cave) => cave.treasures)];
+  const others = all.filter((t) => !section.parts.includes(t.id));
   const beasts = base.enemies
     .map((enemy, index) => ({ enemy, index }))
     .filter(({ enemy }) => enemy.kind !== 'mound');

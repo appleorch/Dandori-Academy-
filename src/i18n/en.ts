@@ -62,7 +62,7 @@ export const EN = {
   'camp.losses': '{lost} Sproutlings lost so far, {night} of them to the night',
   'camp.eyebrow': 'Base camp',
   'camp.finished':
-    'The Great Clock is whole again: every part home by day {day}. The Quad still holds relics and beasts for anyone who wants to finish the job.',
+    'Every part of this section is home, the last on day {day}. It still holds relics and beasts for anyone who wants to finish the job.',
   'camp.kiln': 'In the Kiln',
   'camp.kilnLabel': 'The Kiln’s stock',
   'camp.kilnEmpty': 'The Kiln is empty. It will coax out a single Emberling to start again with.',
