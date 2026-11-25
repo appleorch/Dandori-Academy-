@@ -2818,6 +2818,21 @@ svg.camp-map {
   stroke: #ffb347;
   stroke-width: 3;
 }
+.camp-part.locked {
+  stroke-dasharray: 3 3;
+  opacity: 0.6;
+}
+
+.camp-fog {
+  fill: rgba(20, 16, 14, 0.82);
+  shape-rendering: crispEdges;
+}
+
+.panel.ending {
+  max-width: 40rem;
+  text-align: center;
+}
+
 .camp-part.home {
   fill: #ffb347;
   stroke: #fff6dc;

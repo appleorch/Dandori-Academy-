@@ -11,6 +11,7 @@ import {
 } from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import type { Simulation } from '../simulation/Simulation';
+import { campaignAbilities } from '../campaign/campaign';
 import { themeOf } from './theme';
 
 /** Half-width of the area the sun's shadow map covers, centred on the captain. */
@@ -31,6 +32,8 @@ interface SkyLightProps {
 export const STORY_SUNSET_SECONDS = 90;
 /** Where sunset begins in a setting's sky stops (see theme.ts). */
 const SUNSET_STOP = 0.85;
+/** How much brighter a cave's even light is with the Clock Lantern. */
+const LANTERN_LIGHT = 1.8;
 /** The canvas's exposure at full day (GameCanvas sets the same). */
 const BASE_EXPOSURE = 0.92;
 
@@ -61,6 +64,13 @@ export function SkyLight({ sim, shadowMapSize }: SkyLightProps) {
   const look = themeOf(sim.level.theme);
   // Fixed for the day: the mode a day is played in never changes during it.
   const [story] = useState(() => useGameStore.getState().playMode === 'campaign');
+  // The Clock Lantern (a gift of the Great Clock) lights the story's caves.
+  const [lantern] = useState(
+    () =>
+      story &&
+      sim.level.theme === 'cave' &&
+      campaignAbilities(useGameStore.getState().save.campaign).has('lantern'),
+  );
   const stops = useMemo(
     () =>
       look.sky.map((stop) => ({
@@ -101,7 +111,8 @@ export function SkyLight({ sim, shadowMapSize }: SkyLightProps) {
     sun.current.intensity = from.sunPower + (to.sunPower - from.sunPower) * t;
     hemi.current.color.lerpColors(from.sky, to.sky, t);
     hemi.current.groundColor.lerpColors(from.bounce, to.bounce, t);
-    hemi.current.intensity = from.skyPower + (to.skyPower - from.skyPower) * t;
+    hemi.current.intensity =
+      (from.skyPower + (to.skyPower - from.skyPower) * t) * (lantern ? LANTERN_LIGHT : 1);
     air.lerpColors(from.air, to.air, t);
     if (scene.fog instanceof Fog) scene.fog.color.copy(air);
     // Evening draws in: the even light of the sky fades and the whole picture darkens a touch, so

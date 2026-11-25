@@ -78,10 +78,11 @@ describe.each(CAMPAIGN_SECTIONS)('$name', (section) => {
 });
 
 describe('a story day', () => {
-  it('starts the first day with the whole section and ten Emberlings', () => {
+  it('starts the first day with the whole section, bar the parts for later, and ten Emberlings', () => {
     const state = newCampaign();
     const { level } = dayField(state);
-    expect(level.treasures).toHaveLength(CAMPAIGN_SECTIONS[0].level.treasures.length);
+    const later = Object.keys(CAMPAIGN_SECTIONS[0].needs ?? {}).length;
+    expect(level.treasures).toHaveLength(CAMPAIGN_SECTIONS[0].level.treasures.length - later);
     expect(level.squad).toEqual({ ember: 10 });
     expect(level.startingWorkers).toBe(10);
   });

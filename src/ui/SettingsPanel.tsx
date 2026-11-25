@@ -30,7 +30,8 @@ type ToggleKey =
   | 'fastToggle'
   | 'alwaysShowArc'
   | 'aimAssist'
-  | 'tiltShift';
+  | 'tiltShift'
+  | 'relaxedStory';
 
 type Toggle = readonly [ToggleKey, string, string];
 
@@ -48,6 +49,11 @@ const PLAY_TOGGLES: readonly Toggle[] = [
     'briefings',
     'Briefings',
     'Show the briefing and the day’s goals before each story and Time Attack day begins.',
+  ],
+  [
+    'relaxedStory',
+    'Relaxed story',
+    'No day limit for the Great Clock: take as many days as you like.',
   ],
 ];
 

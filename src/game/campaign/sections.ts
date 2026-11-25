@@ -1,5 +1,6 @@
 import { terrace, terraces } from '../world/course';
 import type { LevelSpec } from '../world/levelTypes';
+import type { Ability } from './upgrades';
 
 /**
  * The story's open grounds, one section at a time. A section is one big field that is played
@@ -15,6 +16,10 @@ export interface CampaignSection {
   level: LevelSpec;
   /** Ids of the treasures that are Great Clock parts, in the order the Clock lists them. */
   parts: readonly string[];
+  /** Parts home, from all sections, before this section can be explored. 0 or absent: open. */
+  opensAt?: number;
+  /** Parts that cannot be reached without one of the Clock's gifts (a return trip later). */
+  needs?: Readonly<Record<string, Ability>>;
 }
 
 const QUAD_TERRACES = terraces(
@@ -237,6 +242,8 @@ export const CAMPAIGN_SECTIONS: readonly CampaignSection[] = [
     parts: WILD_QUAD.treasures
       .filter((treasure) => treasure.id.startsWith('part-'))
       .map((treasure) => treasure.id),
+    // Two parts need one of the Clock's own gifts first: come back for them.
+    needs: { 'part-fusee': 'lantern', 'part-bell-housing': 'bridgekit' },
   },
 ];
 

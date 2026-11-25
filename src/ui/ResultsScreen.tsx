@@ -17,6 +17,8 @@ import { SPROUT_KINDS, SPROUTS } from '../game/workers/sprouts';
 import { runStatus } from './runStatus';
 import { ModeTargets } from './ModeTargets';
 import { SprocketPortrait } from './Portrait';
+import { t } from '../i18n/i18n';
+import type { MessageKey } from '../i18n/en';
 import { ActionPrompt } from './Glyph';
 
 const HEADLINES: Record<DayEnd, string> = {
@@ -361,6 +363,15 @@ function CampaignBody({ result, level }: { result: DayResult; level: LevelDefini
             <tr key={id} className="met">
               <th scope="row">New: {relicFor(level.id, id).name}</th>
               <td>✓</td>
+            </tr>
+          ))}
+          {report.newGifts.map((ability) => (
+            <tr key={ability} className="met">
+              <th scope="row">
+                The Clock’s gift: {t(`gift.${ability}.name` as MessageKey)}.{' '}
+                {t(`gift.${ability}.text` as MessageKey)}
+              </th>
+              <td>★</td>
             </tr>
           ))}
           <tr>

@@ -2,7 +2,10 @@ import { WORKER } from '../core/config';
 import type { Simulation } from '../simulation/Simulation';
 import { SPROUT_KINDS, type Squad, type SproutKind } from '../workers/sprouts';
 import { defineLevel, type LevelDefinition, type LevelSpec } from '../world/level';
+import { decodeFog, encodeFog, mergeFog } from './fog';
 import { CAMPAIGN_SECTIONS, sectionById, type CampaignSection } from './sections';
+import { endingFor, type Ending } from './endings';
+import { abilitiesFor, UPGRADE_EFFECT, type Ability } from './upgrades';
 
 /**
  * The story: an open expedition played day after day on one section of the grounds at a time.
@@ -48,6 +51,25 @@ export interface CampaignState {
   finished: number | null;
   /** Running counts over the whole story. */
   totals: { grown: number; lost: number; leftBehind: number };
+  /** What the Warden has seen of the section being explored (see fog.ts), packed. */
+  seen: string;
+  /**
+   * Every other section's own record, kept while another is explored. The fields above
+   * (`done`, `wear`, `parts`, `finished`, `seen`) are always the current section's.
+   */
+  others: Record<string, SectionRecord>;
+  /** The latest ending reached (see endings.ts), and whether its screen has been shown. */
+  ending: Ending | null;
+  endingShown: boolean;
+}
+
+/** A section's own progress, kept while another section is being explored. */
+export interface SectionRecord {
+  done: string[];
+  wear: Record<string, number>;
+  parts: Record<string, number>;
+  finished: number | null;
+  seen: string;
 }
 
 export function newCampaign(): CampaignState {
@@ -61,7 +83,71 @@ export function newCampaign(): CampaignState {
     parts: {},
     finished: null,
     totals: { grown: 0, lost: 0, leftBehind: 0 },
+    seen: '',
+    others: {},
+    ending: null,
+    endingShown: false,
   };
+}
+
+/** Parts home in every section. */
+export function allPartsHome(state: CampaignState): number {
+  let count = Object.keys(state.parts).length;
+  for (const [id, record] of Object.entries(state.others)) {
+    if (id !== state.section) count += Object.keys(record.parts).length;
+  }
+  return count;
+}
+
+/** Parts in the whole story. */
+export function totalParts(sections: readonly CampaignSection[] = CAMPAIGN_SECTIONS): number {
+  return sections.reduce((sum, section) => sum + section.parts.length, 0);
+}
+
+/** The Clock's gifts so far: one ability for each of the first parts home (see upgrades.ts). */
+export function campaignAbilities(state: CampaignState): Set<Ability> {
+  return abilitiesFor(allPartsHome(state));
+}
+
+/** Whether a section can be explored: enough parts home, from anywhere, to open it. */
+export function sectionOpen(state: CampaignState, section: CampaignSection): boolean {
+  return allPartsHome(state) >= (section.opensAt ?? 0);
+}
+
+/** Parts on the current section that need an ability not yet granted, by id, with the ability. */
+export function partsOutOfReach(state: CampaignState): Map<string, Ability> {
+  const section = currentSection(state);
+  const have = campaignAbilities(state);
+  const out = new Map<string, Ability>();
+  for (const [id, ability] of Object.entries(section.needs ?? {})) {
+    if (!have.has(ability) && state.parts[id] === undefined) out.set(id, ability);
+  }
+  return out;
+}
+
+/**
+ * Moves the expedition to another section: the current one's record is put away, and the
+ * other's taken out (or begun). The Kiln, its stock and the day count go with the Warden.
+ */
+export function switchSection(state: CampaignState, id: string): CampaignState {
+  if (id === state.section || !sectionById(id)) return state;
+  const stored: SectionRecord = {
+    done: state.done,
+    wear: state.wear,
+    parts: state.parts,
+    finished: state.finished,
+    seen: state.seen,
+  };
+  const target = state.others[id] ?? { done: [], wear: {}, parts: {}, finished: null, seen: '' };
+  const others = Object.fromEntries(
+    Object.entries({ ...state.others, [state.section]: stored }).filter(([key]) => key !== id),
+  );
+  return { ...state, section: id, ...target, others };
+}
+
+/** The ending (if any) reached once a day has been settled. */
+export function campaignEnding(state: CampaignState, relaxed: boolean): Ending | null {
+  return endingFor(allPartsHome(state), totalParts(), state.day, relaxed);
 }
 
 /** One entry per Sproutling in stock, most grown first: missing ones are leaves, extras dropped. */
@@ -144,6 +230,7 @@ export function dayField(state: CampaignState): DayField {
   const logs = remaining(base.logs, 'log', done);
   const saps = remaining(base.saps, 'sap', done);
   const party = dayParty(state.stock);
+  const outOfReach = partsOutOfReach(state);
   const spec: LevelSpec = {
     ...base,
     // A new day has its own weather: the beasts wander and the drips fall a little differently.
@@ -154,7 +241,10 @@ export function dayField(state: CampaignState): DayField {
     squadGrowth: Object.fromEntries(
       SPROUT_KINDS.map((kind) => [kind, state.growth[kind].slice(0, party[kind] ?? 0)]),
     ),
-    treasures: base.treasures.filter((treasure) => !done.has(`treasure:${treasure.id}`)),
+    // Parts that need an ability not yet granted are not reachable yet (a return trip later).
+    treasures: base.treasures.filter(
+      (treasure) => !done.has(`treasure:${treasure.id}`) && !outOfReach.has(treasure.id),
+    ),
     enemies: enemies.kept,
     gates: gates.kept.map((gate, i) => {
       const left = state.wear[`gate:${gates.origin[i]}`];
@@ -192,6 +282,8 @@ export interface CampaignReport {
   day: number;
   /** Great Clock parts brought home today, by treasure id. */
   newParts: string[];
+  /** The Clock's gifts that today's parts brought, in order. */
+  newGifts: Ability[];
   partsHome: number;
   partsTotal: number;
   /** Other relics brought home today. */
@@ -213,11 +305,11 @@ export interface CampaignReport {
 }
 
 /** Whether a Sproutling at (x, z) is safe for the night. */
-function safe(sim: Simulation, x: number, z: number): boolean {
+function safe(sim: Simulation, x: number, z: number, radius = SAFE_RADIUS): boolean {
   const { kiln } = sim.level;
-  if (Math.hypot(x - kiln.x, z - kiln.z) <= SAFE_RADIUS) return true;
+  if (Math.hypot(x - kiln.x, z - kiln.z) <= radius) return true;
   return sim.beacons.some(
-    (beacon) => beacon.lit && Math.hypot(x - beacon.x, z - beacon.z) <= SAFE_RADIUS,
+    (beacon) => beacon.lit && Math.hypot(x - beacon.x, z - beacon.z) <= radius,
   );
 }
 
@@ -323,14 +415,17 @@ export function settleDay(
   used('log', origin.logs);
   used('sap', origin.saps);
 
-  // Sunset: who made it home.
+  // Sunset: who made it home. The Evening Bell carries further.
+  const homeRadius = campaignAbilities(state).has('sunset')
+    ? SAFE_RADIUS * UPGRADE_EFFECT.sunsetRadius
+    : SAFE_RADIUS;
   const survivors: Record<SproutKind, number> = { ember: 0, dew: 0, stone: 0, spark: 0 };
   const grownHome: Record<SproutKind, number[]> = { ember: [], dew: [], stone: [], spark: [] };
   let leftBehind = 0;
   if (sim.ended !== 'wipedOut') {
     for (const [entity, worker] of sim.workers.entries()) {
       const at = sim.transforms.require(entity);
-      if (worker.state === 'follow' || safe(sim, at.x, at.z)) {
+      if (worker.state === 'follow' || safe(sim, at.x, at.z, homeRadius)) {
         survivors[worker.kind]++;
         grownHome[worker.kind].push(worker.growth);
       } else {
@@ -369,6 +464,12 @@ export function settleDay(
     section: state.section,
     stock,
     growth,
+    seen: sim.explored
+      ? encodeFog(mergeFog(decodeFog(state.seen, base), sim.explored))
+      : state.seen,
+    others: state.others,
+    ending: state.ending,
+    endingShown: state.endingShown,
     done: [...done],
     wear: Object.fromEntries(Object.entries(wear).filter(([key]) => !finished.has(key))),
     parts,
@@ -384,6 +485,9 @@ export function settleDay(
     report: {
       day,
       newParts,
+      newGifts: [...abilitiesFor(allPartsHome(next))].filter(
+        (ability) => !campaignAbilities(state).has(ability),
+      ),
       partsHome,
       partsTotal: section.parts.length,
       relics,
@@ -460,7 +564,29 @@ export function parseCampaign(value: unknown): CampaignState | null {
       }),
     ),
   );
+  const records = (r: unknown): Record<string, SectionRecord> => {
+    if (typeof r !== 'object' || r === null || Array.isArray(r)) return {};
+    const out: Record<string, SectionRecord> = {};
+    for (const [id, value] of Object.entries(r as Record<string, unknown>)) {
+      if (!sectionById(id) || typeof value !== 'object' || value === null) continue;
+      const v = value as Record<string, unknown>;
+      out[id] = {
+        done: Array.isArray(v.done) ? v.done.filter((k): k is string => typeof k === 'string') : [],
+        wear: record(v.wear),
+        parts: record(v.parts),
+        finished: typeof v.finished === 'number' ? v.finished : null,
+        seen: typeof v.seen === 'string' ? v.seen : '',
+      };
+    }
+    return out;
+  };
+  const endings: readonly Ending[] = ['golden', 'late', 'silent'];
   return {
+    // Saves from before sections (0.19 to 0.25) are the Wild Quad's record, as they were.
+    seen: typeof raw.seen === 'string' ? raw.seen : '',
+    others: records(raw.others),
+    ending: endings.find((e) => e === raw.ending) ?? null,
+    endingShown: raw.endingShown === true,
     day: count(raw.day),
     section: raw.section,
     stock,

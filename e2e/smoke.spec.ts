@@ -129,7 +129,7 @@ test('in the pseudo-locale, the converted screens show no untranslated text', as
   await expect(page.locator('.hero-title')).toContainText('⟦');
   expect(await untranslated(page)).toEqual([]);
   await page.locator('.mode-card').first().click();
-  await expect(page.locator('.camp-day')).toContainText('⟦');
+  await expect(page.locator('.camp-day').first()).toContainText('⟦');
   expect(await untranslated(page)).toEqual([]);
   await page.locator('.mode-card, .tab').filter({ hasText: '⟦' }).nth(3).click();
   await expect(page.locator('h1')).toContainText('⟦');

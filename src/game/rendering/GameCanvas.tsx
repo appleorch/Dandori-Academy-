@@ -43,6 +43,13 @@ import { WorkerInstances } from './WorkerInstances';
 import { PerfProbe, ShadowBudget } from './perf';
 import { QualityTuner } from './QualityTuner';
 import { t } from '../../i18n/i18n';
+import { campaignAbilities, type CampaignState } from '../campaign/campaign';
+import { decodeFog } from '../campaign/fog';
+
+/** The story's day: the Clock's gifts so far, and what has been seen of the section already. */
+function storyOptions(state: CampaignState, level: LevelDefinition) {
+  return { abilities: campaignAbilities(state), explored: decodeFog(state.seen, level) };
+}
 import { PerfOverlay } from '../../ui/PerfOverlay';
 
 /**
@@ -118,6 +125,9 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         endsWhen: rules.endsWhen,
         growth: rules.growth,
         story: playMode === 'campaign',
+        ...(playMode === 'campaign'
+          ? storyOptions(useGameStore.getState().save.campaign, level)
+          : {}),
       }),
     );
     const race = isBattle(playMode) ? new Battle(playMode, level, rival) : null;

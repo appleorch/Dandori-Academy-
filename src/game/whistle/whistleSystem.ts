@@ -1,6 +1,7 @@
 import type { InputState } from '../commands/input';
 import { WHISTLE } from '../core/config';
 import type { Simulation } from '../simulation/Simulation';
+import { UPGRADE_EFFECT } from '../campaign/upgrades';
 import { joinSquad } from '../workers/squad';
 
 /** While whistle is held, a growing circle at the cursor calls every worker inside to the squad. */
@@ -13,7 +14,10 @@ export function updateWhistle(sim: Simulation, input: InputState, dt: number): v
   state.whistleRadius =
     state.whistleRadius === 0
       ? WHISTLE.startRadius
-      : Math.min(WHISTLE.maxRadius, state.whistleRadius + WHISTLE.growth * dt);
+      : Math.min(
+          WHISTLE.maxRadius * (sim.abilities.has('whistle') ? UPGRADE_EFFECT.whistleReach : 1),
+          state.whistleRadius + WHISTLE.growth * dt,
+        );
 
   for (const [entity, worker] of sim.workers.entries()) {
     // The whistle calls; it does not pluck. Sprouts in the ground wait for the Warden's hand.

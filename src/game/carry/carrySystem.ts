@@ -6,6 +6,7 @@ import type { FlowField } from '../pathfinding/flowField';
 import type { Carryable, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { setIdle } from '../workers/squad';
+import { UPGRADE_EFFECT } from '../campaign/upgrades';
 import {
   mostCommon,
   SPROUT_KINDS,
@@ -41,7 +42,10 @@ export function carrySpeed(sim: Simulation, carryable: Carryable): number {
   const spare = carryable.maxCarriers - carryable.weight;
   const extra = spare > 0 ? Math.min(1, (count - carryable.weight) / spare) : 0;
   const sap = sim.sapTimer > 0 ? SAP.speedUp : 1;
-  return (carryable.baseSpeed + carryable.bonusSpeed * extra) * sap * crewStage(sim, carryable);
+  const keel = sim.abilities.has('carry') ? UPGRADE_EFFECT.carrySpeed : 1;
+  return (
+    (carryable.baseSpeed + carryable.bonusSpeed * extra) * sap * keel * crewStage(sim, carryable)
+  );
 }
 
 /** How much faster a crew of grown Sproutlings carries: the average of their stages' speeds (1 for leaves). */
@@ -179,7 +183,8 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
   }
   if (to.site >= 0) {
     const site = sim.bridges[to.site];
-    site.delivered++;
+    // The Bridgewright's Kit makes every log count twice.
+    site.delivered += sim.abilities.has('bridgekit') ? UPGRADE_EFFECT.logsPerDelivery : 1;
     sim.emit('logPlaced', to.x, to.z, site.needs - site.delivered);
     if (site.delivered >= site.needs) {
       site.built = true;

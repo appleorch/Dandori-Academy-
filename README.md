@@ -294,6 +294,23 @@ camp**, which shows a map of the Quad, the Kiln's stock by kind and the Clock's 
   burned to ash, sinking, jolted by a spark, or flattened; each releases a spirit in its kind's
   colour. Butterflies on outdoor fields are chased by idle Sproutlings (`Butterflies.tsx`).
 - The parts are named relics of their own (`CLOCK_PARTS` in `src/game/story/relics.ts`).
+- **Sections.** The story is built for several sections of the grounds (`CAMPAIGN_SECTIONS`).
+  Each keeps its own record (what is done, worn, home and seen); the one being explored is held
+  at the top of `CampaignState`, the others in `others`, and the base camp lists them all: a
+  section opens once enough parts are home from anywhere (`opensAt`). Saves from before keep
+  their progress as the Wild Quad's.
+- **The Clock's gifts** (`src/game/campaign/upgrades.ts`). Each of the first seven parts home
+  grants a lasting ability, announced on the day it comes home and listed at the base camp: the
+  Chime of Finding (parts still out show on the map), a longer whistle, a quicker Kiln, faster
+  carrying, a wider safe ring at sunset, logs that count twice at bridges, and a lantern for
+  caves. Some parts cannot be reached without a gift (`needs`); the map marks them, and they are
+  left out of the field until then: two in the Quad need the lantern and the bridge kit.
+- **Stakes** (`endings.ts`). The Clock should strike for the first day of term, 30 days in; the
+  base camp counts down. Every part home in time is the golden ending; every part home late is
+  another; the limit passing with parts still out is a third, after which the story goes on.
+  "Relaxed story" in the settings turns the limit off.
+- **Fog of war** (`fog.ts`). The base camp map and the minimap show only ground the Warden has
+  seen, kept per section in the save as a small bitset.
 
 **Time Attack.** The Academy's thirty numbered lessons in order (this was the story until
 0.19.0), chosen on the illustrated map of the Academy grounds (`src/ui/StoryMap.tsx`,

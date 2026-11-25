@@ -33,7 +33,17 @@ import {
 import { challengeFacts, liveChallenge, type LiveChallenge } from '../modes/facts';
 import type { BattleOutcome, RaceSnapshot, RivalLevel } from '../modes/battle';
 import { tallyDay, type DayTally } from '../dandori/tally';
-import { dayField, newCampaign, settleDay, type CampaignReport } from '../campaign/campaign';
+import {
+  campaignEnding,
+  dayField,
+  newCampaign,
+  sectionOpen,
+  settleDay,
+  switchSection,
+  type CampaignReport,
+  type CampaignState,
+} from '../campaign/campaign';
+import { sectionById } from '../campaign/sections';
 import { dayFeats } from '../progression/feats';
 import { GAME_VERSION } from './changelog';
 import type { SproutKind } from '../workers/sprouts';
@@ -260,6 +270,10 @@ interface GameStore {
   dismissSaveBackup: () => void;
   /** Gives up the story's expedition and starts it again from the first day. */
   restartCampaign: () => void;
+  /** Story: explores another (open) section from tomorrow. */
+  chooseSection: (id: string) => void;
+  /** Story: the ending's screen has been read. */
+  dismissEnding: () => void;
   /**
    * Publishes the HUD. `below` is set while the Warden is down a cave: the cave's name and the
    * surface clock, which stands still until they come back up.
@@ -330,6 +344,13 @@ function snapshot(sim: Simulation): HudSnapshot {
     selected: sim.selected,
     chain: sim.chain >= 2 && sim.elapsed - sim.lastDelivery <= CHAIN.window ? sim.chain : 0,
   };
+}
+
+/** A settled story day, with the ending it reaches (once) noted on the expedition. */
+function withEnding<T extends { state: CampaignState }>(settled: T, relaxed: boolean): T {
+  const ending = campaignEnding(settled.state, relaxed);
+  if (!ending || ending === settled.state.ending) return settled;
+  return { ...settled, state: { ...settled.state, ending, endingShown: false } };
 }
 
 /** Distance within which a boss's health bar appears before it has been touched. */
@@ -544,6 +565,19 @@ export const useGameStore = create<GameStore>((set, get) => {
       persist(save);
       set({ save });
     },
+    chooseSection: (id) => {
+      const before = get().save.campaign;
+      const section = sectionById(id);
+      if (!section || !sectionOpen(before, section)) return;
+      const save = { ...get().save, campaign: switchSection(before, id) };
+      persist(save);
+      set({ save });
+    },
+    dismissEnding: () => {
+      const save = { ...get().save, campaign: { ...get().save.campaign, endingShown: true } };
+      persist(save);
+      set({ save });
+    },
 
     replaceSave: (save) => {
       const checked = unlockAchievements(save, null, new Date()).save;
@@ -598,7 +632,10 @@ export const useGameStore = create<GameStore>((set, get) => {
       // made it home by sunset.
       const settled =
         mode === 'campaign'
-          ? settleDay(get().save.campaign, dayField(get().save.campaign), sim)
+          ? withEnding(
+              settleDay(get().save.campaign, dayField(get().save.campaign), sim),
+              get().settings.relaxedStory,
+            )
           : null;
       const facts = isChallenge(mode) ? challengeFacts(sim) : null;
       const challenge = isChallenge(mode) && facts ? scoreChallenge(mode, level, facts) : null;

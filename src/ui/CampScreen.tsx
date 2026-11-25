@@ -1,11 +1,21 @@
 import { useState } from 'react';
 import {
+  allPartsHome,
+  campaignAbilities,
   currentSection,
   dayParty,
+  partsOutOfReach,
+  sectionOpen,
   sectionProgress,
   stockTotal,
+  totalParts,
   type CampaignState,
 } from '../game/campaign/campaign';
+import { CAMPAIGN_SECTIONS } from '../game/campaign/sections';
+import { daysLeft } from '../game/campaign/endings';
+import { decodeFog, explored, FOG_CELL, fogSize } from '../game/campaign/fog';
+import { CLOCK_UPGRADES, nextUpgrade, type Ability } from '../game/campaign/upgrades';
+import type { MessageKey } from '../i18n/en';
 import { useGameStore } from '../game/core/gameStore';
 import { relicFor } from '../game/story/relics';
 import { SPROUT_KINDS } from '../game/workers/sprouts';
@@ -21,6 +31,9 @@ import {
 } from '../i18n/gameText';
 import { KindGlyph } from './KindGlyph';
 
+const giftName = (ability: Ability) => t(`gift.${ability}.name` as MessageKey);
+const giftText = (ability: Ability) => t(`gift.${ability}.text` as MessageKey);
+
 /** Map scale: pixels per world unit. */
 const SCALE = 4;
 
@@ -32,6 +45,10 @@ function SectionMap({ state }: { state: CampaignState }) {
   const section = currentSection(state);
   const level = section.level;
   const done = new Set(state.done);
+  const radar = campaignAbilities(state).has('radar');
+  const outOfReach = partsOutOfReach(state);
+  const seen = decodeFog(state.seen, level);
+  const { cols, rows } = fogSize(level);
   const w = level.width * SCALE;
   const h = level.depth * SCALE;
   const px = (x: number) => (x + level.width / 2) * SCALE;
@@ -83,17 +100,39 @@ function SectionMap({ state }: { state: CampaignState }) {
         const part = level.treasures.find((t) => t.id === id);
         if (!part) return null;
         const home = state.parts[id] !== undefined;
+        // Parts still out show only once the Clock can chime for them (the first gift).
+        if (!home && !radar) return null;
         return (
           <g key={id} transform={`translate(${px(part.x)} ${pz(part.z)})`}>
             <title>
               {relicName(relicFor(level.id, id))}
               {home ? ` ${t('camp.partHomeOn', { day: state.parts[id] })}` : ''}
             </title>
-            <circle r={9} className={home ? 'camp-part home' : 'camp-part'} />
+            <circle
+              r={9}
+              className={
+                home ? 'camp-part home' : outOfReach.has(id) ? 'camp-part locked' : 'camp-part'
+              }
+            />
             <path d="M0 -5 L0 0 L4 2" className="camp-part-hand" />
           </g>
         );
       })}
+      {/* Fog of war: ground the Warden has not yet seen. */}
+      {Array.from({ length: rows }, (_, row) =>
+        Array.from({ length: cols }, (_, col) =>
+          seen[row * cols + col] ? null : (
+            <rect
+              key={`f${row}:${col}`}
+              className="camp-fog"
+              x={col * FOG_CELL * SCALE}
+              y={row * FOG_CELL * SCALE}
+              width={FOG_CELL * SCALE + 0.5}
+              height={FOG_CELL * SCALE + 0.5}
+            />
+          ),
+        ),
+      )}
       <circle cx={px(level.kiln.x)} cy={pz(level.kiln.z)} r={12} className="camp-kiln" />
       <text
         x={px(level.kiln.x)}
@@ -114,6 +153,9 @@ function SectionMap({ state }: { state: CampaignState }) {
 export function CampScreen() {
   const state = useGameStore((store) => store.save.campaign);
   const startDay = useGameStore((store) => store.startDay);
+  const chooseSection = useGameStore((store) => store.chooseSection);
+  const dismissEnding = useGameStore((store) => store.dismissEnding);
+  const relaxed = useGameStore((store) => store.settings.relaxedStory);
   const restartCampaign = useGameStore((store) => store.restartCampaign);
   const [confirming, setConfirming] = useState(false);
   const section = currentSection(state);
@@ -121,6 +163,27 @@ export function CampScreen() {
   const total = stockTotal(state.stock);
   const party = dayParty(state.stock);
   const going = SPROUT_KINDS.reduce((sum, kind) => sum + (party[kind] ?? 0), 0);
+  const home = allPartsHome(state);
+  const left = daysLeft(state.day, relaxed);
+  const gifts = campaignAbilities(state);
+  const next = nextUpgrade(home);
+  const outOfReach = partsOutOfReach(state);
+  const seenShare = Math.round(explored(decodeFog(state.seen, section.level)) * 100);
+
+  if (state.ending && !state.endingShown) {
+    return (
+      <main className="screen">
+        <div className="panel ending">
+          <p className="eyebrow">{t('ending.eyebrow')}</p>
+          <h1>{t(`ending.${state.ending}.title` as MessageKey)}</h1>
+          <p>{t(`ending.${state.ending}.text` as MessageKey)}</p>
+          <button type="button" onClick={dismissEnding} autoFocus>
+            {t('ending.carryOn')}
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="screen">
@@ -129,9 +192,20 @@ export function CampScreen() {
         <div className="lesson-head">
           <h1>{t('camp.title')}</h1>
           <span className="camp-day">{t('camp.day', { day: state.day + 1 })}</span>
+          <span className="camp-day camp-deadline">
+            {left === null
+              ? t('camp.relaxed')
+              : left > 0
+                ? t('camp.daysLeft', { days: left })
+                : t('camp.daysOver')}
+          </span>
         </div>
         <p className="map-status">
           <span>{t('camp.partsHome', { count: progress.parts, total: progress.partsTotal })}</span>
+          {CAMPAIGN_SECTIONS.length > 1 && (
+            <span>{t('camp.allParts', { count: home, total: totalParts() })}</span>
+          )}
+          <span>{t('camp.explored', { percent: seenShare })}</span>
           <span>{t('camp.relics', { count: progress.relics, total: progress.relicsTotal })}</span>
           <span>{t('camp.beasts', { count: progress.beasts, total: progress.beastsTotal })}</span>
           <span>
@@ -169,6 +243,46 @@ export function CampScreen() {
           </aside>
         </div>
         <section className="camp-parts">
+          <h2>{t('camp.grounds')}</h2>
+          <ol>
+            {CAMPAIGN_SECTIONS.map((other) => {
+              const open = sectionOpen(state, other);
+              const here = other.id === state.section;
+              return (
+                <li key={other.id} className={here ? 'home' : undefined}>
+                  <strong>{sectionName(other)}</strong>
+                  {here ? (
+                    <small>{t('camp.sectionHere')}</small>
+                  ) : open ? (
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => chooseSection(other.id)}
+                    >
+                      {t('camp.sectionGo')}
+                    </button>
+                  ) : (
+                    <small>{t('camp.sectionLocked', { count: other.opensAt ?? 0 })}</small>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+        <section className="camp-parts">
+          <h2>{t('camp.gifts')}</h2>
+          <ol>
+            {CLOCK_UPGRADES.filter((ability) => gifts.has(ability)).map((ability) => (
+              <li key={ability} className="home">
+                <strong>{giftName(ability)}</strong>
+                <small>{giftText(ability)}</small>
+              </li>
+            ))}
+          </ol>
+          {next && <p className="note">{t('camp.giftNext', { name: giftName(next) })}</p>}
+          {!gifts.has('radar') && <p className="note">{t('camp.noRadar')}</p>}
+        </section>
+        <section className="camp-parts">
           <h2>{t('camp.clock')}</h2>
           <ol>
             {section.parts.map((id) => {
@@ -180,7 +294,9 @@ export function CampScreen() {
                   <small>
                     {day !== undefined
                       ? t('camp.partHome', { description: relicDescription(relic), day })
-                      : t('camp.stillOut')}
+                      : outOfReach.has(id)
+                        ? t('camp.needsGift', { gift: giftName(outOfReach.get(id) as Ability) })
+                        : t('camp.stillOut', { section: sectionName(section) })}
                   </small>
                 </li>
               );

@@ -8,6 +8,16 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.26.0',
+    date: '2026-11-25',
+    changes: [
+      'The story is ready for more of the grounds: each section keeps its own progress, and the base camp lists them, opening each once enough Clock parts are home. Your story so far carries on as the Wild Quad’s.',
+      'The Great Clock’s gifts: each of the first seven parts home grants a lasting ability, from a longer whistle and a quicker Kiln to a lantern for caves. Two parts in the Quad can only be reached once you have the right gift.',
+      'Stakes: the Clock should strike for the first day of term, 30 days in. Three endings depend on how many parts are home and when. Turn on “Relaxed story” in the settings to take as long as you like.',
+      'Fog of war: the base camp map and the minimap show only the ground you have explored. Clock parts still out appear on the map once the Clock can chime for them.',
+    ],
+  },
+  {
     version: '0.25.0',
     date: '2026-11-25',
     changes: [

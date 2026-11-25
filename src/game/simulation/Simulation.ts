@@ -13,6 +13,8 @@ import { updateBlooms } from '../carry/bloomSystem';
 import { applySeparation } from '../flocking/separation';
 import { updateKiln } from '../kiln/kilnSystem';
 import { updateDewdrops } from '../workers/growth';
+import { emptyFog, reveal } from '../campaign/fog';
+import type { Ability } from '../campaign/upgrades';
 import { NavGrid, type Box, type Point } from '../navigation/NavGrid';
 import { FlowField } from '../pathfinding/flowField';
 import { updateSelection, updateThrowing } from '../throwing/throwSystem';
@@ -89,6 +91,10 @@ export interface SimOptions {
    * way, and beaten beasts drop Dewdrops that grow them. Off everywhere paces are measured.
    */
   story?: boolean;
+  /** Story only: the Great Clock's gifts in force today (see campaign/upgrades.ts). */
+  abilities?: ReadonlySet<Ability>;
+  /** Story only: what the Warden had already seen of this section; marked further as they go. */
+  explored?: Uint8Array;
 }
 
 export interface SimStats {
@@ -222,6 +228,10 @@ export class Simulation {
   readonly untimed: boolean;
   /** The story's growing and plucking (see `SimOptions.story`). */
   readonly story: boolean;
+  /** The Great Clock's gifts in force today; always empty outside the story. */
+  readonly abilities: ReadonlySet<Ability>;
+  /** Story only: the fog-of-war map of what the Warden has seen (see campaign/fog.ts). */
+  readonly explored: Uint8Array | null;
   /** Dewdrops lying on the field, waiting to be drunk. */
   readonly dewdrops: Point[];
   /** Recent losses, newest last, for drawing each one's last moment (never read by the rules). */
@@ -237,6 +247,8 @@ export class Simulation {
     this.growth = options.growth ?? true;
     this.untimed = level.untimed ?? false;
     this.story = options.story ?? false;
+    this.abilities = this.story ? (options.abilities ?? new Set()) : new Set();
+    this.explored = this.story ? (options.explored ?? emptyFog(level)) : null;
     this.dewdrops = [];
     this.hard = level.difficulty === 'hard';
     this.captainMaxHp = this.hard ? HARD.captainHp : CAPTAIN.maxHp;
@@ -309,6 +321,7 @@ export class Simulation {
       facing: 0,
     });
     this.anchor = { ...level.captain };
+    if (this.explored) reveal(this.explored, level, level.captain.x, level.captain.z);
     this.cursor = { ...level.captain };
 
     const kinds = startingKinds(level);
@@ -421,6 +434,10 @@ export class Simulation {
     updateCarrying(this, dt);
     updateKiln(this, dt);
     updateDewdrops(this);
+    // The fog lifts round the Warden: a few times a second is plenty.
+    if (this.explored && this.tick % 15 === 0) {
+      reveal(this.explored, this.level, this.captainTransform.x, this.captainTransform.z);
+    }
 
     if (!this.visit && !this.untimed) this.timeLeft = Math.max(0, this.timeLeft - dt);
     if (this.ended) return;

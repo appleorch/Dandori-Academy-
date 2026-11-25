@@ -30,6 +30,8 @@ export interface Settings {
   graphicsTuned: boolean;
   /** The tilt-shift blur at the top and bottom of the view (medium and high graphics). */
   tiltShift: boolean;
+  /** Story: no day limit, and so no deadline for the Great Clock (see campaign/endings.ts). */
+  relaxedStory: boolean;
   /** The language of the menus and the game's text. */
   locale: Locale;
   /** Mode chosen on the lesson list. */
@@ -103,6 +105,7 @@ export const DEFAULT_SETTINGS: Settings = {
   graphics: 'high',
   graphicsTuned: false,
   tiltShift: true,
+  relaxedStory: false,
   locale: 'en',
   difficulty: 'normal',
   carrierCounts: true,
@@ -158,6 +161,7 @@ export function parseSettings(value: unknown, defaults: Settings = DEFAULT_SETTI
     'postRuns',
     'graphicsTuned',
     'tiltShift',
+    'relaxedStory',
     'aimAssist',
     'reducedMotion',
     'highContrast',

@@ -7,6 +7,7 @@ import { twinStyle } from '../world/twins';
 import type { Simulation } from '../simulation/Simulation';
 import type { GateSpawn } from '../world/levelTypes';
 import { inDanger } from './danger';
+import { FOG_CELL, fogSize } from '../campaign/fog';
 
 const MAP_WIDTH = 190;
 const REDRAW_FRAMES = 4;
@@ -242,6 +243,23 @@ export function Minimap({ sim, rival }: { sim: Simulation; rival?: string }) {
       ink.fillStyle = 'rgba(255, 246, 220, 0.9)';
       ink.font = '600 11px system-ui, sans-serif';
       ink.fillText(rival, 6, height - 6);
+    }
+    // Story: ground the Warden has not seen yet stays dark.
+    const seen = sim.explored;
+    if (seen) {
+      const { cols, rows } = fogSize(sim.level);
+      ink.fillStyle = 'rgba(16, 12, 10, 0.88)';
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          if (seen[row * cols + col]) continue;
+          ink.fillRect(
+            col * FOG_CELL * scale,
+            row * FOG_CELL * scale,
+            FOG_CELL * scale + 0.5,
+            FOG_CELL * scale + 0.5,
+          );
+        }
+      }
     }
   };
 
