@@ -8,6 +8,20 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.44.0',
+    date: '2026-11-25',
+    changes: [
+      'A new challenge, Expedition: no clock, and a way down at the far end of the field into two or three floors of caves, each deeper than the last. Bring every floor\u2019s treasure up. Twelve fields, five achievements and two outfits.',
+      'Time Attack has an online board: every lesson and difficulty ranks clears by time, checked by replay.',
+      'Co-op: the screen splits in two when the Wardens are far apart; co-op days are recorded for replays and go on co-op boards of their own.',
+      'Squad control: throw whichever kind is nearest (5), and sort the squad behind you by kind (Y). A hint shows when the squad is ready to sort.',
+      'A new kind\u2019s first day sets out a small puzzle for it to solve.',
+      'Replays can be scrubbed back and forth at once.',
+      'On Medium and High graphics the title screen is the Academy courtyard in 3D.',
+      'Every screen can now be translated.',
+    ],
+  },
+  {
     version: '0.43.0',
     date: '2026-11-25',
     changes: [

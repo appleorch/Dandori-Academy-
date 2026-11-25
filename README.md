@@ -579,8 +579,10 @@ Before and after: `docs-design/art/ui-*-before.jpg` and `ui-*-after.jpg`.
   and half the squad. Each simulation step runs the Warden phase (walk, aim, whistle, throw,
   orders) once for each player, swapping the two Wardens' state in between
   (`Simulation.swapSides`), so it stays deterministic; the world then steps once. The camera
-  frames both, drawing back as they part (up to a limit). Not yet: a split screen when they are
-  far apart, co-op boards (co-op runs are not posted) and co-op replays. Beasts go for either
+  frames both, drawing back as they part; once they are more than 30 units apart the screen
+  splits in two, a camera on each Warden (`camera/SplitScreen.tsx`). Co-op days are recorded with
+  the second player's inputs (`DayLog.partner`) and replay exactly; co-op runs go on co-op boards
+  of their own (`RunEntry.coop`, a Solo/Co-op switch on the leaderboard). Beasts go for either
   Warden, and a blow landing by the second player's hurts them.
 - **Online battles** (Marble Race, Bingo Race and Dandori Duel; _Play online_ on the Battles
   screen). One player hosts and reads out a six-letter room code; the other joins with it. The
@@ -689,8 +691,10 @@ The board never resets. It lives on a small server: a Cloudflare Worker over a D
 (`worker/`, `https://dandori-board.dandori-academy.workers.dev`), free on Cloudflare's plan.
 
 - **Boards**: each challenge field has its own board (and the lessons keep their challenge runs from 0.18.0, closed). **Classic** keeps the runs from before
-  0.18.0, when lesson days were scored, and takes no new ones. Story and Time Attack days and battles are not
-  posted.
+  0.18.0, when lesson days were scored, and takes no new ones. **Time Attack** has a board per
+  lesson and difficulty, ranked by clear time (`mode: 'lessons'`, score 0, the rank the medal the
+  time earned), checked against the lesson's clock and medal times and verified by replaying its
+  log. Co-op runs have boards of their own. Story days and battles are not posted.
 - **Your best runs**: the ten best days per challenge and lesson are kept in the save, each
   marked Posted, Posting or Not posted.
 - **Posting**: when a day ends with a new personal best on a lesson, the game posts it by itself
