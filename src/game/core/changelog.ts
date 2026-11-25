@@ -8,6 +8,14 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.29.1',
+    date: '2026-11-25',
+    changes: [
+      'Shellback Beetles now appear in two challenge fields, Gravelmaw’s Den and Four Kinds, whose targets have been re-measured and whose leaderboards start afresh.',
+      'Caves can lead further down: under the Orchard’s Root Cellar lies the Sunken Cistern, where one of the Clock’s parts now waits.',
+    ],
+  },
+  {
     version: '0.29.0',
     date: '2026-11-25',
     changes: [

@@ -26,6 +26,19 @@ const story = (state: CampaignState) => {
   return { field, sim };
 };
 
+const GROWN = {
+  ember: Array(20).fill(0),
+  dew: Array(10).fill(0),
+  stone: Array(4).fill(0),
+  spark: Array(4).fill(0),
+};
+const GROWN_LATE = {
+  ember: Array(20).fill(0),
+  dew: Array(8).fill(0),
+  stone: Array(6).fill(0),
+  spark: Array(6).fill(0),
+};
+
 /* Whole story days played by the test player: slow, so it runs with `npm run test:levels`. */
 describe('the story over several days', () => {
   it('lets a simple greedy player make progress day after day, and never undoes it', () => {
@@ -75,6 +88,9 @@ describe('the Sunken Orchard over five days', () => {
     );
     const found: number[] = [];
     for (let day = 0; day < 5; day++) {
+      // The test player never heads home at sunset, so the Kiln is restocked each morning: this
+      // measures how far the Orchard can be explored, not how well the test player gets home.
+      state = { ...state, stock: { ember: 20, dew: 10, stone: 4, spark: 4 }, growth: GROWN };
       const { field, sim } = story(state);
       expect(field.section.id).toBe('orchard');
       playGreedy(sim);
@@ -114,6 +130,7 @@ describe.each(['foundry', 'observatory'])('the %s over three days', (id) => {
     );
     const found: number[] = [];
     for (let day = 0; day < 3; day++) {
+      state = { ...state, stock: { ember: 20, dew: 8, stone: 6, spark: 6 }, growth: GROWN_LATE };
       const { field, sim } = story(state);
       expect(field.section.id).toBe(id);
       playGreedy(sim);

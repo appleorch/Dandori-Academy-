@@ -1,7 +1,7 @@
 import { crewStrength, hasRoute } from '../carry/carrySystem';
 import { NO_INPUT, type InputState } from '../commands/input';
 import { NO_ENTITY, type Entity } from '../core/ecs';
-import { approachPoint, damageTaken, isTargetable } from '../enemies/combat';
+import { approachPoint, damageTaken, isTargetable, wardenWeakness } from '../enemies/combat';
 import { ENEMY, ENEMY_SPECS, HAZARDS } from '../enemies/enemyKinds';
 import type { Point } from '../navigation/NavGrid';
 import { createMover, steerTo } from '../navigation/steering';
@@ -110,6 +110,9 @@ function throwKind(sim: Simulation, job: Entity): SproutKind | null {
     return 'stone';
   if ((foe?.kind === 'sparkwasp' || foe?.kind === 'waspnest') && squadOf(sim, 'spark') > 0)
     return 'spark';
+  // The Hollow Warden: whichever kind truly hurts it in this phase.
+  if (foe?.kind === 'hollowwarden' && squadOf(sim, wardenWeakness(foe)) > 0)
+    return wardenWeakness(foe);
   let best: SproutKind | null = null;
   let bestCount = 0;
   for (const kind of SPROUT_KINDS) {
@@ -600,7 +603,13 @@ export function greedyPlayer(
       steerTo(sim.nav, mover, sim.anchor, cold.x, cold.z, 1 / 60, dir);
       input.moveX = dir.x;
       input.moveZ = dir.z;
-    } else if (foe && ENEMY_SPECS[foe.kind].armour < 1 && damageTaken(sim, job, foe) < 1) {
+    } else if (
+      foe &&
+      ENEMY_SPECS[foe.kind].armour < 1 &&
+      damageTaken(sim, job, foe) < 1 &&
+      // A Shellback never lies open by itself: it is flipped by throwing at it, not waited out.
+      foe.kind !== 'shellback'
+    ) {
       // An armoured boss: call everyone off it, wait out of reach until it lies open,
       // then pile on. A charger is baited into a pillar so that it ends up winded.
       const at = sim.transforms.require(job);

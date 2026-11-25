@@ -1,7 +1,7 @@
 import { terrace, terraces } from '../world/course';
 import { defineLevel } from '../world/level';
 import type { LevelDefinition, LevelSpec } from '../world/levelTypes';
-import { ORCHARD_PARTS, ORCHARD_ROOTS, SUNKEN_ORCHARD } from './orchard';
+import { ORCHARD_DEEP, ORCHARD_PARTS, ORCHARD_ROOTS, SUNKEN_ORCHARD } from './orchard';
 import { CLOCKWORK_FOUNDRY, FOUNDRY_PARTS } from './foundry';
 import { FROSTGLASS_OBSERVATORY, OBSERVATORY_PARTS } from './observatory';
 import type { Ability } from './upgrades';
@@ -260,7 +260,7 @@ export const CAMPAIGN_SECTIONS: readonly CampaignSection[] = [
     parts: ORCHARD_PARTS,
     opensAt: 6,
     needs: { 'part-going-barrel': 'bridgekit', 'part-centre-arbor': 'lantern' },
-    caves: [defineLevel(ORCHARD_ROOTS)],
+    caves: [defineLevel(ORCHARD_ROOTS), defineLevel(ORCHARD_DEEP)],
   },
   {
     id: 'foundry',

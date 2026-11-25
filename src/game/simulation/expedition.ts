@@ -53,13 +53,25 @@ export class Expedition {
    */
   caveFilter: ((spec: LevelDefinition) => LevelDefinition) | null = null;
 
+  /**
+   * The places the Warden has come down through to reach the active one, the surface first:
+   * a cave can have a way down of its own to a deeper floor.
+   */
+  private readonly path: Simulation[] = [];
+
   constructor(surface: Simulation) {
     this.surface = surface;
     this.active = surface;
+    this.path.push(surface);
   }
 
   get below(): boolean {
     return this.active !== this.surface;
+  }
+
+  /** How many floors down the Warden is: 0 on the surface. */
+  get depth(): number {
+    return this.path.length - 1;
   }
 
   /** The cave the Warden is in, or null on the surface. */
@@ -69,17 +81,18 @@ export class Expedition {
 
   /** Why the way down cannot be taken right now, or null if it can. */
   blocked(): string | null {
-    const descent = this.surface.level.descent;
-    if (this.below || !descent) return 'There is no way down here.';
+    const descent = this.active.level.descent;
+    if (!descent) return 'There is no way down here.';
     if (this.caves.get(descent.to)?.ended === 'allCollected') return 'Nothing left down there.';
-    for (const [, worker] of this.surface.workers.entries())
+    for (const [, worker] of this.active.workers.entries())
       if (worker.state === 'follow') return null;
     return 'Whistle up a squad to take down with you.';
   }
 
-  /** Takes the squad down the surface's way down. False if it cannot be taken (see `blocked`). */
+  /** Takes the squad down the way down where the Warden is. False if it cannot be taken. */
   descend(): boolean {
-    const descent = this.surface.level.descent;
+    const upper = this.active;
+    const descent = upper.level.descent;
     if (!descent || this.blocked()) return false;
     const written =
       LEVELS.find((level) => level.id === descent.to) ??
@@ -87,12 +100,12 @@ export class Expedition {
     const spec = written && this.caveFilter ? this.caveFilter(written) : written;
     if (!spec) return false;
     const squad: Traveller[] = [];
-    for (const [entity, worker] of [...this.surface.workers.entries()]) {
+    for (const [entity, worker] of [...upper.workers.entries()]) {
       if (worker.state !== 'follow') continue;
       squad.push({ kind: worker.kind, growth: worker.growth });
-      removeWorker(this.surface, entity, worker);
+      removeWorker(upper, entity, worker);
     }
-    this.surface.entityVersion++;
+    upper.entityVersion++;
     let cave = this.caves.get(spec.id);
     if (!cave) {
       // Created empty: whoever comes down is the squad.
@@ -113,18 +126,22 @@ export class Expedition {
     }
     // A cave everyone was lost in is open again to a new squad.
     if (cave.ended === 'wipedOut') cave.ended = null;
-    cave.captainState.hp = this.surface.captainState.hp;
+    cave.captainState.hp = upper.captainState.hp;
     cave.captainState.invuln = 0;
     arrive(cave, squad, spec.captain);
     if (squad.length > 0)
-      cave.selected = squad.some(({ kind }) => kind === this.surface.selected)
-        ? this.surface.selected
+      cave.selected = squad.some(({ kind }) => kind === upper.selected)
+        ? upper.selected
         : squad[0].kind;
     this.active = cave;
+    this.path.push(cave);
     return true;
   }
 
-  /** Brings everyone below back up the way they came, and settles what was found down there. */
+  /**
+   * Brings everyone back up one floor, the way they came, and settles what was found down
+   * there into the day (on the surface's tally, wherever they arrive).
+   */
   ascend(): void {
     const cave = this.cave;
     if (!cave) return;
@@ -159,11 +176,13 @@ export class Expedition {
         this.surface.stats.bossesDefeated.push(boss);
     }
 
-    this.surface.captainState.hp = cave.captainState.hp;
-    const descent = this.surface.level.descent ?? this.surface.level.captain;
-    arrive(this.surface, party, descent);
-    this.surface.entityVersion++;
-    this.active = this.surface;
+    this.path.pop();
+    const upper = this.path[this.path.length - 1] ?? this.surface;
+    upper.captainState.hp = cave.captainState.hp;
+    const descent = upper.level.descent ?? upper.level.captain;
+    arrive(upper, party, descent);
+    upper.entityVersion++;
+    this.active = upper;
   }
 
   /**
@@ -176,7 +195,8 @@ export class Expedition {
     if (cave.ended === 'captainDown') {
       this.surface.captainState.hp = 0;
       this.surface.ended = 'captainDown';
-      this.ascend();
+      // Everyone comes back up from every floor: the day is over.
+      while (this.below) this.ascend();
       return;
     }
     // Every relic found, or nobody left to carry them: back up.

@@ -125,3 +125,39 @@ describe('expedition', () => {
     expedition.dispose();
   });
 });
+
+describe('a cave with a way down of its own', () => {
+  it('goes two floors down and comes back up one floor at a time, keeping every find', async () => {
+    const { dayField, newCampaign, switchSection, settleDay } =
+      await import('../campaign/campaign');
+    const state = switchSection(newCampaign(), 'orchard');
+    const field = dayField(state);
+    const expedition = new Expedition(new Simulation(field.level, { story: true }));
+    const surface = expedition.surface;
+    // A squad on its feet, and the Warden at the way down.
+    for (const [, worker] of surface.workers.entries()) worker.state = 'follow';
+    const descent = field.level.descent;
+    if (!descent) throw new Error('no way down');
+    surface.captainTransform.x = descent.x;
+    surface.captainTransform.z = descent.z;
+    expect(expedition.descend()).toBe(true);
+    expect(expedition.active.level.id).toBe('campaign-orchard-roots');
+    expect(expedition.blocked()).toBeNull();
+    expect(expedition.descend()).toBe(true);
+    expect(expedition.depth).toBe(2);
+    const deep = expedition.active;
+    expect(deep.level.id).toBe('campaign-orchard-deep');
+    // The part down there comes home to the deep Kiln.
+    deep.stats.treasuresCollected.push('part-centre-arbor');
+    expedition.ascend();
+    expect(expedition.active.level.id).toBe('campaign-orchard-roots');
+    expedition.ascend();
+    expect(expedition.below).toBe(false);
+    expect(count(surface)).toBeGreaterThan(0);
+    expect(expedition.haul.relics).toContain('campaign-orchard-deep:part-centre-arbor');
+    surface.ended = 'endedEarly';
+    const { state: next } = settleDay(state, field, surface, expedition.haul.relics);
+    expect(next.parts['part-centre-arbor']).toBe(1);
+    expedition.dispose();
+  });
+});

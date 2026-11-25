@@ -233,8 +233,8 @@ On a phone or tablet the game shows touch controls instead:
   Newt** hunts only in and beside water; the **Thornback Hedgehog**'s spines kill whoever clings
   on unless it is curled (winded after a charge, or knocked by a Stoneling); the **Mimic Cap**
   passes for a Glowcap but twitches and bites whoever comes close; the **Spark Wasp Nest** sends
-  wasps whose stings spare Sparklings. Each is in two challenge fields (the Shellback only in the
-  story for now) and all eight are in the Wild Quad; the Field Guide has a note on every beast.
+  wasps whose stings spare Sparklings. Each is in two challenge fields and all eight are in the Wild
+  Quad; the Field Guide has a note on every beast.
 - **Relics of Harmony**: every Sunshard is set into a named relic with its own model and a line of
   description (`src/game/story/relics.ts`). Recovered relics fill the **Field Guide**.
 - **Headmaster Sprocket** comments on the day in a banner: openings, chains, rare relics,
@@ -299,8 +299,8 @@ camp**, which shows a map of the Quad, the Kiln's stock by kind and the Clock's 
   Dewlings are the stars: the landing meadow and its first loop; the Crate Yard (a giant fallen
   apple crate, its bramble door and a hidden store behind a weak board, with flooded drains
   behind); Watering Can Island in a ring of water, with two bridges to build; and the Root
-  Hollow, whose great tree's roots are the way down into the Root Cellar (a cave with two
-  parts), with the Mire Lord's pond and the last part beyond. Ten parts (two need the Quad's
+  Hollow, whose great tree's roots are the way down into the Root Cellar, and from it further
+  down to the Sunken Cistern (a part on each floor; caves may have ways down of their own), with the Mire Lord's pond and the last part beyond. Ten parts (two need the Quad's
   gifts: the bridge kit and the lantern), 29 other relics, 26 beasts and mounds including the
   Pike Newt, Pollen Moth, Sleeper Slug, Thornback, Mimic Cap, Shellback and a wasp nest, and
   Glowcaps, Sapdrops, Dewdrops, drips and four beacons. Treasure found in a section's caves

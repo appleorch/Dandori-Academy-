@@ -266,7 +266,7 @@ const FIELDS: FieldSpec[] = [
     width: 84,
     depth: 52,
     dayLength: 260,
-    pace: 142,
+    pace: 162,
     seed: 407,
     startingWorkers: 20,
     squad: { ember: 6, dew: 5, stone: 4, spark: 5 },
@@ -293,7 +293,10 @@ const FIELDS: FieldSpec[] = [
       { x: -26, z: -10, kind: 'dew' },
       { x: 0, z: 10, kind: 'spark' },
     ],
-    enemies: [{ x: 14, z: -8, kind: 'mossback' }],
+    enemies: [
+      { x: 24, z: -12, kind: 'shellback' },
+      { x: 14, z: -8, kind: 'mossback' },
+    ],
   },
   {
     id: 'heavy-lifting',

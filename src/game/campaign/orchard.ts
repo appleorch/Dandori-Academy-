@@ -238,6 +238,8 @@ export const ORCHARD_ROOTS: LevelSpec = {
   startingWorkers: 0,
   captain: { x: -28, z: 0 },
   kiln: { x: -31, z: 0 },
+  // A second way down, to the Sunken Cistern under the cellar.
+  descent: { x: 28, z: -4, to: 'campaign-orchard-deep' },
   obstacles: [
     { x: -10, z: -10, w: 3, d: 22 },
     { x: 10, z: 12, w: 3, d: 22 },
@@ -251,7 +253,6 @@ export const ORCHARD_ROOTS: LevelSpec = {
   beacons: [{ x: 4, z: -4 }],
   treasures: [
     { id: 'part-pallet-fork', x: 18, z: -16, weight: 3 },
-    { id: 'part-centre-arbor', x: 30, z: 14, weight: 4 },
     { id: 'relic-27', x: -18, z: 14, weight: 2 },
     { id: 'relic-28', x: 0, z: 18, weight: 2 },
     { id: 'relic-29', x: 0, z: -16, weight: 2 },
@@ -261,6 +262,42 @@ export const ORCHARD_ROOTS: LevelSpec = {
     { x: 4, z: 8, kind: 'skitter' },
     { x: 6, z: 10, kind: 'skitter' },
     { x: 22, z: 4, kind: 'slug' },
+  ],
+};
+
+/** The Sunken Cistern, the second floor down, under the Root Cellar: the Centre Arbor is here. */
+export const ORCHARD_DEEP: LevelSpec = {
+  id: 'campaign-orchard-deep',
+  stage: 0,
+  side: true,
+  name: 'The Sunken Cistern',
+  theme: 'cave',
+  brief: 'The burst cistern itself, deep under the tree: black water and old brick.',
+  wallLook: 'brick',
+  width: 60,
+  depth: 40,
+  dayLength: 540,
+  platinumTime: 540,
+  seed: 9103,
+  startingWorkers: 0,
+  captain: { x: -24, z: 0 },
+  kiln: { x: -27, z: 0 },
+  obstacles: [
+    { x: -4, z: -12, w: 3, d: 14 },
+    { x: 12, z: 10, w: 3, d: 18 },
+  ],
+  water: [{ x: 4, z: 12, w: 10, d: 12 }],
+  beacons: [{ x: 0, z: 0 }],
+  drips: [{ x: 8, z: -10, period: 4, offset: 1 }],
+  treasures: [
+    { id: 'part-centre-arbor', x: 22, z: -10, weight: 4 },
+    { id: 'relic-30', x: 4, z: 14, weight: 2 },
+    { id: 'relic-31', x: -14, z: 12, weight: 2 },
+  ],
+  pods: [],
+  enemies: [
+    { x: 4, z: 8, kind: 'newt' },
+    { x: 18, z: -2, kind: 'slug' },
   ],
 };
 

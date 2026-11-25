@@ -294,8 +294,9 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
       if (sim === surface) headmaster.events(sim.events);
       // Below: a cave that is finished, or a Warden who fell there, settles the visit.
       if (expedition.below) {
+        const was = expedition.active;
         expedition.settle();
-        if (!expedition.below) {
+        if (expedition.active !== was) {
           switched = true;
           break;
         }
@@ -392,7 +393,7 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
       secret !== undefined && Math.hypot(spot.x - secret.x, spot.z - secret.z) < SECRET_RANGE;
     store.setNearSecret(atDoor);
     // The way down (on the surface) and the way back up (where the Warden arrived below).
-    const descent = expedition.below ? undefined : sim.level.descent;
+    const descent = sim.level.descent;
     const atStair =
       descent !== undefined && Math.hypot(spot.x - descent.x, spot.z - descent.z) < SECRET_RANGE;
     const start = sim.level.captain;
