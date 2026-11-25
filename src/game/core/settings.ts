@@ -5,9 +5,14 @@ import { LOCALES, type Locale } from '../../i18n/i18n';
 /**
  * Rendering quality. Low: no shadows or effects. Medium: shadows, bloom, tilt-shift
  * and vignette. High: adds ambient occlusion, sharper shadows and full resolution.
+ * The level is picked for the device on first run (see QualityTuner), and never lowered after
+ * the player has chosen one.
  */
 export const GRAPHICS_LEVELS = ['low', 'medium', 'high'] as const;
 export type GraphicsLevel = (typeof GRAPHICS_LEVELS)[number];
+/** A level the renderer can draw at (the same set: kept for the model pipeline's code). */
+export type RenderLevel = GraphicsLevel;
+export const RENDER_LEVELS = GRAPHICS_LEVELS;
 
 /**
  * Colour palettes for the four kinds, hazard rings and medal ranks. The two colour-blind ones

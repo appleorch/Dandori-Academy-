@@ -5,3 +5,7 @@ dist
 .board-build
 test-results
 playwright-report
+
+release/
+.desktop-stage/
+.wrangler/

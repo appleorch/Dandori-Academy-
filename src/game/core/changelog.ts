@@ -8,6 +8,16 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.43.0',
+    date: '2026-11-25',
+    changes: [
+      'Everything from the other lines of work, together: the Academy board has a home of its own, a small server that keeps every Warden\u2019s best run for good (the relay and the backup file remain as fallbacks, and runs are still verified by replay).',
+      'Play anywhere: builds for Cloudflare Pages and itch.io, and Windows and Linux desktop downloads.',
+      'Ready for 3D models: a glTF model of the Warden, with idle, walk and run animations, can replace the built-in one.',
+      'The back room has a second door, behind the Warden\u2019s own chair. Push every chip in enough hands running and the Warden may get up and go to see where it leads.',
+    ],
+  },
+  {
     version: '0.42.0',
     date: '2026-11-25',
     changes: [

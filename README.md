@@ -121,9 +121,36 @@ off under Settings, Comfort.
 
 ## Play without installing anything
 
-`docs/` holds a ready-to-serve build. With GitHub Pages enabled (Settings, Pages, Deploy from a
-branch, folder `/docs`) the game runs at `https://<owner>.github.io/Dandori-Academy-/`. Rebuild
-it after changes with `npm run build:docs`.
+- **Browser**: https://dandori-academy.pages.dev (Cloudflare Pages), or on itch.io at
+  https://sgtseamonkey.itch.io/dandori-academy.
+- **Desktop**: Windows and Linux downloads on the itch.io page (Electron: the same game in its
+  own window, using the fast GPU on laptops with two). F11 toggles full screen.
+- `docs/` still holds a build for GitHub Pages (`npm run build:docs`).
+
+The game draws on the player's own GPU. **Graphics: Auto** (the default) picks a level for the
+device and, while playing, lowers the resolution and then the level if the frame rate drops, so
+slower machines stay playable.
+
+## Shipping
+
+| Command                                  | What it does                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------- |
+| `npm run deploy:web`                     | Builds and deploys the web game to Cloudflare Pages                 |
+| `npm run deploy:board`                   | Deploys the leaderboard server (`worker/`) to Cloudflare Workers    |
+| `npm run build:desktop -- win32 linux`   | Builds the desktop game into `release/`, one zip per platform       |
+| `npm run deploy:itch`                    | Builds and uploads the web game to itch.io (`html5` channel)        |
+| `node scripts/push-itch.mjs win32 linux` | Uploads the desktop builds to itch.io (`windows`, `linux` channels) |
+| `npm run desktop`                        | Runs the desktop window against a fresh build, without packing it   |
+
+`.github/workflows/deploy.yml` does all of it on every push to `main`, once two repository
+secrets are set (Settings, Secrets and variables, Actions): `CLOUDFLARE_API_TOKEN` (Workers, D1
+and Pages edit rights) and `BUTLER_API_KEY` (itch.io, Settings, API keys).
+
+## 3D models
+
+Characters can use glTF models: drop `warden.glb` into `src/assets/models/` and the Warden uses
+it, animated by its `Idle`, `Walk` and `Run` clips; with no file, the built-in procedural model
+is drawn. How to make and compress a model is in `src/assets/models/README.md`.
 
 ## How to play
 
@@ -652,8 +679,8 @@ person would try again.
 
 ## Leaderboard
 
-The Leaderboard tab needs no server of its own, and posting is automatic
-(`src/game/leaderboard/`):
+The board never resets. It lives on a small server: a Cloudflare Worker over a D1 database
+(`worker/`, `https://dandori-board.dandori-academy.workers.dev`), free on Cloudflare's plan.
 
 - **Boards**: each challenge field has its own board (and the lessons keep their challenge runs from 0.18.0, closed). **Classic** keeps the runs from before
   0.18.0, when lesson days were scored, and takes no new ones. Story and Time Attack days and battles are not
@@ -661,26 +688,30 @@ The Leaderboard tab needs no server of its own, and posting is automatic
 - **Your best runs**: the ten best days per challenge and lesson are kept in the save, each
   marked Posted, Posting or Not posted.
 - **Posting**: when a day ends with a new personal best on a lesson, the game posts it by itself
-  to a topic on [ntfy.sh](https://ntfy.sh), a free public message relay that browsers can post to
-  and read from with no account. A post carries the run, your Warden name and a random player id
-  made once per browser, and nothing else. If the relay cannot be reached the run waits in the
-  save and is tried again later (after a minute, then longer, up to half an hour). The Warden
-  name, and a switch to turn posting off, are on the Leaderboard tab.
-- **Collecting**: the relay keeps messages for 12 hours. Every half hour a scheduled GitHub
-  Action in this repository (`.github/workflows/leaderboard.yml`, which runs
-  `npm run board:collect`) reads the topic, checks every run, and commits the best run per
-  Warden per lesson to `leaderboard/board.json`.
-- **Reading**: the board reads `leaderboard/board.json` from GitHub and whatever reached the relay
-  in the last 12 hours, so a new run shows up at once and stays once collected.
-- Every run is signed, and wherever it is read (in the game and in the Action) the signature is
-  checked, every part of the score is recomputed from the lesson's own rules, the rank is checked
-  against the score and the clock against the day, impossibly fast clears are refused, and a
-  fingerprint of how the lesson plays is compared, so runs on a lesson whose layout has since
-  changed are left off. The fingerprint leaves out the lesson's words and rank targets, so
-  rewording a briefing or moving a rank never clears the board; runs from 0.17.0 are checked
-  against that version's own fingerprint and rank rules, and stay. The signing key ships with the game, so this stops casual editing, not a determined
-  cheat. Names are not verified. To strike a player off, add their player id (16 hex digits,
-  the first four are shown as `#abcd` beside their name) to `leaderboard/banned.json`.
+  to the server (`POST /runs`), and with its replay log to the relay as well, for verification. A post carries the run, your Warden name and a random player id
+  made once per browser, and nothing else. The server keeps each player's best run per board,
+  lesson and difficulty. If it cannot be reached, the run goes to the old public relay
+  ([ntfy.sh](https://ntfy.sh), kept 12 hours), which the server collects every half hour; if
+  neither can be reached the run waits in the save and is tried again later.
+- **Reading**: the board reads `GET /board`. If the server is away it falls back to
+  `leaderboard/board.json` plus the relay. That file is a backup of the server's board, written
+  every half hour by a scheduled GitHub Action (`.github/workflows/leaderboard.yml`, `npm run
+board:collect`), which also carries relay runs to the server.
+- Every run is signed, and wherever it is read (on the server, in the game and in the Action)
+  the signature is checked, every part of the score is recomputed from the lesson's own rules,
+  the rank is checked against the score and the clock against the day, impossibly fast clears
+  are refused, and a fingerprint of how the lesson plays is compared, so runs on a lesson whose
+  layout has since changed are left off. The fingerprint leaves out the lesson's words and rank
+  targets, so rewording a briefing or moving a rank never clears the board; runs from 0.17.0 are
+  checked against that version's own fingerprint and rank rules, and stay. The signing key ships
+  with the game, so this stops casual editing, not a determined cheat. Names are not verified.
+- **Striking a player off**: their player id is 16 hex digits (the first four are shown as
+  `#abcd` beside their name). Ban them on the server with
+  `npx wrangler d1 execute dandori-board --remote --config worker/wrangler.toml --command
+"INSERT INTO banned (player) VALUES ('<id>')"`, and add the id to `leaderboard/banned.json`
+  for the backup file.
+- Free-plan limits (100,000 requests and 5 million database rows read a day) are far above what
+  the board needs: the board is cached at the edge for 30 seconds.
 - **Replays and verification** (`src/game/replay/`). The simulation is deterministic, so a day is
   decided by its field, its mode and its inputs. Every Time Attack and challenge day is recorded:
   each step's input, on a fixed grid the game itself plays on (cursor to a twentieth of a unit,
@@ -708,13 +739,8 @@ The Leaderboard tab needs no server of its own, and posting is automatic
   headless, up to the chosen moment (a few seconds at most), rather than keeping snapshots. _Race_
   replays the run here to get its Warden's path and sets it as the ghost on your next day on that
   field, in Time Attack or a challenge.
-- Scheduled workflows only run on the default branch, so collecting starts once this is merged
-  to `main`; until then (and if the Action is ever paused) runs still show from the relay for 12
-  hours. GitHub pauses scheduled workflows in a repository with no activity for 60 days; re-enable
-  it from the Actions tab if that happens.
-- ntfy.sh limits how many messages one network can send a day. A player posts only personal
-  bests, so this is far more than a player needs, but a run from a crowded shared network may
-  wait until the next day.
+- Scheduled workflows only run on the default branch. GitHub pauses scheduled workflows in a
+  repository with no activity for 60 days; re-enable it from the Actions tab if that happens.
 
 ## Settings, save files and achievements
 

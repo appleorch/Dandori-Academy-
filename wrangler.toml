@@ -1,0 +1,6 @@
+# Cloudflare Pages: the web build, https://dandori-academy.pages.dev
+# Deployed by .github/workflows/deploy.yml (or by hand with `npm run deploy:web`).
+# The leaderboard server is a separate Worker: see worker/.
+name = "dandori-academy"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-11-01"

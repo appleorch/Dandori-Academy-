@@ -12,20 +12,21 @@ import {
 } from './runCode';
 
 /**
- * The Academy board needs no server of its own. Runs travel through a public relay and come to
- * rest in a file in the game's own repository:
+ * The Academy board lives on a small server: a Cloudflare Worker over a D1 database
+ * (`worker/`). It never resets.
  *
- * 1. When a day ends with a new personal best, the game posts the signed run to a topic on
- *    ntfy.sh, a free public message relay that browsers may post to and read from without an
- *    account. The relay keeps messages for 12 hours.
- * 2. A scheduled GitHub Action in the repository (`.github/workflows/leaderboard.yml`) reads
- *    the topic every half hour, checks every run against the game's own rules, and commits the
- *    survivors to `leaderboard/board.json`.
- * 3. The board reads that file (served by GitHub, which browsers may also read), plus whatever
- *    reached the relay in the last 12 hours, so a new run shows up at once.
+ * 1. When a day ends with a new personal best, the game posts the signed run to
+ *    `BOARD_API/runs`. The server checks it with these same rules and keeps each player's best
+ *    run per board, lesson and difficulty.
+ * 2. The board reads `BOARD_API/board`.
+ * 3. If the server cannot be reached, runs go to the old public relay (ntfy.sh, kept 12 hours)
+ *    and the board reads the relay plus `leaderboard/board.json`, a backup of the server's board
+ *    that a scheduled GitHub Action keeps. The server collects the relay every half hour.
  *
- * Every run is checked again wherever it is read, so neither the relay nor the file is trusted.
+ * Every run is checked again wherever it is read, so neither the server nor the relay is trusted.
  */
+/** The board server. The web, itch.io and desktop builds all use the same one. */
+export const BOARD_API = 'https://dandori-board.dandori-academy.workers.dev';
 export const BOARD_REPO = 'appleorch/Dandori-Academy-';
 export const RELAY = 'https://ntfy.sh';
 export const BOARD_TOPIC = 'dandori-academy-runs-v1-q7k2m9x4';
@@ -189,21 +190,46 @@ export function relayMessage(code: string, log?: DayLog): string {
   return JSON.stringify(log ? { dandori: 1, code, log } : { dandori: 1, code });
 }
 
-/** Posts a run to the relay. True once the relay has taken it. */
+/**
+ * Posts a run to the server, and to the relay too when it brings its replay (the board's
+ * collection replays it from there to verify it), or when the server is away. True once
+ * either has it.
+ */
 export async function sendPost(
   post: BoardPost,
   fetcher: Fetcher = defaultFetcher,
   log?: DayLog,
 ): Promise<boolean> {
+  const code = await encodePost(post);
+  let taken = false;
+  try {
+    const response = await fetcher(`${BOARD_API}/runs`, {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    // 422 and 403 (a run the server refuses, a banned player) will never be taken: stop trying.
+    taken = response.ok || response.status === 422 || response.status === 403;
+  } catch {
+    // Fall through to the relay.
+  }
+  if (taken && !log) return true;
   try {
     const response = await fetcher(`${RELAY}/${BOARD_TOPIC}`, {
       method: 'POST',
-      body: relayMessage(await encodePost(post), log),
+      body: relayMessage(code, log),
     });
-    return response.ok;
+    return taken || response.ok;
   } catch {
-    return false;
+    return taken;
   }
+}
+
+/** Every run the server keeps. Throws if the server cannot be reached. */
+export async function readServer(fetcher: Fetcher = defaultFetcher): Promise<string[]> {
+  const response = await fetcher(`${BOARD_API}/board`);
+  if (!response.ok) throw new Error(`The board server answered ${response.status}.`);
+  return parseBoardFile(await response.text());
 }
 
 /** Every post on the relay from the last 12 hours. Throws if the relay cannot be reached. */
@@ -279,7 +305,8 @@ export async function checkPosts(
 
 export interface Board {
   entries: BoardEntry[];
-  /** Which sources answered: the board file and the relay. */
+  /** Which sources answered: the server, or else the backup file and the relay. */
+  server: boolean;
   file: boolean;
   relay: boolean;
   /** Replay logs to hand: those riding on the relay, by hash. */
@@ -296,20 +323,29 @@ export async function readBoardFileFull(fetcher: Fetcher = defaultFetcher): Prom
   return parseBoardFileFull(await response.text());
 }
 
-/** The whole board: the file and the relay together. Throws only if neither can be read. */
+/**
+ * The whole board: the server's, or, when the server is away, the backup file and the relay
+ * together. Throws only if nothing can be read.
+ */
 export async function fetchBoard(fetcher: Fetcher = defaultFetcher): Promise<Board> {
-  const [file, relay] = await Promise.allSettled([
+  // The server's board, and the backup file (which also says which runs were verified by
+  // replay and which replays are kept) and the relay (which carries replays) beside it.
+  const [server, file, relay] = await Promise.allSettled([
+    readServer(fetcher),
     readBoardFileFull(fetcher),
     readRelayPosts(fetcher),
   ]);
-  if (file.status === 'rejected' && relay.status === 'rejected') {
+  if (server.status === 'rejected' && file.status === 'rejected' && relay.status === 'rejected') {
     throw new Error('The board could not be reached. Check your connection and try again.');
   }
   const fileValue = file.status === 'fulfilled' ? file.value : null;
   const posts = relay.status === 'fulfilled' ? relay.value : [];
   const verified = new Set(fileValue?.verified ?? []);
   const logs = new Map<string, DayLog>();
-  const codes = [...(fileValue?.posts ?? []), ...posts.map((post) => post.code)];
+  const codes = [
+    ...(server.status === 'fulfilled' ? server.value : (fileValue?.posts ?? [])),
+    ...posts.map((post) => post.code),
+  ];
   const entries = keepBest(await checkPosts(codes)).map((entry) =>
     verified.has(entry.code) ? { ...entry, verified: true } : entry,
   );
@@ -325,6 +361,7 @@ export async function fetchBoard(fetcher: Fetcher = defaultFetcher): Promise<Boa
   }
   return {
     entries,
+    server: server.status === 'fulfilled',
     file: fileValue !== null,
     relay: relay.status === 'fulfilled',
     logs,

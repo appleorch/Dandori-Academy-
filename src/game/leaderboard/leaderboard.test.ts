@@ -10,6 +10,7 @@ import {
   BOARD_TOPIC,
   checkPosts,
   entryOf,
+  BOARD_API,
   fetchBoard,
   keepBest,
   KEPT_PER_LESSON,
@@ -237,15 +238,29 @@ describe('board posts', () => {
     expect(parseRelay('not json\n{"event":"keepalive"}\n')).toEqual([]);
   });
 
-  it('posts the signed run to the relay topic', async () => {
+  it('posts the signed run to the board server, and to the relay when the server is away', async () => {
     const sent: { url: string; body?: string }[] = [];
-    const fetcher: Fetcher = (url, init) => {
+    const serverUp: Fetcher = (url, init) => {
       sent.push({ url, body: init?.body });
-      return respond(200, '{}');
+      return respond(200, '{"result":"kept"}');
     };
-    expect(await sendPost(post(sampleRun()), fetcher)).toBe(true);
-    expect(sent[0].url).toBe(`${RELAY}/${BOARD_TOPIC}`);
-    expect(parseRelay(JSON.stringify({ event: 'message', message: sent[0].body }))).toHaveLength(1);
+    expect(await sendPost(post(sampleRun()), serverUp)).toBe(true);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].url).toBe(`${BOARD_API}/runs`);
+    const { code } = JSON.parse(sent[0].body ?? '{}') as { code: string };
+    expect(await entryOf(code)).toMatchObject({ name: 'Ada' });
+
+    // A run the server refuses is never tried again.
+    expect(await sendPost(post(sampleRun()), () => respond(422))).toBe(true);
+
+    sent.length = 0;
+    const serverDown: Fetcher = (url, init) => {
+      sent.push({ url, body: init?.body });
+      return url.startsWith(BOARD_API) ? Promise.reject(new Error('down')) : respond(200, '{}');
+    };
+    expect(await sendPost(post(sampleRun()), serverDown)).toBe(true);
+    expect(sent[1].url).toBe(`${RELAY}/${BOARD_TOPIC}`);
+    expect(parseRelay(JSON.stringify({ event: 'message', message: sent[1].body }))).toHaveLength(1);
     expect(await sendPost(post(sampleRun()), () => respond(429))).toBe(false);
     expect(await sendPost(post(sampleRun()), () => Promise.reject(new Error('offline')))).toBe(
       false,
@@ -370,23 +385,38 @@ describe('the board', () => {
     expect(kept).toHaveLength(KEPT_PER_LESSON);
   });
 
-  it('reads the board file and the relay, and copes when either is away', async () => {
+  it('reads the board server, or the board file and the relay when it is away', async () => {
     const file = JSON.stringify({
       v: 1,
       updated: '',
       posts: [await encodePost(post(sampleRun()))],
     });
     const relay = await relayAnswer([post(sampleRun({ elapsed: 15 }), BO, 'Bo')]);
-    const both: Fetcher = (url) => respond(200, url === BOARD_FILE_URL ? file : relay);
+    const serverBoard = JSON.stringify({
+      v: 1,
+      updated: '',
+      posts: [await encodePost(post(sampleRun())), await encodePost(post(sampleRun(), BO, 'Bo'))],
+    });
+    const server: Fetcher = (url) =>
+      url === `${BOARD_API}/board` ? respond(200, serverBoard) : respond(500);
+    const fromServer = await fetchBoard(server);
+    expect(fromServer.entries.map((entry) => entry.player).sort()).toEqual([ADA, BO]);
+    expect(fromServer).toMatchObject({ server: true });
+
+    const down =
+      (fetcher: Fetcher): Fetcher =>
+      (url, init) =>
+        url.startsWith(BOARD_API) ? respond(503) : fetcher(url, init);
+    const both = down((url) => respond(200, url === BOARD_FILE_URL ? file : relay));
     const board = await fetchBoard(both);
     expect(board.entries.map((entry) => entry.player).sort()).toEqual([ADA, BO]);
-    expect(board).toMatchObject({ file: true, relay: true });
+    expect(board).toMatchObject({ server: false, file: true, relay: true });
 
     // Before the first run is collected the file is not there: that is an empty board.
-    const noFile: Fetcher = (url) => (url === BOARD_FILE_URL ? respond(404) : respond(200, relay));
+    const noFile = down((url) => (url === BOARD_FILE_URL ? respond(404) : respond(200, relay)));
     expect((await fetchBoard(noFile)).entries).toHaveLength(1);
 
-    const noRelay: Fetcher = (url) => (url === BOARD_FILE_URL ? respond(200, file) : respond(503));
+    const noRelay = down((url) => (url === BOARD_FILE_URL ? respond(200, file) : respond(503)));
     expect(await fetchBoard(noRelay)).toMatchObject({ file: true, relay: false });
 
     await expect(fetchBoard(() => respond(500))).rejects.toThrow(/could not be reached/);
