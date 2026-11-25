@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useEffect, useState } from 'react';
 import { useGameStore } from '../game/core/gameStore';
 import {
@@ -30,15 +31,12 @@ export function SyncPanel() {
   if (!syncSupported()) return null;
   return (
     <section className="settings-group">
-      <h2>Sync to a file</h2>
-      <p className="note">
-        Choose a file and your progress is written to it as you play. Keep it in a folder a cloud
-        drive syncs to carry your save between computers. Nothing goes to any server of ours.
-      </p>
+      <h2>{t('ui.syncPanel.syncToAFile')}</h2>
+      <p className="note">{t('ui.syncPanel.chooseAFileAnd')}</p>
       {name ? (
         <>
           <p>
-            Syncing to <strong>{name}</strong>.
+            {t('ui.syncPanel.syncingTo')} <strong>{name}</strong>.
           </p>
           <div className="button-row">
             <button
@@ -53,14 +51,14 @@ export function SyncPanel() {
                 })
               }
             >
-              Load from the file
+              {t('ui.syncPanel.loadFromTheFile')}
             </button>
             <button
               type="button"
               className="secondary small"
               onClick={() => void stopSync().then(() => setName(null))}
             >
-              Stop syncing
+              {t('ui.syncPanel.stopSyncing')}
             </button>
           </div>
         </>
@@ -75,7 +73,7 @@ export function SyncPanel() {
             })
           }
         >
-          Resume syncing to {waiting.name}
+          {t('ui.syncPanel.resumeSyncingTo')} {waiting.name}
         </button>
       ) : (
         <button
@@ -87,7 +85,7 @@ export function SyncPanel() {
               .catch(() => setNote('No file chosen.'))
           }
         >
-          Choose a file
+          {t('ui.syncPanel.chooseAFile')}
         </button>
       )}
       {note && <p className="note">{note}</p>}

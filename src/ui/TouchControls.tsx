@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import type { InputController } from '../game/commands/input';
 import { CAPTAIN } from '../game/core/config';
@@ -59,7 +60,7 @@ export function TouchControls({ input }: { input: InputController }) {
       <div
         className="stick"
         role="application"
-        aria-label="Move joystick"
+        aria-label={t('ui.touchControls.moveJoystick')}
         onPointerDown={(event) => {
           event.currentTarget.setPointerCapture(event.pointerId);
           moveStick(event);
@@ -73,7 +74,7 @@ export function TouchControls({ input }: { input: InputController }) {
       <button
         type="button"
         className="touch-button fast"
-        aria-label="Fast forward"
+        aria-label={t('ui.touchControls.fastForward')}
         onPointerDown={(event) => {
           event.currentTarget.setPointerCapture(event.pointerId);
           input.fastButton = true;
@@ -90,12 +91,12 @@ export function TouchControls({ input }: { input: InputController }) {
       <button
         type="button"
         className="touch-button map"
-        aria-label="Tactical view"
+        aria-label={t('ui.touchControls.tacticalView')}
         onPointerDown={() => {
           input.tactical = !input.tactical;
         }}
       >
-        Map
+        {t('ui.touchControls.map')}
       </button>
       <div className="touch-buttons">
         <button
@@ -103,22 +104,22 @@ export function TouchControls({ input }: { input: InputController }) {
           className="touch-button dismiss"
           onPointerDown={() => input.queueDismiss()}
         >
-          Dismiss
+          {t('ui.touchControls.dismiss')}
         </button>
         <button
           type="button"
           className="touch-button cycle"
-          aria-label="Next kind of Sproutling"
+          aria-label={t('ui.touchControls.nextKindOfSproutling')}
           onPointerDown={() => input.queueCycle()}
         >
-          Kind
+          {t('ui.touchControls.kind')}
         </button>
         <button
           type="button"
           className="touch-button charge"
           onPointerDown={() => input.queueRush()}
         >
-          Charge
+          {t('ui.touchControls.charge')}
         </button>
         <button
           type="button"
@@ -133,8 +134,8 @@ export function TouchControls({ input }: { input: InputController }) {
           onPointerUp={releaseWhistle}
           onPointerCancel={releaseWhistle}
         >
-          Whistle
-          <small>drag to aim</small>
+          {t('ui.touchControls.whistle')}
+          <small>{t('ui.touchControls.dragToAim')}</small>
         </button>
       </div>
     </div>

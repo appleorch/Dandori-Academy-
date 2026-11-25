@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { rankValue, type Rank } from '../game/dandori/scoring';
 import { RIVAL_NAMES, type RivalLevel } from '../game/modes/battle';
 import {
@@ -30,7 +31,12 @@ export function ModeTargets({ level, mode, rival, earned }: ModeTargetsProps) {
     <div className="targets">
       <p className="mode-name">
         <strong>{spec.name}</strong>
-        {isBattle(mode) && rival && <> against {RIVAL_NAMES[rival]}</>}
+        {isBattle(mode) && rival && (
+          <>
+            {' '}
+            {t('ui.modeTargets.against')} {RIVAL_NAMES[rival]}
+          </>
+        )}
       </p>
       <ul className="mode-rule-list">
         {spec.rules.map((rule) => (
@@ -40,12 +46,16 @@ export function ModeTargets({ level, mode, rival, earned }: ModeTargetsProps) {
       {isChallenge(mode) && (
         <>
           <table>
-            <caption>Medals</caption>
+            <caption>{t('ui.modeTargets.medals')}</caption>
             <thead>
               <tr>
-                <th scope="col">Medal</th>
-                <th scope="col">Score</th>
-                <th scope="col">{challengeTimed(mode, level) ? 'Pace' : 'Needs'}</th>
+                <th scope="col">{t('ui.modeTargets.medal')}</th>
+                <th scope="col">{t('ui.modeTargets.score')}</th>
+                <th scope="col">
+                  {challengeTimed(mode, level)
+                    ? t('ui.modeTargets.pace')
+                    : t('ui.modeTargets.needs')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -61,7 +71,10 @@ export function ModeTargets({ level, mode, rival, earned }: ModeTargetsProps) {
                     <td>
                       {target.finishBy === null
                         ? (target.note ?? '')
-                        : `Done by ${formatTime(target.finishBy)} (${formatTime(level.dayLength - target.finishBy)} left)`}
+                        : t('ui.modeTargets.doneByLeft', {
+                            v1: formatTime(target.finishBy),
+                            v2: formatTime(level.dayLength - target.finishBy),
+                          })}
                     </td>
                   </tr>
                 );
@@ -70,8 +83,8 @@ export function ModeTargets({ level, mode, rival, earned }: ModeTargetsProps) {
           </table>
           <p className="note">
             {medalGate(mode, level) ?? ''}{' '}
-            {challengeTimed(mode, level) ? 'Paces assume a perfect day otherwise.' : ''} Glowcaps
-            add to your score but never count for a medal.
+            {challengeTimed(mode, level) ? t('ui.modeTargets.pacesAssumeAPerfect') : ''}{' '}
+            {t('ui.modeTargets.glowcapsAddToYour')}
           </p>
         </>
       )}

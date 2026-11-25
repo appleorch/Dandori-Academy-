@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useState } from 'react';
 import { formatTime } from './format';
 
@@ -44,7 +45,12 @@ function DayChart({
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`${title}: from ${values[0]} to ${values[end]} ${unit}`}
+        aria-label={t('ui.dayGraphs.fromTo', {
+          title: title,
+          v2: values[0],
+          v3: values[end],
+          unit: unit,
+        })}
         onPointerMove={(event) => pick(event.clientX, event.currentTarget.getBoundingClientRect())}
         onPointerLeave={() => setHover(null)}
       >
@@ -105,9 +111,14 @@ export function DayGraphs({
 }) {
   if (timeline.field.length < 2) return null;
   return (
-    <div className="day-graphs" aria-label="The day as it went">
-      <DayChart title="Sproutlings on the field" values={timeline.field} tone="field" unit="" />
-      <DayChart title="Treasure home" values={timeline.home} tone="home" unit="" />
+    <div className="day-graphs" aria-label={t('ui.dayGraphs.theDayAsIt')}>
+      <DayChart
+        title={t('ui.dayGraphs.sproutlingsOnTheField')}
+        values={timeline.field}
+        tone="field"
+        unit=""
+      />
+      <DayChart title={t('ui.dayGraphs.treasureHome')} values={timeline.home} tone="home" unit="" />
     </div>
   );
 }

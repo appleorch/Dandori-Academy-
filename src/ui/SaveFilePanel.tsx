@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useRef, useState, type ChangeEvent } from 'react';
 import { useGameStore } from '../game/core/gameStore';
 import { ACHIEVEMENTS } from '../game/progression/achievements';
@@ -76,19 +77,20 @@ export function SaveFilePanel() {
 
   return (
     <section className="save-file" aria-labelledby="save-heading">
-      <h2 id="save-heading">Save file</h2>
+      <h2 id="save-heading">{t('ui.saveFilePanel.saveFile')}</h2>
       <p>
-        Progress saves in this browser after every day. Download it as a {SAVE_FILE_EXTENSION} file
-        to keep a backup or move it to another computer. Save files are sealed: one that has been
-        edited is refused.
+        {t('ui.saveFilePanel.progressSavesInThis')} {SAVE_FILE_EXTENSION}{' '}
+        {t('ui.saveFilePanel.fileToKeepA')}
       </p>
-      <p className="save-summary">Current progress: {describe(save)}.</p>
+      <p className="save-summary">
+        {t('ui.saveFilePanel.currentProgress')} {describe(save)}.
+      </p>
       <div className="button-row">
         <button type="button" onClick={download}>
-          Download save file
+          {t('ui.saveFilePanel.downloadSaveFile')}
         </button>
         <button type="button" className="secondary" onClick={() => fileInput.current?.click()}>
-          Load save file…
+          {t('ui.saveFilePanel.loadSaveFile')}
         </button>
         <input
           ref={fileInput}
@@ -103,8 +105,11 @@ export function SaveFilePanel() {
         <div className="confirm" role="alertdialog" aria-labelledby="confirm-text">
           <p id="confirm-text">
             {pending.kind === 'load'
-              ? `Load ${pending.fileName}? It has ${describe(pending.save)}. This replaces your current progress.`
-              : 'Erase all progress? Lessons, ranks, scores and achievements will be reset. Download a save file first if you might want them back.'}
+              ? t('ui.saveFilePanel.loadItHasThis', {
+                  fileName: pending.fileName,
+                  v2: describe(pending.save),
+                })
+              : t('ui.saveFilePanel.eraseAllProgressLessons')}
           </p>
           <div className="button-row">
             <button
@@ -113,10 +118,12 @@ export function SaveFilePanel() {
               onClick={confirm}
               autoFocus
             >
-              {pending.kind === 'load' ? 'Load this save' : 'Erase progress'}
+              {pending.kind === 'load'
+                ? t('ui.saveFilePanel.loadThisSave')
+                : t('ui.saveFilePanel.eraseProgress')}
             </button>
             <button type="button" className="secondary" onClick={() => setPending(null)}>
-              Cancel
+              {t('ui.saveFilePanel.cancel')}
             </button>
           </div>
         </div>
@@ -134,7 +141,7 @@ export function SaveFilePanel() {
           setPending({ kind: 'erase' });
         }}
       >
-        Erase all progress…
+        {t('ui.saveFilePanel.eraseAllProgress')}
       </button>
     </section>
   );

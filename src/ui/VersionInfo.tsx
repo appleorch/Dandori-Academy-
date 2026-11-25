@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { CHANGELOG, GAME_VERSION } from '../game/core/changelog';
 
 function formatDate(isoDay: string): string {
@@ -15,8 +16,12 @@ export function VersionCallout() {
   return (
     <aside className="version-callout" aria-labelledby="version-heading">
       <p className="version-line">
-        <strong id="version-heading">Version {GAME_VERSION}</strong>
-        <span>Released {formatDate(latest.date)}</span>
+        <strong id="version-heading">
+          {t('ui.versionInfo.version')} {GAME_VERSION}
+        </strong>
+        <span>
+          {t('ui.versionInfo.released')} {formatDate(latest.date)}
+        </span>
       </p>
       <ul>
         {latest.changes.map((change) => (
@@ -31,7 +36,7 @@ export function VersionCallout() {
 export function RevisionLog() {
   return (
     <section className="revision-log" aria-labelledby="revisions-heading">
-      <h2 id="revisions-heading">Revision history</h2>
+      <h2 id="revisions-heading">{t('ui.versionInfo.revisionHistory')}</h2>
       {CHANGELOG.map((release, index) => (
         <details key={release.version} open={index === 0}>
           <summary>

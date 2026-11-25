@@ -1,7 +1,13 @@
+import { t } from '../i18n/i18n';
 /** Proctor Ashwick: a soot-grey coat, a flat cap, a moustache and very little patience. */
 export function AshwickPortrait() {
   return (
-    <svg className="portrait" viewBox="0 0 64 64" role="img" aria-label="Proctor Ashwick">
+    <svg
+      className="portrait"
+      viewBox="0 0 64 64"
+      role="img"
+      aria-label={t('ui.portrait.proctorAshwick')}
+    >
       <circle cx="32" cy="32" r="31" fill="#2c3a34" stroke="#ffb347" strokeWidth="2" />
       <path d="M12 62c2-16 10-22 20-22s18 6 20 22z" fill="#55525e" />
       <path d="M28 40h8l-4 10z" fill="#ffb347" />
@@ -28,7 +34,7 @@ export function TindlePortrait() {
       className="portrait small"
       viewBox="0 0 64 64"
       role="img"
-      aria-label="Tindle the Emberling"
+      aria-label={t('ui.portrait.tindleTheEmberling')}
     >
       <circle cx="32" cy="32" r="31" fill="#3a2a22" stroke="#ffb347" strokeWidth="2" />
       <path d="M32 6c5 5 5 9 0 13-5-4-5-8 0-13z" fill="#ffd27a" />
@@ -59,7 +65,7 @@ export function SprocketPortrait({ mood = 'cheer' }: { mood?: 'cheer' | 'alarm' 
       className={`portrait sprocket ${mood}`}
       viewBox="0 0 64 64"
       role="img"
-      aria-label="Headmaster Sprocket"
+      aria-label={t('ui.portrait.headmasterSprocket')}
     >
       <circle cx="32" cy="32" r="31" fill="#2a2440" stroke="#e8c15a" strokeWidth="2" />
       <path d="M12 63c2-14 10-19 20-19s18 5 20 19z" fill="#5a2a3a" />
@@ -96,7 +102,12 @@ export function SprocketPortrait({ mood = 'cheer' }: { mood?: 'cheer' | 'alarm' 
 /** Warden Quill: the Academy's other Warden, in a blue coat with a feather in the cap. */
 export function QuillPortrait() {
   return (
-    <svg className="portrait" viewBox="0 0 64 64" role="img" aria-label="Warden Quill">
+    <svg
+      className="portrait"
+      viewBox="0 0 64 64"
+      role="img"
+      aria-label={t('ui.portrait.wardenQuill')}
+    >
       <circle cx="32" cy="32" r="31" fill="#1e2c44" stroke="#7ac8ff" strokeWidth="2" />
       <path d="M12 62c2-16 10-22 20-22s18 6 20 22z" fill="#2f5a8a" />
       <circle cx="32" cy="28" r="12" fill="#e8c0a0" />

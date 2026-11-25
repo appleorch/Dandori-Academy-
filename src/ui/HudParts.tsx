@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useEffect, useState } from 'react';
 import type { InputController } from '../game/commands/input';
 import { SPROUT_KINDS, SPROUTS, type SproutKind } from '../game/workers/sprouts';
@@ -78,7 +79,7 @@ export function KindWheel({
   }, [input]);
   if (!wheel.open) return null;
   return (
-    <div className="kind-wheel" role="listbox" aria-label="Choose a kind">
+    <div className="kind-wheel" role="listbox" aria-label={t('ui.hudParts.chooseAKind')}>
       {SPROUT_KINDS.map((kind, i) => (
         <div
           key={kind}

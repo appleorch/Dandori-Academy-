@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useState } from 'react';
 import type { Transport } from '../game/net/lockstep';
 import { cleanRoomCode, hostRoom, joinRoom, newRoomCode } from '../game/net/rtc';
@@ -78,29 +79,26 @@ function OnlinePanel({
   };
   return (
     <section className="online-panel">
-      <h2>Play online</h2>
+      <h2>{t('ui.battleSelect.playOnline')}</h2>
       {!supported ? (
-        <p className="note">This browser cannot play online.</p>
+        <p className="note">{t('ui.battleSelect.thisBrowserCannotPlay')}</p>
       ) : online.state === 'off' || online.state === 'failed' ? (
         <>
-          <p className="note">
-            Race a friend on another computer: one hosts and reads out the room code, the other
-            joins with it. Nothing but your inputs is sent, straight between your two browsers.
-          </p>
+          <p className="note">{t('ui.battleSelect.raceAFriendOn')}</p>
           <div className="button-row">
             <button
               type="button"
               className="secondary small"
               onClick={() => connect(true, newRoomCode())}
             >
-              Host a room
+              {t('ui.battleSelect.hostARoom')}
             </button>
             <label className="room-code">
-              <span className="sr-only">Room code</span>
+              <span className="sr-only">{t('ui.battleSelect.roomCode')}</span>
               <input
                 value={typed}
                 maxLength={8}
-                placeholder="Room code"
+                placeholder={t('ui.battleSelect.roomCode')}
                 onChange={(event) => setTyped(event.target.value)}
               />
             </label>
@@ -113,7 +111,7 @@ function OnlinePanel({
                 if (code) connect(false, code);
               }}
             >
-              Join
+              {t('ui.battleSelect.join')}
             </button>
           </div>
           {online.state === 'failed' && <p className="note warn">{online.message}</p>}
@@ -121,14 +119,15 @@ function OnlinePanel({
       ) : online.state === 'ready' ? (
         <p className="best" role="status">
           {online.host
-            ? 'Connected. Pick the race above and a field below to start.'
-            : 'Connected. Waiting for the host to pick the race and field…'}
+            ? t('ui.battleSelect.connectedPickTheRace')
+            : t('ui.battleSelect.connectedWaitingForThe')}
         </p>
       ) : (
         <div role="status">
           {online.state === 'hosting' && (
             <p>
-              Room code: <strong className="room-code-shown">{online.code}</strong>
+              {t('ui.battleSelect.roomCode2')}{' '}
+              <strong className="room-code-shown">{online.code}</strong>
             </p>
           )}
           <p className="note">{online.status}</p>
@@ -140,7 +139,7 @@ function OnlinePanel({
               setOnline({ state: 'off' });
             }}
           >
-            Cancel
+            {t('ui.battleSelect.cancel')}
           </button>
         </div>
       )}
@@ -167,8 +166,8 @@ export function BattleSelect() {
     <main className="screen">
       <div className="panel wide">
         <MenuNav />
-        <h1>Battles</h1>
-        <nav className="tabs mode-tabs" aria-label="Battle">
+        <h1>{t('ui.battleSelect.battles')}</h1>
+        <nav className="tabs mode-tabs" aria-label={t('ui.battleSelect.battle')}>
           {BATTLE_IDS.map((id) => (
             <button
               key={id}
@@ -187,15 +186,16 @@ export function BattleSelect() {
             {spec.rules.map((rule) => (
               <li key={rule}>{rule}</li>
             ))}
-            <li>Battle days are short. Ending the day early from the pause menu concedes.</li>
+            <li>{t('ui.battleSelect.battleDaysAreShort')}</li>
           </ul>
           <p className="note">
-            Your record: {record.won} won, {record.lost} lost, {record.drawn} drawn.
+            {t('ui.battleSelect.yourRecord')} {record.won} {t('ui.battleSelect.won')} {record.lost}{' '}
+            {t('ui.battleSelect.lost')} {record.drawn} {t('ui.battleSelect.drawn')}
           </p>
         </section>
         <OnlinePanel online={online} setOnline={setOnline} />
         {!hostReady && !guestWaiting && (
-          <div className="rival-pick" role="radiogroup" aria-label="Rival">
+          <div className="rival-pick" role="radiogroup" aria-label={t('ui.battleSelect.rival')}>
             {RIVAL_LEVELS.map((level) => (
               <button
                 key={level}
@@ -212,7 +212,7 @@ export function BattleSelect() {
           </div>
         )}
         {guestWaiting ? null : lessons.length === 0 ? (
-          <p className="note">No lesson Time Attack has opened suits this race yet.</p>
+          <p className="note">{t('ui.battleSelect.noLessonTimeAttack')}</p>
         ) : (
           <ol className="lessons">
             {lessons.map((level) => (
@@ -230,7 +230,9 @@ export function BattleSelect() {
                   <span className="lesson-number">{level.side ? '▼' : level.stage}</span>
                   <span className="lesson-text">
                     <strong>{level.name}</strong>
-                    <span>{formatTime(battleLevel(level).dayLength)} on the clock</span>
+                    <span>
+                      {formatTime(battleLevel(level).dayLength)} {t('ui.battleSelect.onTheClock')}
+                    </span>
                   </span>
                 </button>
               </li>

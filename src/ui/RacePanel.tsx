@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import type { RaceSnapshot } from '../game/modes/battle';
 
 /** A tug-of-war bar: the player's share of what the two sides have between them. */
@@ -18,10 +19,10 @@ function Tug({ you, rival }: { you: number; rival: number }) {
 export function RacePanel({ race }: { race: RaceSnapshot }) {
   const ahead = race.you === race.rival ? 'level' : race.you > race.rival ? 'ahead' : 'behind';
   return (
-    <section className={`race ${ahead}`} aria-label="The race">
+    <section className={`race ${ahead}`} aria-label={t('ui.racePanel.theRace')}>
       <div className="race-row">
         <span className="race-side you">
-          You <strong>{race.you}</strong>
+          {t('ui.racePanel.you')} <strong>{race.you}</strong>
           {race.goal !== null && race.card === null && <small>/{race.goal}</small>}
         </span>
         <Tug you={race.you} rival={race.rival} />
@@ -32,14 +33,20 @@ export function RacePanel({ race }: { race: RaceSnapshot }) {
       </div>
       <p className="race-unit">
         {race.card
-          ? `Best line: you ${race.youLine}/${race.goal ?? 0}, ${race.rivalName} ${race.rivalLine}/${race.goal ?? 0}`
+          ? t('ui.racePanel.bestLineYou', {
+              youLine: race.youLine,
+              v2: race.goal ?? 0,
+              rivalName: race.rivalName,
+              rivalLine: race.rivalLine,
+              v5: race.goal ?? 0,
+            })
           : race.unit}
       </p>
       {race.card && (
         <ol
           className="bingo-card"
           style={{ gridTemplateColumns: `repeat(${race.card.size}, 1fr)` }}
-          aria-label="Your bingo card"
+          aria-label={t('ui.racePanel.yourBingoCard')}
         >
           {race.card.squares.map((square, i) => (
             <li key={i} className={square.done ? 'done' : undefined}>

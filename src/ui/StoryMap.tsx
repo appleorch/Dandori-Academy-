@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useState, type KeyboardEvent } from 'react';
 import { DIFFICULTIES, HARD } from '../game/core/difficulty';
 import { useGameStore } from '../game/core/gameStore';
@@ -141,7 +142,7 @@ function Academy() {
       <circle cx={0} cy={6} r={11} fill="#ffb347" className="map-kiln" />
       <rect x={-8} y={18} width={16} height={14} rx={8} fill="#3a2e22" />
       <text x={0} y={-62} textAnchor="middle" className="map-academy-label">
-        The Academy
+        {t('ui.storyMap.theAcademy')}
       </text>
     </g>
   );
@@ -199,8 +200,8 @@ export function StoryMap() {
       <div className="panel wide map-wide">
         <MenuNav />
         <div className="lesson-head">
-          <h1>Time Attack</h1>
-          <span className="segmented" role="radiogroup" aria-label="Difficulty">
+          <h1>{t('ui.storyMap.timeAttack')}</h1>
+          <span className="segmented" role="radiogroup" aria-label={t('ui.storyMap.difficulty')}>
             {DIFFICULTIES.map((option) => (
               <button
                 key={option}
@@ -210,22 +211,21 @@ export function StoryMap() {
                 className={difficulty === option ? `segment active ${option}` : 'segment'}
                 onClick={() => updateSettings({ difficulty: option })}
               >
-                {option === 'hard' ? 'Hard' : 'Normal'}
+                {option === 'hard' ? t('ui.storyMap.hard') : t('ui.storyMap.normal')}
               </button>
             ))}
           </span>
         </div>
         <p className="map-status">
           <span>
-            <strong>{cleared}</strong> of {MAIN_LEVELS.length} lessons cleared
+            <strong>{cleared}</strong> {t('ui.storyMap.of')} {MAIN_LEVELS.length}{' '}
+            {t('ui.storyMap.lessonsCleared')}
           </span>
-          <span>
-            The Academy’s lessons in order. Bring every Sunshard home to clear one; every clear is
-            timed against your best.
-          </span>
+          <span>{t('ui.storyMap.theAcademySLessons')}</span>
           {academy.lessons > 0 && (
             <span>
-              Academy time <strong>{formatTime(academy.seconds)}</strong> over {academy.lessons}{' '}
+              {t('ui.storyMap.academyTime')} <strong>{formatTime(academy.seconds)}</strong>{' '}
+              {t('ui.storyMap.over')} {academy.lessons}{' '}
               {academy.lessons === 1 ? 'lesson' : 'lessons'}
             </span>
           )}
@@ -235,7 +235,7 @@ export function StoryMap() {
             className="map"
             viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
             role="group"
-            aria-label="Map of the Academy grounds"
+            aria-label={t('ui.storyMap.mapOfTheAcademy')}
           >
             <defs>
               <radialGradient id="map-paper" cx="50%" cy="45%" r="75%">
@@ -331,7 +331,7 @@ export function StoryMap() {
                         stroke="#6b5636"
                         strokeWidth={1.5}
                       >
-                        <title>{`${medalOf(level) ?? ''} time medal`}</title>
+                        <title>{t('ui.storyMap.timeMedal', { v1: medalOf(level) ?? '' })}</title>
                       </circle>
                       <path d="M-4 0 L-1 3 L4 -3" fill="none" stroke="#3a2e22" strokeWidth={2} />
                     </g>
@@ -342,12 +342,12 @@ export function StoryMap() {
           </svg>
           <aside className="map-panel" aria-live="polite">
             <p className="eyebrow">
-              {selected.side ? 'Below' : `${chapter.label} · ${chapter.title}`}
+              {selected.side ? t('ui.storyMap.below') : `${chapter.label} · ${chapter.title}`}
             </p>
             <h2>
               {selected.side ? '' : `${selected.stage}. `}
               {locked && !selected.side && selected.stage > save.stage
-                ? 'A lesson not yet open'
+                ? t('ui.storyMap.aLessonNotYet')
                 : selected.name}
             </h2>
             {locked ? (
@@ -358,8 +358,11 @@ export function StoryMap() {
                 <OptionalTreasure level={selected} />
                 <p className="map-cleared">
                   {storyCleared(save, selected.id, difficulty)
-                    ? `Cleared${hard ? ' on Hard' : ''}. Best time ${formatTime(bestClearTime(save, selected.id, difficulty) ?? 0)}: play it again to beat it.`
-                    : 'Not cleared yet.'}
+                    ? t('ui.storyMap.clearedBestTimePlay', {
+                        v1: hard ? ' on Hard' : '',
+                        v2: formatTime(bestClearTime(save, selected.id, difficulty) ?? 0),
+                      })
+                    : t('ui.storyMap.notClearedYet')}
                 </p>
               </>
             )}
@@ -370,12 +373,14 @@ export function StoryMap() {
               onClick={() => startDay(selected.id, 'lessons')}
               autoFocus
             >
-              {selected.id === next.id && save.story.day > 0 ? 'Continue' : 'Play this day'}
+              {selected.id === next.id && save.story.day > 0
+                ? t('ui.storyMap.continue')
+                : t('ui.storyMap.playThisDay')}
             </button>
           </aside>
         </div>
         <details className="how-to" open={save.story.day === 0}>
-          <summary>Controls</summary>
+          <summary>{t('ui.storyMap.controls')}</summary>
           <Controls />
         </details>
       </div>

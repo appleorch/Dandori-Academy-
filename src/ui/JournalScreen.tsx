@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useGameStore } from '../game/core/gameStore';
 import { storyCleared, type SaveData } from '../game/save/saveManager';
 import { CHAPTERS, LESSON_STORY } from '../game/story/story';
@@ -21,24 +22,24 @@ export function JournalScreen() {
     <main className="screen">
       <div className="panel wide">
         <MenuNav />
-        <h1>Journal</h1>
+        <h1>{t('ui.journalScreen.journal')}</h1>
         <p>
-          {written} of {LEVELS.length} entries written. An entry is added each time a lesson is
-          cleared in Time Attack.
+          {written} {t('ui.journalScreen.of')} {LEVELS.length}{' '}
+          {t('ui.journalScreen.entriesWrittenAnEntry')}
         </p>
         <div className="button-row">
           <button type="button" className="secondary small" onClick={() => showStory('prologue')}>
-            Read the prologue
+            {t('ui.journalScreen.readThePrologue')}
           </button>
           {finished && (
             <button type="button" className="secondary small" onClick={() => showStory('epilogue')}>
-              Read the ending
+              {t('ui.journalScreen.readTheEnding')}
             </button>
           )}
         </div>
         {save.campaign.log.length > 0 && (
           <section className="warden-log">
-            <h2>The Warden’s log</h2>
+            <h2>{t('ui.journalScreen.theWardenSLog')}</h2>
             <ol reversed>
               {[...save.campaign.log].reverse().map((entry) => (
                 <li key={entry.day}>{entry.text}</li>
@@ -57,7 +58,8 @@ export function JournalScreen() {
           return (
             <section key={chapter.id} className="journal-chapter">
               <h2>
-                <small>{chapter.label}</small> {open ? chapter.title : 'Not yet reached'}
+                <small>{chapter.label}</small>{' '}
+                {open ? chapter.title : t('ui.journalScreen.notYetReached')}
               </h2>
               {open && <p className="chapter-intro">{chapter.intro}</p>}
               {open && (
@@ -68,7 +70,7 @@ export function JournalScreen() {
                       <span>
                         {passed(save, level.id)
                           ? LESSON_STORY[level.id]?.journal
-                          : 'This page is still blank.'}
+                          : t('ui.journalScreen.thisPageIsStill')}
                       </span>
                     </li>
                   ))}

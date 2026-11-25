@@ -163,12 +163,17 @@ function PracticePanel({ level }: { level: LevelDefinition }) {
   const [note, setNote] = useState<string | null>(null);
   const splits = save.bestSplits[splitKey(level.id, level.difficulty)] ?? [];
   if (practising) {
-    return <p className="note">Practice run from Sunshard {practising.shard}: nothing was kept.</p>;
+    return (
+      <p className="note">
+        {t('ui.resultsScreen.practiceRunFromSunshard')} {practising.shard}
+        {t('ui.resultsScreen.nothingWasKept')}
+      </p>
+    );
   }
   if (splits.length < 2) return null;
   return (
     <section className="practice">
-      <p className="eyebrow">Practice from your fastest clear</p>
+      <p className="eyebrow">{t('ui.resultsScreen.practiceFromYourFastest')}</p>
       <div className="button-row">
         {splits.slice(0, -1).map((time, i) => (
           <button
@@ -183,7 +188,7 @@ function PracticePanel({ level }: { level: LevelDefinition }) {
               })
             }
           >
-            After Sunshard {i + 1} ({formatTime(time)})
+            {t('ui.resultsScreen.afterSunshard')} {i + 1} ({formatTime(time)})
           </button>
         ))}
       </div>
@@ -204,7 +209,7 @@ function WatchReplayButton({ title }: { title: string }) {
         void getReplay(LAST_KEY).then((log) => (log ? watchReplay(log, title) : setMissing(true)))
       }
     >
-      {missing ? 'No replay kept' : 'Watch the replay'}
+      {missing ? t('ui.resultsScreen.noReplayKept') : t('ui.resultsScreen.watchTheReplay')}
     </button>
   );
 }
@@ -216,7 +221,7 @@ function Verdict({ text, happy }: { text: string; happy: boolean }) {
       <SprocketPortrait mood={happy ? 'cheer' : 'muse'} />
       <div>
         <blockquote>{text}</blockquote>
-        <figcaption>Headmaster Sprocket</figcaption>
+        <figcaption>{t('ui.resultsScreen.headmasterSprocket')}</figcaption>
       </div>
     </figure>
   );
@@ -234,36 +239,36 @@ function StoryBody({ result, level }: { result: DayResult; level: LevelDefinitio
   return (
     <>
       <h1 className={`rank stamp ${tally.cleared ? 'rank-gold' : 'rank-copper'}`}>
-        {tally.cleared ? 'Cleared' : 'Not yet'}
+        {tally.cleared ? t('ui.resultsScreen.cleared') : t('ui.resultsScreen.notYet')}
       </h1>
       <Verdict text={storyVerdict(tally.cleared, level.id)} happy={tally.cleared} />
       <table>
         <tbody>
           <CountRow
-            label="Sunshards"
+            label={t('ui.resultsScreen.sunshards')}
             value={`${tally.required.got} of ${tally.required.of}`}
             note="Every one must come home to clear the lesson"
           />
           {bonus.length > 0 && (
             <CountRow
-              label="Optional treasure"
+              label={t('ui.resultsScreen.optionalTreasure')}
               value={`${twins.got + dewglass.got + glowcaps.got} of ${twins.of + dewglass.of + glowcaps.of}`}
               note={bonus.join(' · ')}
             />
           )}
           <CountRow
-            label="Sproutlings"
+            label={t('ui.resultsScreen.sproutlings')}
             value={`${tally.sproutlings.alive} home`}
             note={`Started with ${tally.sproutlings.start}, grew ${tally.sproutlings.grown}, lost ${tally.sproutlings.lost}`}
           />
           <CountRow
-            label="Academy pace"
+            label={t('ui.resultsScreen.academyPace')}
             value={formatTime(level.platinumTime)}
             note={`The Academy’s test player clears it in this; ${formatTime(level.diamondTime)} is a record pace`}
           />
           {result.newRelics > 0 && (
             <CountRow
-              label="New relics"
+              label={t('ui.resultsScreen.newRelics')}
               value={String(result.newRelics)}
               note="Added to the Field Guide"
             />
@@ -276,26 +281,31 @@ function StoryBody({ result, level }: { result: DayResult; level: LevelDefinitio
             result.previousBest === null || result.clearTime < result.previousBest ? 'pb new' : 'pb'
           }
         >
-          Cleared in <strong>{formatTime(result.clearTime)}</strong>
+          {t('ui.resultsScreen.clearedIn')} <strong>{formatTime(result.clearTime)}</strong>
           {result.previousBest === null
-            ? ' · first clear'
+            ? ` ${t('ui.resultsScreen.firstClear')}`
             : result.clearTime < result.previousBest
-              ? ` · your fastest yet, ${(result.previousBest - result.clearTime).toFixed(1)}s faster`
-              : ` · fastest ${formatTime(result.previousBest)} (+${(result.clearTime - result.previousBest).toFixed(1)}s)`}
+              ? ` ${t('ui.resultsScreen.yourFastestYetS', {
+                  v1: (result.previousBest - result.clearTime).toFixed(1),
+                })}`
+              : ` ${t('ui.resultsScreen.fastestS', {
+                  v1: formatTime(result.previousBest),
+                  v2: (result.clearTime - result.previousBest).toFixed(1),
+                })}`}
         </p>
       )}
       {result.clearTime !== null && (
         <p className={`time-medal ${timeMedal(level, result.clearTime).toLowerCase()}`}>
-          Time medal: <strong>{timeMedal(level, result.clearTime)}</strong>
+          {t('ui.resultsScreen.timeMedal')} <strong>{timeMedal(level, result.clearTime)}</strong>
         </p>
       )}
       {result.clearTime !== null && result.splits.length > 1 && (
         <table className="splits">
           <thead>
             <tr>
-              <th scope="col">Sunshard</th>
-              <th scope="col">Today</th>
-              <th scope="col">Fastest before</th>
+              <th scope="col">{t('ui.resultsScreen.sunshard')}</th>
+              <th scope="col">{t('ui.resultsScreen.today')}</th>
+              <th scope="col">{t('ui.resultsScreen.fastestBefore')}</th>
             </tr>
           </thead>
           <tbody>
@@ -319,7 +329,8 @@ function StoryBody({ result, level }: { result: DayResult; level: LevelDefinitio
       )}
       {!tally.cleared && (
         <p className="day-stats">
-          Bring every Sunshard home to clear {level.name} and open the next lesson.
+          {t('ui.resultsScreen.bringEverySunshardHome')} {level.name}{' '}
+          {t('ui.resultsScreen.andOpenTheNext')}
         </p>
       )}
       <PracticePanel level={level} />
@@ -354,7 +365,7 @@ function ChallengeBody({ result, level }: { result: DayResult; level: LevelDefin
             />
           ))}
           <TallyRow
-            label="Total"
+            label={t('ui.resultsScreen.total')}
             note={
               challenge.ranked !== challenge.total
                 ? `The medal is judged on ${challenge.ranked}, Glowcaps aside`
@@ -367,33 +378,45 @@ function ChallengeBody({ result, level }: { result: DayResult; level: LevelDefin
         </tbody>
       </table>
       {challenge.perfectBloom && (
-        <p className="best">Perfect Bloom: every Sunshard home, not one Sproutling lost</p>
+        <p className="best">{t('ui.resultsScreen.perfectBloomEverySunshard')}</p>
       )}
-      <section className="next-rank" aria-label="How to do better">
+      <section className="next-rank" aria-label={t('ui.resultsScreen.howToDoBetter')}>
         <h2>
           {next ? (
             <>
-              Next: <span className={`rank-${next.rank.toLowerCase()}`}>{next.rank}</span>
+              {t('ui.resultsScreen.next')}{' '}
+              <span className={`rank-${next.rank.toLowerCase()}`}>{next.rank}</span>
             </>
           ) : (
-            'Top medal'
+            t('ui.resultsScreen.topMedal')
           )}
         </h2>
         <p>
           {next
-            ? `${next.rank} needs ${next.score} points${challenge.ranked < next.score ? `: ${next.score - challenge.ranked} more` : ''}${
-                (next.rank === 'Platinum' || next.rank === 'Diamond') && !challenge.gateMet && gate
-                  ? `. ${gate}`
-                  : ''
-              }${next.finishBy !== null ? `. A perfect day finishes by ${formatTime(next.finishBy)}.` : '.'}`
-            : 'Nothing above Diamond. Try the next lesson, or another challenge.'}
+            ? t('ui.resultsScreen.needsPoints', {
+                rank: next.rank,
+                score: next.score,
+                v3: challenge.ranked < next.score ? `: ${next.score - challenge.ranked} more` : '',
+                v4:
+                  (next.rank === 'Platinum' || next.rank === 'Diamond') &&
+                  !challenge.gateMet &&
+                  gate
+                    ? `. ${gate}`
+                    : '',
+                v5:
+                  next.finishBy !== null
+                    ? `. A perfect day finishes by ${formatTime(next.finishBy)}.`
+                    : '.',
+              })
+            : t('ui.resultsScreen.nothingAboveDiamondTry')}
         </p>
       </section>
       <p className="day-stats">
-        Day finished in {formatTime(result.elapsed)} · {result.workersAlive} Sproutlings home ·{' '}
-        {result.enemiesDefeated} {result.enemiesDefeated === 1 ? 'beast' : 'beasts'} defeated
+        {t('ui.resultsScreen.dayFinishedIn')} {formatTime(result.elapsed)} · {result.workersAlive}{' '}
+        {t('ui.resultsScreen.sproutlingsHome')} {result.enemiesDefeated}{' '}
+        {result.enemiesDefeated === 1 ? 'beast' : 'beasts'} {t('ui.resultsScreen.defeated')}
       </p>
-      {result.isBestScore && <p className="best">New best score</p>}
+      {result.isBestScore && <p className="best">{t('ui.resultsScreen.newBestScore')}</p>}
       {result.run && <BoardLine run={result.run} />}
     </>
   );
@@ -411,7 +434,7 @@ function BattleBody({ result, level }: { result: DayResult; level: LevelDefiniti
       <Verdict text={battleVerdict(battle.outcome, level.id)} happy={battle.outcome !== 'lost'} />
       <div className="race-final">
         <span>
-          You <strong>{battle.you}</strong>
+          {t('ui.resultsScreen.you')} <strong>{battle.you}</strong>
         </span>
         <span className="race-vs">{battle.unit}</span>
         <span>
@@ -420,7 +443,8 @@ function BattleBody({ result, level }: { result: DayResult; level: LevelDefiniti
       </div>
       <p className="day-stats">{battle.reason}</p>
       <p className="day-stats">
-        {formatTime(result.elapsed)} played · {result.workersAlive} Sproutlings home
+        {formatTime(result.elapsed)} {t('ui.resultsScreen.played')} {result.workersAlive}{' '}
+        {t('ui.resultsScreen.sproutlingsHome2')}
       </p>
     </>
   );
@@ -441,7 +465,9 @@ function CampaignBody({ result, level }: { result: DayResult; level: LevelDefini
   return (
     <>
       <h1 className="rank stamp story-stamp">
-        {report.finishedToday ? 'The Clock is whole' : `Day ${report.day}`}
+        {report.finishedToday
+          ? t('ui.resultsScreen.theClockIsWhole')
+          : t('ui.resultsScreen.day', { day: report.day })}
       </h1>
       {report.finishedToday && (
         <Verdict
@@ -452,55 +478,62 @@ function CampaignBody({ result, level }: { result: DayResult; level: LevelDefini
       <table>
         <tbody>
           <tr>
-            <th scope="row">Clock parts home</th>
+            <th scope="row">{t('ui.resultsScreen.clockPartsHome')}</th>
             <td>
-              {report.partsHome} of {report.partsTotal}
+              {report.partsHome} {t('ui.resultsScreen.of')} {report.partsTotal}
             </td>
           </tr>
           {report.newParts.map((id) => (
             <tr key={id} className="met">
-              <th scope="row">New: {relicFor(level.id, id).name}</th>
+              <th scope="row">
+                {t('ui.resultsScreen.new')} {relicFor(level.id, id).name}
+              </th>
               <td>✓</td>
             </tr>
           ))}
           {report.newGifts.map((ability) => (
             <tr key={ability} className="met">
               <th scope="row">
-                The Clock’s gift: {t(`gift.${ability}.name` as MessageKey)}.{' '}
+                {t('ui.resultsScreen.theClockSGift')} {t(`gift.${ability}.name` as MessageKey)}.{' '}
                 {t(`gift.${ability}.text` as MessageKey)}
               </th>
               <td>★</td>
             </tr>
           ))}
           <tr>
-            <th scope="row">Other relics found today</th>
+            <th scope="row">{t('ui.resultsScreen.otherRelicsFoundToday')}</th>
             <td>{report.relics}</td>
           </tr>
           <tr>
-            <th scope="row">Sproutlings home by sunset</th>
+            <th scope="row">{t('ui.resultsScreen.sproutlingsHomeBySunset')}</th>
             <td>{home}</td>
           </tr>
           {report.leftBehind > 0 && (
             <tr className="missed">
-              <th scope="row">Left out at sunset</th>
+              <th scope="row">{t('ui.resultsScreen.leftOutAtSunset')}</th>
               <td>−{report.leftBehind}</td>
             </tr>
           )}
           {report.lost > 0 && (
             <tr className="missed">
-              <th scope="row">Lost during the day</th>
+              <th scope="row">{t('ui.resultsScreen.lostDuringTheDay')}</th>
               <td>−{report.lost}</td>
             </tr>
           )}
           <tr>
-            <th scope="row">Grown today</th>
+            <th scope="row">{t('ui.resultsScreen.grownToday')}</th>
             <td>+{report.grown}</td>
           </tr>
         </tbody>
       </table>
-      {done.length > 0 && <p className="day-stats">{done.join(' · ')}. They stay that way.</p>}
+      {done.length > 0 && (
+        <p className="day-stats">
+          {done.join(' · ')}
+          {t('ui.resultsScreen.theyStayThatWay')}
+        </p>
+      )}
       <p className="day-stats">
-        The Kiln holds {stock} for tomorrow:{' '}
+        {t('ui.resultsScreen.theKilnHolds')} {stock} {t('ui.resultsScreen.forTomorrow')}{' '}
         {SPROUT_KINDS.filter((kind) => report.stock[kind] > 0)
           .map((kind) => `${report.stock[kind]} ${SPROUTS[kind].plural}`)
           .join(', ') || 'nobody'}
@@ -592,22 +625,32 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
           </p>
           {award && <MedalCeremony award={award} />}
           {body}
-          {result.bestChain >= 3 && <p className="day-stats">Longest chain: ×{result.bestChain}</p>}
-          {result.caveRelics > 0 && (
+          {result.bestChain >= 3 && (
             <p className="day-stats">
-              Relics brought up from below: {result.caveRelics} (added to the Field Guide)
+              {t('ui.resultsScreen.longestChain')}
+              {result.bestChain}
             </p>
           )}
-          {result.unlockedNext && next && <p className="best">Opened: {next.name}</p>}
+          {result.caveRelics > 0 && (
+            <p className="day-stats">
+              {t('ui.resultsScreen.relicsBroughtUpFrom')} {result.caveRelics}{' '}
+              {t('ui.resultsScreen.addedToTheField')}
+            </p>
+          )}
+          {result.unlockedNext && next && (
+            <p className="best">
+              {t('ui.resultsScreen.opened')} {next.name}
+            </p>
+          )}
           <div className="results-actions">
             {story && level.id === 'restoration-day' && result.tally.cleared && (
               <button type="button" onClick={() => showStory('epilogue')} data-primary>
-                Read the ending
+                {t('ui.resultsScreen.readTheEnding')}
               </button>
             )}
             {next && nextUnlocked && result.tally.cleared && (
               <button type="button" onClick={() => startDay(next.id, 'lessons')} data-primary>
-                Next lesson: {next.name}
+                {t('ui.resultsScreen.nextLesson')} {next.name}
               </button>
             )}
             {!online && (
@@ -618,10 +661,10 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
                 data-primary={!(next && nextUnlocked && result.tally.cleared) || undefined}
               >
                 {campaign
-                  ? `Start day ${(result.campaign?.day ?? 0) + 1}`
+                  ? t('ui.resultsScreen.startDay', { v1: (result.campaign?.day ?? 0) + 1 })
                   : result.battle
-                    ? 'Rematch'
-                    : 'Try again'}{' '}
+                    ? t('ui.resultsScreen.rematch')
+                    : t('ui.resultsScreen.tryAgain')}{' '}
                 <ActionPrompt action="restart" />
               </button>
             )}
@@ -631,27 +674,33 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
                 className="secondary"
                 onClick={() => startDay(below.id, 'lessons')}
               >
-                Go down to {below.name}
+                {t('ui.resultsScreen.goDownTo')} {below.name}
               </button>
             )}
             <button type="button" className="secondary" onClick={leaveDay}>
               {campaign
-                ? 'Base camp'
+                ? t('ui.resultsScreen.baseCamp')
                 : story
-                  ? 'Lesson map'
+                  ? t('ui.resultsScreen.lessonMap')
                   : result.battle
-                    ? 'All battles'
-                    : 'All challenges'}
+                    ? t('ui.resultsScreen.allBattles')
+                    : t('ui.resultsScreen.allChallenges')}
             </button>
           </div>
         </section>
         <section className="results-side">
           <DayGraphs timeline={result.timeline} />
           <ShareCardButton result={result} level={level} fieldName={level.name} />
-          {replayable(mode) && <WatchReplayButton title={`${level.name}, just now`} />}
+          {replayable(mode) && (
+            <WatchReplayButton title={t('ui.resultsScreen.justNow', { name: level.name })} />
+          )}
           {story && result.tally.cleared && LESSON_STORY[level.id] && (
             <blockquote className="journal-note">
-              <small>{result.firstClear ? 'New journal entry' : 'From the journal'}</small>
+              <small>
+                {result.firstClear
+                  ? t('ui.resultsScreen.newJournalEntry')
+                  : t('ui.resultsScreen.fromTheJournal')}
+              </small>
               {LESSON_STORY[level.id].journal}
             </blockquote>
           )}
@@ -659,8 +708,10 @@ export function ResultsScreen({ level }: { level: LevelDefinition }) {
             <div className="unlocks">
               <p className="eyebrow">
                 {result.achievements.length === 1
-                  ? 'Achievement unlocked'
-                  : `${result.achievements.length} achievements unlocked`}
+                  ? t('ui.resultsScreen.achievementUnlocked')
+                  : t('ui.resultsScreen.achievementsUnlocked', {
+                      length: result.achievements.length,
+                    })}
               </p>
               <ul>
                 {result.achievements.map((id) => {

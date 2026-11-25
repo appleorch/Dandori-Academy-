@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useEffect, useRef, useState } from 'react';
 import {
   ACTION_INFO,
@@ -169,11 +170,10 @@ export function ControlsSettings() {
 
   return (
     <section className="controls-settings" aria-labelledby="controls-heading">
-      <h3 id="controls-heading">Controls</h3>
+      <h3 id="controls-heading">{t('ui.controlsSettings.controls')}</h3>
       <p className="setting-note">
-        Choose a slot, then press the key, mouse button or gamepad button for it. Esc always pauses
-        and Menu on a pad always pauses, whatever else is bound.
-        {!padConnected && ' No gamepad found yet: press any button on one to wake it.'}
+        {t('ui.controlsSettings.chooseASlotThen')}
+        {!padConnected && ` ${t('ui.controlsSettings.noGamepadFoundYet')}`}
       </p>
       <p className="setting-note" role="status" aria-live="polite">
         {message}
@@ -181,14 +181,17 @@ export function ControlsSettings() {
       {(unbound.length > 0 || conflicts.length > 0) && (
         <ul className="binding-warnings">
           {unbound.map((action) => (
-            <li key={`unbound-${action}`}>No key or mouse button: {ACTION_INFO[action].label}</li>
+            <li key={`unbound-${action}`}>
+              {t('ui.controlsSettings.noKeyOrMouse')} {ACTION_INFO[action].label}
+            </li>
           ))}
           {conflicts.map((conflict) => (
             <li key={`conflict-${conflict.device}-${conflict.input}`}>
               {conflict.device === 'pad'
                 ? padName(conflict.input as number)
                 : keyName(conflict.input as string)}{' '}
-              does two things: {conflict.actions.map((a) => ACTION_INFO[a].label).join(' and ')}
+              {t('ui.controlsSettings.doesTwoThings')}{' '}
+              {conflict.actions.map((a) => ACTION_INFO[a].label).join(' and ')}
             </li>
           ))}
         </ul>
@@ -218,10 +221,18 @@ export function ControlsSettings() {
                         type="button"
                         className={waiting(action, slot) ? 'binding waiting' : 'binding'}
                         title={code ? keyName(code) : undefined}
-                        aria-label={`${ACTION_INFO[action].label}, ${slot === 0 ? 'first' : 'second'} key: ${code ? keyName(code) : 'none'}. Press to change.`}
+                        aria-label={t('ui.controlsSettings.keyPressToChange', {
+                          label: ACTION_INFO[action].label,
+                          v2: slot === 0 ? 'first' : 'second',
+                          v3: code ? keyName(code) : 'none',
+                        })}
                         onClick={() => start(action, slot)}
                       >
-                        {waiting(action, slot) ? 'Press…' : code ? keyName(code) : '—'}
+                        {waiting(action, slot)
+                          ? t('ui.controlsSettings.press')
+                          : code
+                            ? keyName(code)
+                            : '—'}
                       </button>
                     </td>
                   );
@@ -230,11 +241,14 @@ export function ControlsSettings() {
                   <button
                     type="button"
                     className={waiting(action, 'pad') ? 'binding pad waiting' : 'binding pad'}
-                    aria-label={`${ACTION_INFO[action].label}, gamepad: ${bindings.pad[action] !== null ? padName(bindings.pad[action]) : 'none'}. Press to change.`}
+                    aria-label={t('ui.controlsSettings.gamepadPressToChange', {
+                      label: ACTION_INFO[action].label,
+                      v2: bindings.pad[action] !== null ? padName(bindings.pad[action]) : 'none',
+                    })}
                     onClick={() => start(action, 'pad')}
                   >
                     {waiting(action, 'pad') ? (
-                      'Press…'
+                      t('ui.controlsSettings.press')
                     ) : bindings.pad[action] !== null ? (
                       <PadGlyph button={bindings.pad[action]} />
                     ) : (
@@ -247,10 +261,7 @@ export function ControlsSettings() {
           </tbody>
         ))}
       </table>
-      <p className="setting-note">
-        On a pad the left stick always moves and the right stick aims; in menus the D-pad or left
-        stick moves between buttons, A chooses and B goes back.
-      </p>
+      <p className="setting-note">{t('ui.controlsSettings.onAPadThe')}</p>
       <button
         type="button"
         className="secondary small"
@@ -260,7 +271,7 @@ export function ControlsSettings() {
           setMessage('Controls reset to the defaults.');
         }}
       >
-        Reset controls to the defaults
+        {t('ui.controlsSettings.resetControlsToThe')}
       </button>
     </section>
   );

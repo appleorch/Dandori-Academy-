@@ -35,19 +35,10 @@ describe('localisation', () => {
 
 /**
  * Screens moved onto the message tables. Any text written straight into their markup would
- * escape translation, so it is looked for here. Add a screen once it is converted.
+ * escape translation, so it is looked for here. Every screen is checked.
  */
-const CONVERTED = [
-  'src/ui/MainMenu.tsx',
-  'src/ui/MenuNav.tsx',
-  'src/ui/PauseMenu.tsx',
-  'src/ui/CampScreen.tsx',
-  'src/ui/ChallengeSelect.tsx',
-  'src/ui/CreditsScreen.tsx',
-  'src/ui/SaveRecoveryNotice.tsx',
-  'src/ui/ErrorLogPanel.tsx',
-  'src/ui/CanvasErrorBoundary.tsx',
-];
+/** Every screen but the developer's performance overlay, which stays in English. */
+const NOT_CONVERTED = new Set(['src/ui/PerfOverlay.tsx']);
 
 /** The screens' source text, read through Vite. */
 const SOURCES = import.meta.glob<string>('../ui/*.tsx', {
@@ -55,6 +46,10 @@ const SOURCES = import.meta.glob<string>('../ui/*.tsx', {
   import: 'default',
   eager: true,
 });
+
+const CONVERTED = Object.keys(SOURCES)
+  .map((path) => path.replace('../ui/', 'src/ui/'))
+  .filter((path) => !NOT_CONVERTED.has(path));
 
 describe('converted screens', () => {
   it.each(CONVERTED)('%s has no text written straight into its markup', (path) => {
@@ -64,7 +59,9 @@ describe('converted screens', () => {
     const literals = [...source.matchAll(/>\s*([^<>{}]*[A-Za-z]{2,}[^<>{}]*)\s*(?=[<{])/g)]
       .map((match) => match[1].trim())
       // Arrow functions and comparisons in code look like '>' too; markup text has no '=' or '('.
-      .filter((text) => text && !/[=();?$`]|=>|&&|\|\||^\w+ [-+*/] \w+$/.test(text));
+      .filter((text) => text && !/[=();?$`]|=>|&&|\|\||^\w+ [-+*/] \w+$/.test(text))
+      // Type arguments look like markup too: `new Set<string>()`, `Promise<void>[]`.
+      .filter((text) => !/^(new \w+|void\]|Promise)$/.test(text));
     expect(literals).toEqual([]);
   });
 });

@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { PHOTO_FILTERS, useGameStore, type PhotoFilter } from '../game/core/gameStore';
 
 const FILTER_NAMES: Record<PhotoFilter, string> = {
@@ -22,10 +23,10 @@ export function PhotoPanel() {
     <>
       <style>{`.game canvas { filter: ${PHOTO_FILTERS[photo.filter]}; }`}</style>
       {photo.depth && <div className="photo-depth" aria-hidden="true" />}
-      <div className="photo-panel" role="toolbar" aria-label="Photo mode">
-        <strong>Photo mode</strong>
+      <div className="photo-panel" role="toolbar" aria-label={t('ui.photoPanel.photoMode')}>
+        <strong>{t('ui.photoPanel.photoMode')}</strong>
         <label>
-          Filter{' '}
+          {t('ui.photoPanel.filter')}{' '}
           <select
             value={photo.filter}
             onChange={(event) => setPhoto({ ...photo, filter: event.target.value as PhotoFilter })}
@@ -43,7 +44,7 @@ export function PhotoPanel() {
             checked={photo.depth}
             onChange={(event) => setPhoto({ ...photo, depth: event.target.checked })}
           />{' '}
-          Depth of field
+          {t('ui.photoPanel.depthOfField')}
         </label>
         <label>
           <input
@@ -51,15 +52,15 @@ export function PhotoPanel() {
             checked={photo.cheer}
             onChange={(event) => setPhoto({ ...photo, cheer: event.target.checked })}
           />{' '}
-          Sproutlings cheer
+          {t('ui.photoPanel.sproutlingsCheer')}
         </label>
         <button type="button" className="chip" onClick={takePhoto}>
-          Save picture
+          {t('ui.photoPanel.savePicture')}
         </button>
         <button type="button" className="chip" onClick={() => setPhoto(null)}>
-          Back
+          {t('ui.photoPanel.back')}
         </button>
-        <small className="note">WASD or drag to move · Q/E to turn · wheel to zoom</small>
+        <small className="note">{t('ui.photoPanel.wasdOrDragTo')}</small>
       </div>
     </>
   );

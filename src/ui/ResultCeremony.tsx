@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useState } from 'react';
 import type { DayResult } from '../game/core/gameStore';
 import { timeMedal } from '../game/modes/timeAttack';
@@ -211,10 +212,10 @@ export function ShareCardButton({
   return (
     <button type="button" className="secondary small share-card" onClick={() => void share()}>
       {state === 'done'
-        ? 'Card saved'
+        ? t('ui.resultCeremony.cardSaved')
         : state === 'failed'
-          ? 'Could not make the card'
-          : 'Share a card'}
+          ? t('ui.resultCeremony.couldNotMakeThe')
+          : t('ui.resultCeremony.shareACard')}
     </button>
   );
 }

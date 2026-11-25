@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useMemo, useRef, useState } from 'react';
 import { ACESFilmicToneMapping, type Group } from 'three';
@@ -74,13 +75,13 @@ export function FieldGuide() {
     <main className="screen">
       <div className="panel wide">
         <MenuNav />
-        <h1>Field Guide</h1>
+        <h1>{t('ui.fieldGuide.fieldGuide')}</h1>
         <p>
-          The Relics of Harmony: lost things of the founders, each with a Sunshard set into it.
-          {` ${found.size} of ${RELICS.length} recovered.`}
+          {t('ui.fieldGuide.theRelicsOfHarmony')}
+          {` ${t('ui.fieldGuide.ofRecovered', { size: found.size, length: RELICS.length })}`}
         </p>
         <section className="sprout-guide relic-sets">
-          <h2>Relic sets</h2>
+          <h2>{t('ui.fieldGuide.relicSets')}</h2>
           <ul className="roster">
             {RELIC_SETS.map((relicSet) => {
               const got = setProgress(relicSet, found);
@@ -90,10 +91,12 @@ export function FieldGuide() {
                   className={got === relicSet.relics.length ? 'home' : undefined}
                 >
                   <strong>
-                    {relicSet.name} · {got} of {relicSet.relics.length}
+                    {relicSet.name} · {got} {t('ui.fieldGuide.of')} {relicSet.relics.length}
                   </strong>
                   <small>
-                    {got === relicSet.relics.length ? 'Complete! ' : 'Complete it for '}
+                    {got === relicSet.relics.length
+                      ? `${t('ui.fieldGuide.complete')} `
+                      : `${t('ui.fieldGuide.completeItFor')} `}
                     {relicSet.bonus}
                   </small>
                 </li>
@@ -103,20 +106,28 @@ export function FieldGuide() {
         </section>
         <SproutlingGuide />
         <section className="sprout-guide">
-          <h2>Beasts</h2>
+          <h2>{t('ui.fieldGuide.beasts')}</h2>
           <ul className="roster">
             {BESTIARY.map(({ kind, note, warden, sprocket }) =>
               beaten.has(kind) ? (
                 <li key={kind}>
                   <strong>{ENEMY_SPECS[kind].name}</strong>
                   <small>{note}</small>
-                  {warden && <small>Warden’s note: {warden}</small>}
-                  {sprocket && <small>The Headmaster adds: {sprocket}</small>}
+                  {warden && (
+                    <small>
+                      {t('ui.fieldGuide.wardenSNote')} {warden}
+                    </small>
+                  )}
+                  {sprocket && (
+                    <small>
+                      {t('ui.fieldGuide.theHeadmasterAdds')} {sprocket}
+                    </small>
+                  )}
                 </li>
               ) : (
                 <li key={kind} className="unknown">
                   <strong>{ENEMY_SPECS[kind].name}</strong>
-                  <small>Not yet beaten. Beat one to learn its ways.</small>
+                  <small>{t('ui.fieldGuide.notYetBeatenBeat')}</small>
                 </li>
               ),
             )}
@@ -134,7 +145,7 @@ export function FieldGuide() {
               </Canvas>
             </div>
             <figcaption>
-              <strong>{isFound ? chosen.name : 'Not yet recovered'}</strong>
+              <strong>{isFound ? chosen.name : t('ui.fieldGuide.notYetRecovered')}</strong>
               <span className="guide-material">
                 {isFound ? MATERIAL_NAMES[chosen.material] : '???'}
               </span>
@@ -142,16 +153,26 @@ export function FieldGuide() {
                 {isFound
                   ? chosen.description
                   : chosen.id.startsWith('set-')
-                    ? 'Turns up in the Escort fields and the daily challenge’s fields.'
+                    ? t('ui.fieldGuide.turnsUpInThe')
                     : chosen.id.startsWith('part-') || chosen.id.startsWith('secret-')
-                      ? 'Somewhere in the story’s grounds.'
-                      : `Somewhere in ${places.length > 0 ? places[0] : 'a lesson boss or mound'}.`}
+                      ? t('ui.fieldGuide.somewhereInTheStory')
+                      : t('ui.fieldGuide.somewhereIn', {
+                          v1: places.length > 0 ? places[0] : 'a lesson boss or mound',
+                        })}
               </p>
-              {isFound && places.length > 0 && <small>Found in: {places.join(', ')}</small>}
+              {isFound && places.length > 0 && (
+                <small>
+                  {t('ui.fieldGuide.foundIn')} {places.join(', ')}
+                </small>
+              )}
               {isFound && notes && (
                 <>
-                  <small>Warden’s note: {notes.warden}</small>
-                  <small>The Headmaster adds: {notes.sprocket}</small>
+                  <small>
+                    {t('ui.fieldGuide.wardenSNote')} {notes.warden}
+                  </small>
+                  <small>
+                    {t('ui.fieldGuide.theHeadmasterAdds')} {notes.sprocket}
+                  </small>
                 </>
               )}
             </figcaption>

@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useState, type ReactNode } from 'react';
 import { SPROUT_KINDS } from '../game/workers/sprouts';
 import { KindGlyph } from './KindGlyph';
@@ -132,7 +133,7 @@ export function Manual({ onClose }: { onClose: () => void }) {
   const page = MANUAL[at];
   return (
     <div className="manual">
-      <nav className="manual-pages" aria-label="Manual pages">
+      <nav className="manual-pages" aria-label={t('ui.manual.manualPages')}>
         {MANUAL.map((entry, i) => (
           <button
             key={entry.id}
@@ -174,7 +175,7 @@ export function Manual({ onClose }: { onClose: () => void }) {
           disabled={at === 0}
           onClick={() => setAt(at - 1)}
         >
-          ‹ Previous
+          {t('ui.manual.previous')}
         </button>
         <button
           type="button"
@@ -182,11 +183,11 @@ export function Manual({ onClose }: { onClose: () => void }) {
           disabled={at === MANUAL.length - 1}
           onClick={() => setAt(at + 1)}
         >
-          Next ›
+          {t('ui.manual.next')}
         </button>
       </div>
       <button type="button" onClick={onClose} autoFocus>
-        Back
+        {t('ui.manual.back')}
       </button>
     </div>
   );

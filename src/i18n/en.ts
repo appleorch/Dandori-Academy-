@@ -301,6 +301,415 @@ export const EN = {
   'credits.thanksBody':
     'To everyone who plays, posts a run to the Academy board, or files a bug report. And to the Sproutlings, who carried all of it.',
   'credits.version': 'Version {version}',
+  // AchievementsScreen (moved out of the JSX).
+  'ui.achievementsScreen.achievements': 'Achievements',
+  'ui.achievementsScreen.of': 'of',
+  'ui.achievementsScreen.earnedDaysPlayed': 'earned. Days played:',
+  'ui.achievementsScreen.sunshardsDelivered': '· Sunshards delivered:',
+  'ui.achievementsScreen.enemiesDefeated': '· Enemies defeated:',
+  'ui.achievementsScreen.earned': 'Earned',
+  'ui.achievementsScreen.progress': '{name} progress',
+  'ui.achievementsScreen.notEarnedYet': 'Not earned yet',
+
+  // BattleSelect (moved out of the JSX).
+  'ui.battleSelect.playOnline': 'Play online',
+  'ui.battleSelect.thisBrowserCannotPlay': 'This browser cannot play online.',
+  'ui.battleSelect.raceAFriendOn':
+    'Race a friend on another computer: one hosts and reads out the room code, the other joins with it. Nothing but your inputs is sent, straight between your two browsers.',
+  'ui.battleSelect.hostARoom': 'Host a room',
+  'ui.battleSelect.roomCode': 'Room code',
+  'ui.battleSelect.join': 'Join',
+  'ui.battleSelect.connectedPickTheRace':
+    'Connected. Pick the race above and a field below to start.',
+  'ui.battleSelect.connectedWaitingForThe':
+    'Connected. Waiting for the host to pick the race and field…',
+  'ui.battleSelect.roomCode2': 'Room code:',
+  'ui.battleSelect.cancel': 'Cancel',
+  'ui.battleSelect.battles': 'Battles',
+  'ui.battleSelect.battle': 'Battle',
+  'ui.battleSelect.battleDaysAreShort':
+    'Battle days are short. Ending the day early from the pause menu concedes.',
+  'ui.battleSelect.yourRecord': 'Your record:',
+  'ui.battleSelect.won': 'won,',
+  'ui.battleSelect.lost': 'lost,',
+  'ui.battleSelect.drawn': 'drawn.',
+  'ui.battleSelect.rival': 'Rival',
+  'ui.battleSelect.noLessonTimeAttack': 'No lesson Time Attack has opened suits this race yet.',
+  'ui.battleSelect.onTheClock': 'on the clock',
+
+  // Briefing (moved out of the JSX).
+  'ui.briefing.storyDay': 'Story · Day',
+  'ui.briefing.proctorAshwick': 'Proctor Ashwick',
+  'ui.briefing.clockPartsHome': 'Clock parts home:',
+  'ui.briefing.of': 'of',
+  'ui.briefing.relics': '· Relics:',
+  'ui.briefing.beastsBeaten': '· Beasts beaten:',
+  'ui.briefing.beginTheDay': 'Begin the day',
+  'ui.briefing.backToBaseCamp': 'Back to base camp',
+  'ui.briefing.hard': '· Hard',
+  'ui.briefing.back': 'Back',
+
+  // ControlsSettings (moved out of the JSX).
+  'ui.controlsSettings.controls': 'Controls',
+  'ui.controlsSettings.chooseASlotThen':
+    'Choose a slot, then press the key, mouse button or gamepad button for it. Esc always pauses and Menu on a pad always pauses, whatever else is bound.',
+  'ui.controlsSettings.noGamepadFoundYet':
+    'No gamepad found yet: press any button on one to wake it.',
+  'ui.controlsSettings.noKeyOrMouse': 'No key or mouse button:',
+  'ui.controlsSettings.doesTwoThings': 'does two things:',
+  'ui.controlsSettings.keyPressToChange': '{label}, {v2} key: {v3}. Press to change.',
+  'ui.controlsSettings.press': 'Press…',
+  'ui.controlsSettings.gamepadPressToChange': '{label}, gamepad: {v2}. Press to change.',
+  'ui.controlsSettings.onAPadThe':
+    'On a pad the left stick always moves and the right stick aims; in menus the D-pad or left stick moves between buttons, A chooses and B goes back.',
+  'ui.controlsSettings.resetControlsToThe': 'Reset controls to the defaults',
+
+  // DayGraphs (moved out of the JSX).
+  'ui.dayGraphs.fromTo': '{title}: from {v2} to {v3} {unit}',
+  'ui.dayGraphs.theDayAsIt': 'The day as it went',
+  'ui.dayGraphs.sproutlingsOnTheField': 'Sproutlings on the field',
+  'ui.dayGraphs.treasureHome': 'Treasure home',
+
+  // FieldGuide (moved out of the JSX).
+  'ui.fieldGuide.fieldGuide': 'Field Guide',
+  'ui.fieldGuide.theRelicsOfHarmony':
+    'The Relics of Harmony: lost things of the founders, each with a Sunshard set into it.',
+  'ui.fieldGuide.ofRecovered': '{size} of {length} recovered.',
+  'ui.fieldGuide.relicSets': 'Relic sets',
+  'ui.fieldGuide.of': 'of',
+  'ui.fieldGuide.complete': 'Complete!',
+  'ui.fieldGuide.completeItFor': 'Complete it for',
+  'ui.fieldGuide.beasts': 'Beasts',
+  'ui.fieldGuide.wardenSNote': 'Warden’s note:',
+  'ui.fieldGuide.theHeadmasterAdds': 'The Headmaster adds:',
+  'ui.fieldGuide.notYetBeatenBeat': 'Not yet beaten. Beat one to learn its ways.',
+  'ui.fieldGuide.notYetRecovered': 'Not yet recovered',
+  'ui.fieldGuide.turnsUpInThe': 'Turns up in the Escort fields and the daily challenge’s fields.',
+  'ui.fieldGuide.somewhereInTheStory': 'Somewhere in the story’s grounds.',
+  'ui.fieldGuide.somewhereIn': 'Somewhere in {v1}.',
+  'ui.fieldGuide.foundIn': 'Found in:',
+
+  // HudParts (moved out of the JSX).
+  'ui.hudParts.chooseAKind': 'Choose a kind',
+
+  // JournalScreen (moved out of the JSX).
+  'ui.journalScreen.journal': 'Journal',
+  'ui.journalScreen.of': 'of',
+  'ui.journalScreen.entriesWrittenAnEntry':
+    'entries written. An entry is added each time a lesson is cleared in Time Attack.',
+  'ui.journalScreen.readThePrologue': 'Read the prologue',
+  'ui.journalScreen.readTheEnding': 'Read the ending',
+  'ui.journalScreen.theWardenSLog': 'The Warden’s log',
+  'ui.journalScreen.notYetReached': 'Not yet reached',
+  'ui.journalScreen.thisPageIsStill': 'This page is still blank.',
+
+  // LeaderboardScreen (moved out of the JSX).
+  'ui.leaderboardScreen.watchYourBestRun': 'Watch your best run',
+  'ui.leaderboardScreen.watch': 'Watch',
+  'ui.leaderboardScreen.race': 'Race',
+  'ui.leaderboardScreen.leaderboard': 'Leaderboard',
+  'ui.leaderboardScreen.youOnTheBoard': 'You on the board',
+  'ui.leaderboardScreen.yourWardenName': 'Your Warden name',
+  'ui.leaderboardScreen.lettersDigitsSpacesAnd':
+    "Letters, digits, spaces and . _ ' - only, starting with a letter or digit.",
+  'ui.leaderboardScreen.postMyNewPersonal':
+    'Post my new personal bests to the Academy board automatically',
+  'ui.leaderboardScreen.shownAs': 'Shown as',
+  'ui.leaderboardScreen.waitingToPostThey':
+    '{length} waiting to post (they go as soon as the board can be reached).',
+  'ui.leaderboardScreen.waitingUntilPostingIs': '{length} waiting until posting is turned back on.',
+  'ui.leaderboardScreen.nothingWaitingToPost': 'Nothing waiting to post.',
+  'ui.leaderboardScreen.board': 'Board',
+  'ui.leaderboardScreen.classicKeepsTheRuns':
+    'Classic keeps the runs from before the challenges, when lesson days were scored. It is closed to new runs.',
+  'ui.leaderboardScreen.eachLessonHasIts':
+    'Each lesson has its own board for each difficulty, ranked by clear time.',
+  'ui.leaderboardScreen.eachFieldHasIts':
+    'Each field has its own board. Runs from 0.18.0, when challenges were played on the lessons, stay on their lessons’ boards, closed to new runs.',
+  'ui.leaderboardScreen.lesson': 'Lesson',
+  'ui.leaderboardScreen.field': 'Field',
+  'ui.leaderboardScreen.fields': '{v1} fields',
+  'ui.leaderboardScreen.lessons': 'Lessons',
+  'ui.leaderboardScreen.lessonsClosed': 'Lessons (0.18.0, closed)',
+  'ui.leaderboardScreen.below': 'Below. {name}',
+  'ui.leaderboardScreen.players': 'Players',
+  'ui.leaderboardScreen.coOp': 'Co-op',
+  'ui.leaderboardScreen.solo': 'Solo',
+  'ui.leaderboardScreen.difficulty': 'Difficulty',
+  'ui.leaderboardScreen.hard': 'Hard',
+  'ui.leaderboardScreen.normal': 'Normal',
+  'ui.leaderboardScreen.board2': 'board',
+  'ui.leaderboardScreen.readingTheBoard': 'Reading the board…',
+  'ui.leaderboardScreen.yourOwnRunsBelow':
+    'Your own runs below are kept on this device either way.',
+  'ui.leaderboardScreen.noRunsOnThis': 'No runs on this field yet. Be the first.',
+  'ui.leaderboardScreen.noRunsFromOn': 'No runs from 0.18.0 on this lesson.',
+  'ui.leaderboardScreen.isNotOfferedOn': '{v1} is not offered on this lesson.',
+  'ui.leaderboardScreen.warden': 'Warden',
+  'ui.leaderboardScreen.clear': 'Clear',
+  'ui.leaderboardScreen.score': 'Score',
+  'ui.leaderboardScreen.medal': 'Medal',
+  'ui.leaderboardScreen.rank': 'Rank',
+  'ui.leaderboardScreen.time': 'Time',
+  'ui.leaderboardScreen.lost': 'Lost',
+  'ui.leaderboardScreen.replay': 'Replay',
+  'ui.leaderboardScreen.tellsWardensWithThe': 'Tells Wardens with the same name apart',
+  'ui.leaderboardScreen.verifiedTheBoardReplayed':
+    'Verified: the board replayed this run and got the same result',
+  'ui.leaderboardScreen.partOfTheBoard':
+    'Part of the board could not be read just now; it may be missing the newest runs.',
+  'ui.leaderboardScreen.refresh': 'Refresh',
+  'ui.leaderboardScreen.justNow': 'Just now',
+  'ui.leaderboardScreen.minAgo': '{age} min ago',
+  'ui.leaderboardScreen.yourBestRuns': 'Your best runs',
+  'ui.leaderboardScreen.noRunsFromBefore': 'No runs from before the challenges on this lesson.',
+  'ui.leaderboardScreen.clearThisLessonIn':
+    'Clear this lesson in Time Attack and your fastest clears are kept here.',
+  'ui.leaderboardScreen.playOnThisLesson': 'Play {v1} on this lesson and your runs are kept here.',
+  'ui.leaderboardScreen.played': 'Played',
+  'ui.leaderboardScreen.postThisBestTo': 'Post this best to the board',
+  'ui.leaderboardScreen.post': 'Post',
+  'ui.leaderboardScreen.eachChallengeAndTime':
+    "Each challenge and Time Attack keeps its own board, and it never resets. Each new personal best is posted by itself to the Academy's board server, with your Warden name and a random player id and nothing else. The server checks every run against the lesson's own rules and keeps the best run per Warden per lesson, so new runs show here at once. Runs from an older version of a lesson are left off.",
+
+  // Manual (moved out of the JSX).
+  'ui.manual.manualPages': 'Manual pages',
+  'ui.manual.previous': '‹ Previous',
+  'ui.manual.next': 'Next ›',
+  'ui.manual.back': 'Back',
+
+  // ModeTargets (moved out of the JSX).
+  'ui.modeTargets.against': 'against',
+  'ui.modeTargets.medals': 'Medals',
+  'ui.modeTargets.medal': 'Medal',
+  'ui.modeTargets.score': 'Score',
+  'ui.modeTargets.pace': 'Pace',
+  'ui.modeTargets.needs': 'Needs',
+  'ui.modeTargets.doneByLeft': 'Done by {v1} ({v2} left)',
+  'ui.modeTargets.pacesAssumeAPerfect': 'Paces assume a perfect day otherwise.',
+  'ui.modeTargets.glowcapsAddToYour': 'Glowcaps add to your score but never count for a medal.',
+
+  // PhotoPanel (moved out of the JSX).
+  'ui.photoPanel.photoMode': 'Photo mode',
+  'ui.photoPanel.filter': 'Filter',
+  'ui.photoPanel.depthOfField': 'Depth of field',
+  'ui.photoPanel.sproutlingsCheer': 'Sproutlings cheer',
+  'ui.photoPanel.savePicture': 'Save picture',
+  'ui.photoPanel.back': 'Back',
+  'ui.photoPanel.wasdOrDragTo': 'WASD or drag to move · Q/E to turn · wheel to zoom',
+
+  // Portrait (moved out of the JSX).
+  'ui.portrait.proctorAshwick': 'Proctor Ashwick',
+  'ui.portrait.tindleTheEmberling': 'Tindle the Emberling',
+  'ui.portrait.headmasterSprocket': 'Headmaster Sprocket',
+  'ui.portrait.wardenQuill': 'Warden Quill',
+
+  // RacePanel (moved out of the JSX).
+  'ui.racePanel.theRace': 'The race',
+  'ui.racePanel.you': 'You',
+  'ui.racePanel.bestLineYou': 'Best line: you {youLine}/{v2}, {rivalName} {rivalLine}/{v5}',
+  'ui.racePanel.yourBingoCard': 'Your bingo card',
+
+  // ResultCeremony (moved out of the JSX).
+  'ui.resultCeremony.cardSaved': 'Card saved',
+  'ui.resultCeremony.couldNotMakeThe': 'Could not make the card',
+  'ui.resultCeremony.shareACard': 'Share a card',
+
+  // ResultsScreen (moved out of the JSX).
+  'ui.resultsScreen.practiceRunFromSunshard': 'Practice run from Sunshard',
+  'ui.resultsScreen.nothingWasKept': ': nothing was kept.',
+  'ui.resultsScreen.practiceFromYourFastest': 'Practice from your fastest clear',
+  'ui.resultsScreen.afterSunshard': 'After Sunshard',
+  'ui.resultsScreen.noReplayKept': 'No replay kept',
+  'ui.resultsScreen.watchTheReplay': 'Watch the replay',
+  'ui.resultsScreen.headmasterSprocket': 'Headmaster Sprocket',
+  'ui.resultsScreen.cleared': 'Cleared',
+  'ui.resultsScreen.notYet': 'Not yet',
+  'ui.resultsScreen.sunshards': 'Sunshards',
+  'ui.resultsScreen.optionalTreasure': 'Optional treasure',
+  'ui.resultsScreen.sproutlings': 'Sproutlings',
+  'ui.resultsScreen.academyPace': 'Academy pace',
+  'ui.resultsScreen.newRelics': 'New relics',
+  'ui.resultsScreen.clearedIn': 'Cleared in',
+  'ui.resultsScreen.firstClear': '· first clear',
+  'ui.resultsScreen.yourFastestYetS': '· your fastest yet, {v1}s faster',
+  'ui.resultsScreen.fastestS': '· fastest {v1} (+{v2}s)',
+  'ui.resultsScreen.timeMedal': 'Time medal:',
+  'ui.resultsScreen.sunshard': 'Sunshard',
+  'ui.resultsScreen.today': 'Today',
+  'ui.resultsScreen.fastestBefore': 'Fastest before',
+  'ui.resultsScreen.bringEverySunshardHome': 'Bring every Sunshard home to clear',
+  'ui.resultsScreen.andOpenTheNext': 'and open the next lesson.',
+  'ui.resultsScreen.total': 'Total',
+  'ui.resultsScreen.perfectBloomEverySunshard':
+    'Perfect Bloom: every Sunshard home, not one Sproutling lost',
+  'ui.resultsScreen.howToDoBetter': 'How to do better',
+  'ui.resultsScreen.topMedal': 'Top medal',
+  'ui.resultsScreen.next': 'Next:',
+  'ui.resultsScreen.needsPoints': '{rank} needs {score} points{v3}{v4}{v5}',
+  'ui.resultsScreen.nothingAboveDiamondTry':
+    'Nothing above Diamond. Try the next lesson, or another challenge.',
+  'ui.resultsScreen.dayFinishedIn': 'Day finished in',
+  'ui.resultsScreen.sproutlingsHome': 'Sproutlings home ·',
+  'ui.resultsScreen.defeated': 'defeated',
+  'ui.resultsScreen.newBestScore': 'New best score',
+  'ui.resultsScreen.you': 'You',
+  'ui.resultsScreen.played': 'played ·',
+  'ui.resultsScreen.sproutlingsHome2': 'Sproutlings home',
+  'ui.resultsScreen.theClockIsWhole': 'The Clock is whole',
+  'ui.resultsScreen.day': 'Day {day}',
+  'ui.resultsScreen.clockPartsHome': 'Clock parts home',
+  'ui.resultsScreen.of': 'of',
+  'ui.resultsScreen.new': 'New:',
+  'ui.resultsScreen.theClockSGift': 'The Clock’s gift:',
+  'ui.resultsScreen.otherRelicsFoundToday': 'Other relics found today',
+  'ui.resultsScreen.sproutlingsHomeBySunset': 'Sproutlings home by sunset',
+  'ui.resultsScreen.leftOutAtSunset': 'Left out at sunset',
+  'ui.resultsScreen.lostDuringTheDay': 'Lost during the day',
+  'ui.resultsScreen.grownToday': 'Grown today',
+  'ui.resultsScreen.theyStayThatWay': '. They stay that way.',
+  'ui.resultsScreen.theKilnHolds': 'The Kiln holds',
+  'ui.resultsScreen.forTomorrow': 'for tomorrow:',
+  'ui.resultsScreen.longestChain': 'Longest chain: ×',
+  'ui.resultsScreen.relicsBroughtUpFrom': 'Relics brought up from below:',
+  'ui.resultsScreen.addedToTheField': '(added to the Field Guide)',
+  'ui.resultsScreen.opened': 'Opened:',
+  'ui.resultsScreen.readTheEnding': 'Read the ending',
+  'ui.resultsScreen.nextLesson': 'Next lesson:',
+  'ui.resultsScreen.startDay': 'Start day {v1}',
+  'ui.resultsScreen.rematch': 'Rematch',
+  'ui.resultsScreen.tryAgain': 'Try again',
+  'ui.resultsScreen.goDownTo': 'Go down to',
+  'ui.resultsScreen.baseCamp': 'Base camp',
+  'ui.resultsScreen.lessonMap': 'Lesson map',
+  'ui.resultsScreen.allBattles': 'All battles',
+  'ui.resultsScreen.allChallenges': 'All challenges',
+  'ui.resultsScreen.justNow': '{name}, just now',
+  'ui.resultsScreen.newJournalEntry': 'New journal entry',
+  'ui.resultsScreen.fromTheJournal': 'From the journal',
+  'ui.resultsScreen.achievementUnlocked': 'Achievement unlocked',
+  'ui.resultsScreen.achievementsUnlocked': '{length} achievements unlocked',
+
+  // SaveFilePanel (moved out of the JSX).
+  'ui.saveFilePanel.saveFile': 'Save file',
+  'ui.saveFilePanel.progressSavesInThis':
+    'Progress saves in this browser after every day. Download it as a',
+  'ui.saveFilePanel.fileToKeepA':
+    'file to keep a backup or move it to another computer. Save files are sealed: one that has been edited is refused.',
+  'ui.saveFilePanel.currentProgress': 'Current progress:',
+  'ui.saveFilePanel.downloadSaveFile': 'Download save file',
+  'ui.saveFilePanel.loadSaveFile': 'Load save file…',
+  'ui.saveFilePanel.loadItHasThis':
+    'Load {fileName}? It has {v2}. This replaces your current progress.',
+  'ui.saveFilePanel.eraseAllProgressLessons':
+    'Erase all progress? Lessons, ranks, scores and achievements will be reset. Download a save file first if you might want them back.',
+  'ui.saveFilePanel.loadThisSave': 'Load this save',
+  'ui.saveFilePanel.eraseProgress': 'Erase progress',
+  'ui.saveFilePanel.cancel': 'Cancel',
+  'ui.saveFilePanel.eraseAllProgress': 'Erase all progress…',
+
+  // SettingsPanel (moved out of the JSX).
+  'ui.settingsPanel.settings': 'Settings',
+  'ui.settingsPanel.pictureAndSound': 'Picture and sound',
+  'ui.settingsPanel.graphics': 'Graphics',
+  'ui.settingsPanel.playing': 'Playing',
+  'ui.settingsPanel.accessibilityAndComfort': 'Accessibility and comfort',
+  'ui.settingsPanel.colours': 'Colours',
+  'ui.settingsPanel.gold': 'Gold',
+  'ui.settingsPanel.silver': 'Silver',
+  'ui.settingsPanel.bronze': 'Bronze',
+  'ui.settingsPanel.restoreDefaultSettings': 'Restore default settings',
+
+  // SquadRoster (moved out of the JSX).
+  'ui.squadRoster.todaySSquad': "Today's squad",
+  'ui.squadRoster.grownFromSeedPods': 'Grown from seed pods today.',
+  'ui.squadRoster.theSproutlings': 'The Sproutlings',
+  'ui.squadRoster.theKilnGrowsFour':
+    'The Kiln grows four kinds. A seed pod grows its own kind; anything else grows whichever kind carried it home.',
+  'ui.squadRoster.required': 'Required:',
+  'ui.squadRoster.sunshardsEveryOneHome': 'Sunshards, every one home to clear the lesson.',
+  'ui.squadRoster.twinPairs': 'Twin pairs:',
+  'ui.squadRoster.onePair': 'one pair',
+  'ui.squadRoster.pairs': '{length} pairs',
+  'ui.squadRoster.ofSunshardsEachPair':
+    'of Sunshards, each pair marked by its own colour, shape and letter:',
+  'ui.squadRoster.bringTheSecondHalf': '. Bring the second half of a pair home within',
+  'ui.squadRoster.secondsOfTheFirst':
+    'seconds of the first for a bonus; a countdown shows once the first is in.',
+  'ui.squadRoster.dewglass': 'Dewglass:',
+  'ui.squadRoster.fragile': 'fragile',
+  'ui.squadRoster.worthMoreIfHome': ', worth more if home without a crack.',
+  'ui.squadRoster.glowcaps': 'Glowcaps:',
+  'ui.squadRoster.laterInTheDay':
+    'later in the day and wilt if left. Extra points in the challenges, never needed for a medal.',
+
+  // StoryMap (moved out of the JSX).
+  'ui.storyMap.theAcademy': 'The Academy',
+  'ui.storyMap.timeAttack': 'Time Attack',
+  'ui.storyMap.difficulty': 'Difficulty',
+  'ui.storyMap.hard': 'Hard',
+  'ui.storyMap.normal': 'Normal',
+  'ui.storyMap.of': 'of',
+  'ui.storyMap.lessonsCleared': 'lessons cleared',
+  'ui.storyMap.theAcademySLessons':
+    'The Academy’s lessons in order. Bring every Sunshard home to clear one; every clear is timed against your best.',
+  'ui.storyMap.academyTime': 'Academy time',
+  'ui.storyMap.over': 'over',
+  'ui.storyMap.mapOfTheAcademy': 'Map of the Academy grounds',
+  'ui.storyMap.timeMedal': '{v1} time medal',
+  'ui.storyMap.below': 'Below',
+  'ui.storyMap.aLessonNotYet': 'A lesson not yet open',
+  'ui.storyMap.clearedBestTimePlay': 'Cleared{v1}. Best time {v2}: play it again to beat it.',
+  'ui.storyMap.notClearedYet': 'Not cleared yet.',
+  'ui.storyMap.continue': 'Continue',
+  'ui.storyMap.playThisDay': 'Play this day',
+  'ui.storyMap.controls': 'Controls',
+
+  // StoryScreen (moved out of the JSX).
+  'ui.storyScreen.dandoriAcademy': 'Dandori Academy',
+  'ui.storyScreen.epilogue': 'Epilogue',
+  'ui.storyScreen.theFireIsLow': 'The fire is low',
+  'ui.storyScreen.bothFiresBurning': 'Both fires burning',
+  'ui.storyScreen.pageOf': 'Page {v1} of {length}',
+  'ui.storyScreen.toTheAcademy': 'To the Academy',
+  'ui.storyScreen.closeTheBook': 'Close the book',
+  'ui.storyScreen.next': 'Next',
+  'ui.storyScreen.skip': 'Skip',
+
+  // SyncPanel (moved out of the JSX).
+  'ui.syncPanel.syncToAFile': 'Sync to a file',
+  'ui.syncPanel.chooseAFileAnd':
+    'Choose a file and your progress is written to it as you play. Keep it in a folder a cloud drive syncs to carry your save between computers. Nothing goes to any server of ours.',
+  'ui.syncPanel.syncingTo': 'Syncing to',
+  'ui.syncPanel.loadFromTheFile': 'Load from the file',
+  'ui.syncPanel.stopSyncing': 'Stop syncing',
+  'ui.syncPanel.resumeSyncingTo': 'Resume syncing to',
+  'ui.syncPanel.chooseAFile': 'Choose a file',
+
+  // TouchControls (moved out of the JSX).
+  'ui.touchControls.moveJoystick': 'Move joystick',
+  'ui.touchControls.fastForward': 'Fast forward',
+  'ui.touchControls.tacticalView': 'Tactical view',
+  'ui.touchControls.map': 'Map',
+  'ui.touchControls.dismiss': 'Dismiss',
+  'ui.touchControls.nextKindOfSproutling': 'Next kind of Sproutling',
+  'ui.touchControls.kind': 'Kind',
+  'ui.touchControls.charge': 'Charge',
+  'ui.touchControls.whistle': 'Whistle',
+  'ui.touchControls.dragToAim': 'drag to aim',
+
+  // VersionInfo (moved out of the JSX).
+  'ui.versionInfo.version': 'Version',
+  'ui.versionInfo.released': 'Released',
+  'ui.versionInfo.revisionHistory': 'Revision history',
+
+  // Wardrobe (moved out of the JSX).
+  'ui.wardrobe.wardrobe': 'Wardrobe',
+  'ui.wardrobe.of': 'of',
+  'ui.wardrobe.earned': 'earned',
+  'ui.wardrobe.locked': 'Locked',
+  'ui.wardrobe.wearing': 'Wearing',
+  'ui.wardrobe.wear': 'Wear',
 } as const;
 
 export type MessageKey = keyof typeof EN;

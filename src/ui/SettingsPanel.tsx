@@ -245,12 +245,12 @@ export function SettingsPanel() {
 
   return (
     <section className="settings" aria-labelledby="settings-heading">
-      <h2 id="settings-heading">Settings</h2>
+      <h2 id="settings-heading">{t('ui.settingsPanel.settings')}</h2>
 
-      <h3>Picture and sound</h3>
+      <h3>{t('ui.settingsPanel.pictureAndSound')}</h3>
       <div className="setting">
         <span className="setting-text">
-          <strong id="graphics-label">Graphics</strong>
+          <strong id="graphics-label">{t('ui.settingsPanel.graphics')}</strong>
           <small>{GRAPHICS_HINTS[settings.graphics]}</small>
         </span>
         <span className="segmented" role="radiogroup" aria-labelledby="graphics-label">
@@ -292,25 +292,25 @@ export function SettingsPanel() {
         </span>
       </div>
 
-      <h3>Playing</h3>
+      <h3>{t('ui.settingsPanel.playing')}</h3>
       {PLAY_TOGGLES.map((toggle) => (
         <ToggleRow key={toggle[0]} toggle={toggle} />
       ))}
       <RangeRow range={ZOOM_RANGE} />
 
-      <h3>Accessibility and comfort</h3>
+      <h3>{t('ui.settingsPanel.accessibilityAndComfort')}</h3>
       <div className="setting">
         <span className="setting-text">
-          <strong id="palette-label">Colours</strong>
+          <strong id="palette-label">{t('ui.settingsPanel.colours')}</strong>
           <small>{PALETTE_HINTS[settings.palette]}</small>
           <span className="palette-preview" aria-hidden="true">
             {SPROUT_KINDS.map((kind) => (
               <KindGlyph key={kind} kind={kind} />
             ))}
             <span className="swatch danger" />
-            <span className="rank-gold">Gold</span>
-            <span className="rank-silver">Silver</span>
-            <span className="rank-bronze">Bronze</span>
+            <span className="rank-gold">{t('ui.settingsPanel.gold')}</span>
+            <span className="rank-silver">{t('ui.settingsPanel.silver')}</span>
+            <span className="rank-bronze">{t('ui.settingsPanel.bronze')}</span>
           </span>
         </span>
         <span className="segmented" role="radiogroup" aria-labelledby="palette-label">
@@ -344,7 +344,7 @@ export function SettingsPanel() {
           updateSettings({ ...DEFAULT_SETTINGS, ...kept });
         }}
       >
-        Restore default settings
+        {t('ui.settingsPanel.restoreDefaultSettings')}
       </button>
     </section>
   );

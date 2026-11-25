@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useGameStore } from '../game/core/gameStore';
 import { chapterOf, LESSON_STORY } from '../game/story/story';
 import type { LevelDefinition } from '../game/world/level';
@@ -30,29 +31,33 @@ export function Briefing({ level }: { level: LevelDefinition }) {
     return (
       <div className="screen overlay briefing">
         <div className="panel" role="dialog" aria-labelledby="briefing-title">
-          <p className="eyebrow">Story · Day {campaign.day + 1}</p>
+          <p className="eyebrow">
+            {t('ui.briefing.storyDay')} {campaign.day + 1}
+          </p>
           <h1 id="briefing-title">{section.name}</h1>
           {campaign.day === 0 && (
             <figure className="speech">
               <AshwickPortrait />
               <div>
                 <blockquote>{CAMPAIGN_INTRO}</blockquote>
-                <figcaption>Proctor Ashwick</figcaption>
+                <figcaption>{t('ui.briefing.proctorAshwick')}</figcaption>
               </div>
             </figure>
           )}
           <p className="brief">{section.brief}</p>
           <p className="day-stats">
-            Clock parts home: {progress.parts} of {progress.partsTotal} · Relics: {progress.relics}{' '}
-            of {progress.relicsTotal} · Beasts beaten: {progress.beasts} of {progress.beastsTotal}
+            {t('ui.briefing.clockPartsHome')} {progress.parts} {t('ui.briefing.of')}{' '}
+            {progress.partsTotal} {t('ui.briefing.relics')} {progress.relics} {t('ui.briefing.of')}{' '}
+            {progress.relicsTotal} {t('ui.briefing.beastsBeaten')} {progress.beasts}{' '}
+            {t('ui.briefing.of')} {progress.beastsTotal}
           </p>
           <SquadRoster level={level} />
           <ModeTargets level={level} mode={mode} />
           <button type="button" onClick={beginDay} autoFocus>
-            Begin the day <MenuPrompt keyName="Enter" button={PAD.a} />
+            {t('ui.briefing.beginTheDay')} <MenuPrompt keyName="Enter" button={PAD.a} />
           </button>
           <button type="button" className="secondary" onClick={leaveDay}>
-            Back to base camp
+            {t('ui.briefing.backToBaseCamp')}
           </button>
         </div>
       </div>
@@ -64,7 +69,7 @@ export function Briefing({ level }: { level: LevelDefinition }) {
       <div className="panel" role="dialog" aria-labelledby="briefing-title">
         <p className="eyebrow">
           {mode === 'lessons' ? `${chapter.label} · ${chapter.title}` : MODES[mode].name}
-          {level.difficulty === 'hard' ? ' · Hard' : ''}
+          {level.difficulty === 'hard' ? ` ${t('ui.briefing.hard')}` : ''}
         </p>
         <h1 id="briefing-title">{fieldTitle(level)}</h1>
         {story && (
@@ -72,7 +77,7 @@ export function Briefing({ level }: { level: LevelDefinition }) {
             <AshwickPortrait />
             <div>
               <blockquote>{story.briefing}</blockquote>
-              <figcaption>Proctor Ashwick</figcaption>
+              <figcaption>{t('ui.briefing.proctorAshwick')}</figcaption>
             </div>
           </figure>
         )}
@@ -81,10 +86,10 @@ export function Briefing({ level }: { level: LevelDefinition }) {
         <SquadRoster level={level} />
         <ModeTargets level={level} mode={mode} rival={rival} />
         <button type="button" onClick={beginDay} autoFocus>
-          Begin the day <MenuPrompt keyName="Enter" button={PAD.a} />
+          {t('ui.briefing.beginTheDay')} <MenuPrompt keyName="Enter" button={PAD.a} />
         </button>
         <button type="button" className="secondary" onClick={leaveDay}>
-          Back
+          {t('ui.briefing.back')}
         </button>
       </div>
     </div>

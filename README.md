@@ -66,13 +66,12 @@ fails on any plain English left on the converted screens, and a unit test scans 
 text written in directly. To add a language, add it to `LOCALES` with a message table for every
 key and, optionally, a content table.
 
-Converted so far: the main menu and its tabs, the pause menu, the story's base camp, the challenge
-list, the credits, and the save, error and loading notices. Still to move onto the tables (each is
-plain English in its markup today): the briefing, HUD, results, Time Attack map, battle list,
-journal, Field Guide, achievements, leaderboard, settings and controls pages, wardrobe, revision
-history, squad roster, mode targets, touch controls, race panel and prologue; and the game text
-in `src/game/story/` (story pages, coach and Headmaster lines, relic descriptions), the lesson and
-challenge-field briefs where they are shown, rank names and achievement text.
+Every screen's markup is on the tables: its text, labels, tooltips, placeholders and the strings
+it shows directly were moved by an AST codemod into `ui.<screen>.*` keys, and the markup scan
+now covers every screen (only the developer's performance overlay stays in English). Still
+English: strings put together in code away from the markup (a few status lines, the leaderboard's
+time column, popups over the field), and the game text in `src/game/story/` (story pages, coach
+and Headmaster lines, relic descriptions), achievement text and rank names.
 
 **Art direction.** `docs-design/ART_DIRECTION.md` is the reference for the look: a garden seen at
 insect scale (a Sproutling is about two centimetres tall), full of giant everyday objects. Walls can

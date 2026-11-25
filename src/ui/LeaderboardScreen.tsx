@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DIFFICULTIES, type Difficulty } from '../game/core/difficulty';
 import { useGameStore } from '../game/core/gameStore';
@@ -50,7 +51,7 @@ function WatchBest({
       className="secondary small"
       onClick={() => watchReplay(log, `Your best on ${title}`)}
     >
-      Watch your best run
+      {t('ui.leaderboardScreen.watchYourBestRun')}
     </button>
   );
 }
@@ -87,7 +88,7 @@ function RunReplayButtons({
         disabled={busy === 'Fetching…'}
         onClick={() => void withLog((log) => watchReplay(log, title))}
       >
-        Watch
+        {t('ui.leaderboardScreen.watch')}
       </button>
       {entry.mode && (
         <button
@@ -113,7 +114,7 @@ function RunReplayButtons({
             })
           }
         >
-          Race
+          {t('ui.leaderboardScreen.race')}
         </button>
       )}
       {busy && <small className="note">{busy}</small>}
@@ -279,11 +280,11 @@ export function LeaderboardScreen() {
     <main className="screen">
       <div className="panel wide">
         <MenuNav />
-        <h1>Leaderboard</h1>
+        <h1>{t('ui.leaderboardScreen.leaderboard')}</h1>
 
-        <section className="board-me" aria-label="You on the board">
+        <section className="board-me" aria-label={t('ui.leaderboardScreen.youOnTheBoard')}>
           <label className="board-name">
-            Your Warden name
+            {t('ui.leaderboardScreen.yourWardenName')}
             <span className="board-name-row">
               <input
                 type="text"
@@ -300,7 +301,7 @@ export function LeaderboardScreen() {
             </span>
             {!nameOk && (
               <small className="note warn">
-                Letters, digits, spaces and . _ &apos; - only, starting with a letter or digit.
+                {t('ui.leaderboardScreen.lettersDigitsSpacesAnd')}
               </small>
             )}
           </label>
@@ -310,19 +311,19 @@ export function LeaderboardScreen() {
               checked={settings.postRuns}
               onChange={(event) => updateSettings({ postRuns: event.target.checked })}
             />
-            Post my new personal bests to the Academy board automatically
+            {t('ui.leaderboardScreen.postMyNewPersonal')}
           </label>
           <p className="note">
-            Shown as <strong>{shownName}</strong>.{' '}
+            {t('ui.leaderboardScreen.shownAs')} <strong>{shownName}</strong>.{' '}
             {save.outbox.length > 0
               ? settings.postRuns
-                ? `${save.outbox.length} waiting to post (they go as soon as the board can be reached).`
-                : `${save.outbox.length} waiting until posting is turned back on.`
-              : 'Nothing waiting to post.'}
+                ? t('ui.leaderboardScreen.waitingToPostThey', { length: save.outbox.length })
+                : t('ui.leaderboardScreen.waitingUntilPostingIs', { length: save.outbox.length })
+              : t('ui.leaderboardScreen.nothingWaitingToPost')}
           </p>
         </section>
 
-        <nav className="tabs mode-tabs" aria-label="Board">
+        <nav className="tabs mode-tabs" aria-label={t('ui.leaderboardScreen.board')}>
           {BOARD_MODES.map((option) => (
             <button
               key={option}
@@ -336,26 +337,18 @@ export function LeaderboardScreen() {
           ))}
         </nav>
         {mode === 'classic' ? (
-          <p className="note">
-            Classic keeps the runs from before the challenges, when lesson days were scored. It is
-            closed to new runs.
-          </p>
+          <p className="note">{t('ui.leaderboardScreen.classicKeepsTheRuns')}</p>
         ) : timed ? (
-          <p className="note">
-            Each lesson has its own board for each difficulty, ranked by clear time.
-          </p>
+          <p className="note">{t('ui.leaderboardScreen.eachLessonHasIts')}</p>
         ) : (
-          <p className="note">
-            Each field has its own board. Runs from 0.18.0, when challenges were played on the
-            lessons, stay on their lessons’ boards, closed to new runs.
-          </p>
+          <p className="note">{t('ui.leaderboardScreen.eachFieldHasIts')}</p>
         )}
         <div className="board-pick">
           <label>
-            {onLessons(mode) ? 'Lesson' : 'Field'}
+            {onLessons(mode) ? t('ui.leaderboardScreen.lesson') : t('ui.leaderboardScreen.field')}
             <select value={levelId} onChange={(event) => setLevelId(event.target.value)}>
               {fields.length > 0 && (
-                <optgroup label={`${boardName(mode)} fields`}>
+                <optgroup label={t('ui.leaderboardScreen.fields', { v1: boardName(mode) })}>
                   {fields.map((choice) => (
                     <option key={choice.id} value={choice.id}>
                       {fieldTitle(choice)}
@@ -363,17 +356,29 @@ export function LeaderboardScreen() {
                   ))}
                 </optgroup>
               )}
-              <optgroup label={onLessons(mode) ? 'Lessons' : 'Lessons (0.18.0, closed)'}>
+              <optgroup
+                label={
+                  onLessons(mode)
+                    ? t('ui.leaderboardScreen.lessons')
+                    : t('ui.leaderboardScreen.lessonsClosed')
+                }
+              >
                 {lessons.map((choice) => (
                   <option key={choice.id} value={choice.id}>
-                    {choice.side ? `Below. ${choice.name}` : fieldTitle(choice)}
+                    {choice.side
+                      ? t('ui.leaderboardScreen.below', { name: choice.name })
+                      : fieldTitle(choice)}
                   </option>
                 ))}
               </optgroup>
             </select>
           </label>
           {!onLessons(mode) && (
-            <div className="board-difficulty" role="group" aria-label="Players">
+            <div
+              className="board-difficulty"
+              role="group"
+              aria-label={t('ui.leaderboardScreen.players')}
+            >
               {[false, true].map((option) => (
                 <button
                   key={String(option)}
@@ -382,13 +387,17 @@ export function LeaderboardScreen() {
                   aria-pressed={option === coopBoard}
                   onClick={() => setCoopBoard(option)}
                 >
-                  {option ? 'Co-op' : 'Solo'}
+                  {option ? t('ui.leaderboardScreen.coOp') : t('ui.leaderboardScreen.solo')}
                 </button>
               ))}
             </div>
           )}
           {onLessons(mode) && (
-            <div className="board-difficulty" role="group" aria-label="Difficulty">
+            <div
+              className="board-difficulty"
+              role="group"
+              aria-label={t('ui.leaderboardScreen.difficulty')}
+            >
               {DIFFICULTIES.map((option) => (
                 <button
                   key={option}
@@ -397,7 +406,9 @@ export function LeaderboardScreen() {
                   aria-pressed={option === difficulty}
                   onClick={() => setDifficulty(option)}
                 >
-                  {option === 'hard' ? 'Hard' : 'Normal'}
+                  {option === 'hard'
+                    ? t('ui.leaderboardScreen.hard')
+                    : t('ui.leaderboardScreen.normal')}
                 </button>
               ))}
             </div>
@@ -406,35 +417,42 @@ export function LeaderboardScreen() {
 
         <section className="board">
           <h2>
-            {boardName(mode)} {coopShown ? 'co-op ' : ''}board <small>{level.name}</small>
+            {boardName(mode)} {coopShown ? 'co-op ' : ''}
+            {t('ui.leaderboardScreen.board2')} <small>{level.name}</small>
           </h2>
-          {load.state === 'loading' && <p className="note">Reading the board…</p>}
+          {load.state === 'loading' && (
+            <p className="note">{t('ui.leaderboardScreen.readingTheBoard')}</p>
+          )}
           {load.state === 'error' && (
             <p className="note warn">
-              {load.message} Your own runs below are kept on this device either way.
+              {load.message} {t('ui.leaderboardScreen.yourOwnRunsBelow')}
             </p>
           )}
           {load.state === 'ready' &&
             (board.length === 0 ? (
               <p className="note">
                 {offered && (level.challenge || timed)
-                  ? 'No runs on this field yet. Be the first.'
+                  ? t('ui.leaderboardScreen.noRunsOnThis')
                   : offered
-                    ? 'No runs from 0.18.0 on this lesson.'
-                    : `${boardName(mode)} is not offered on this lesson.`}
+                    ? t('ui.leaderboardScreen.noRunsFromOn')
+                    : t('ui.leaderboardScreen.isNotOfferedOn', { v1: boardName(mode) })}
               </p>
             ) : (
               <table className="board-table">
                 <thead>
                   <tr>
                     <th scope="col">#</th>
-                    <th scope="col">Warden</th>
-                    <th scope="col">{timed ? 'Clear' : 'Score'}</th>
-                    <th scope="col">{timed ? 'Medal' : 'Rank'}</th>
-                    {!timed && <th scope="col">Time</th>}
-                    <th scope="col">Lost</th>
+                    <th scope="col">{t('ui.leaderboardScreen.warden')}</th>
                     <th scope="col">
-                      <span className="sr-only">Replay</span>
+                      {timed ? t('ui.leaderboardScreen.clear') : t('ui.leaderboardScreen.score')}
+                    </th>
+                    <th scope="col">
+                      {timed ? t('ui.leaderboardScreen.medal') : t('ui.leaderboardScreen.rank')}
+                    </th>
+                    {!timed && <th scope="col">{t('ui.leaderboardScreen.time')}</th>}
+                    <th scope="col">{t('ui.leaderboardScreen.lost')}</th>
+                    <th scope="col">
+                      <span className="sr-only">{t('ui.leaderboardScreen.replay')}</span>
                     </th>
                   </tr>
                 </thead>
@@ -447,7 +465,10 @@ export function LeaderboardScreen() {
                       <td>{i + 1}</td>
                       <th scope="row">
                         {entry.name}{' '}
-                        <small className="board-id" title="Tells Wardens with the same name apart">
+                        <small
+                          className="board-id"
+                          title={t('ui.leaderboardScreen.tellsWardensWithThe')}
+                        >
                           #{entry.player.slice(0, 4)}
                         </small>
                       </th>
@@ -459,7 +480,7 @@ export function LeaderboardScreen() {
                         {entry.verified && (
                           <span
                             className="verified"
-                            title="Verified: the board replayed this run and got the same result"
+                            title={t('ui.leaderboardScreen.verifiedTheBoardReplayed')}
                           >
                             ✓
                           </span>
@@ -476,9 +497,7 @@ export function LeaderboardScreen() {
               </table>
             ))}
           {load.state === 'ready' && load.partial && (
-            <p className="note">
-              Part of the board could not be read just now; it may be missing the newest runs.
-            </p>
+            <p className="note">{t('ui.leaderboardScreen.partOfTheBoard')}</p>
           )}
           <div className="button-row">
             <button
@@ -487,16 +506,20 @@ export function LeaderboardScreen() {
               onClick={() => refresh(true)}
               disabled={load.state === 'loading'}
             >
-              Refresh
+              {t('ui.leaderboardScreen.refresh')}
             </button>
             {load.state === 'ready' && (
-              <span className="note">{age < 1 ? 'Just now' : `${age} min ago`}</span>
+              <span className="note">
+                {age < 1
+                  ? t('ui.leaderboardScreen.justNow')
+                  : t('ui.leaderboardScreen.minAgo', { age: age })}
+              </span>
             )}
           </div>
         </section>
 
         <section className="board">
-          <h2>Your best runs</h2>
+          <h2>{t('ui.leaderboardScreen.yourBestRuns')}</h2>
           {mode !== 'classic' && (
             <WatchBest
               level={level.id}
@@ -508,21 +531,25 @@ export function LeaderboardScreen() {
           {mine.length === 0 ? (
             <p className="note">
               {mode === 'classic'
-                ? 'No runs from before the challenges on this lesson.'
+                ? t('ui.leaderboardScreen.noRunsFromBefore')
                 : timed
-                  ? 'Clear this lesson in Time Attack and your fastest clears are kept here.'
-                  : `Play ${boardName(mode)} on this lesson and your runs are kept here.`}
+                  ? t('ui.leaderboardScreen.clearThisLessonIn')
+                  : t('ui.leaderboardScreen.playOnThisLesson', { v1: boardName(mode) })}
             </p>
           ) : (
             <table className="board-table">
               <thead>
                 <tr>
                   <th scope="col">#</th>
-                  {!timed && <th scope="col">Score</th>}
-                  <th scope="col">{timed ? 'Medal' : 'Rank'}</th>
-                  <th scope="col">{timed ? 'Clear' : 'Time'}</th>
-                  <th scope="col">Played</th>
-                  <th scope="col">Board</th>
+                  {!timed && <th scope="col">{t('ui.leaderboardScreen.score')}</th>}
+                  <th scope="col">
+                    {timed ? t('ui.leaderboardScreen.medal') : t('ui.leaderboardScreen.rank')}
+                  </th>
+                  <th scope="col">
+                    {timed ? t('ui.leaderboardScreen.clear') : t('ui.leaderboardScreen.time')}
+                  </th>
+                  <th scope="col">{t('ui.leaderboardScreen.played')}</th>
+                  <th scope="col">{t('ui.leaderboardScreen.board')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -539,9 +566,9 @@ export function LeaderboardScreen() {
                           type="button"
                           className="secondary small inline"
                           onClick={() => queueRun(run)}
-                          title="Post this best to the board"
+                          title={t('ui.leaderboardScreen.postThisBestTo')}
                         >
-                          Post
+                          {t('ui.leaderboardScreen.post')}
                         </button>
                       ) : (
                         <small>{runStatus(save, run, settings.postRuns)}</small>
@@ -554,13 +581,7 @@ export function LeaderboardScreen() {
           )}
         </section>
 
-        <p className="note">
-          Each challenge and Time Attack keeps its own board, and it never resets. Each new personal
-          best is posted by itself to the Academy&apos;s board server, with your Warden name and a
-          random player id and nothing else. The server checks every run against the lesson&apos;s
-          own rules and keeps the best run per Warden per lesson, so new runs show here at once.
-          Runs from an older version of a lesson are left off.
-        </p>
+        <p className="note">{t('ui.leaderboardScreen.eachChallengeAndTime')}</p>
       </div>
     </main>
   );

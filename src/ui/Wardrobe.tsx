@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useGameStore } from '../game/core/gameStore';
 import { OUTFITS } from '../game/progression/outfits';
 
@@ -11,9 +12,9 @@ export function Wardrobe() {
   return (
     <section className="wardrobe" aria-labelledby="wardrobe-heading">
       <h2 id="wardrobe-heading">
-        Wardrobe{' '}
+        {t('ui.wardrobe.wardrobe')}{' '}
         <small>
-          {earned} of {OUTFITS.length} earned
+          {earned} {t('ui.wardrobe.of')} {OUTFITS.length} {t('ui.wardrobe.earned')}
         </small>
       </h2>
       <div className="outfits" role="radiogroup" aria-labelledby="wardrobe-heading">
@@ -45,8 +46,14 @@ export function Wardrobe() {
                 <rect x="10" y="36" width="20" height="2.5" fill={open ? outfit.trim : '#4a423a'} />
                 <circle cx="33" cy="38" r="3" fill={open ? outfit.lamp : '#4a423a'} />
               </svg>
-              <strong>{open ? outfit.name : 'Locked'}</strong>
-              <small>{open ? (worn ? 'Wearing' : 'Wear') : outfit.requirement}</small>
+              <strong>{open ? outfit.name : t('ui.wardrobe.locked')}</strong>
+              <small>
+                {open
+                  ? worn
+                    ? t('ui.wardrobe.wearing')
+                    : t('ui.wardrobe.wear')
+                  : outfit.requirement}
+              </small>
             </button>
           );
         })}

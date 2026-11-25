@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { useGameStore } from '../game/core/gameStore';
 import { ACHIEVEMENTS } from '../game/progression/achievements';
 import { MenuNav } from './MenuNav';
@@ -21,10 +22,12 @@ export function AchievementsScreen() {
     <main className="screen">
       <div className="panel wide">
         <MenuNav />
-        <h1>Achievements</h1>
+        <h1>{t('ui.achievementsScreen.achievements')}</h1>
         <p>
-          {earned} of {listed.length} earned. Days played: {save.totals.days} · Sunshards delivered:{' '}
-          {save.totals.treasures} · Enemies defeated: {save.totals.enemies}
+          {earned} {t('ui.achievementsScreen.of')} {listed.length}{' '}
+          {t('ui.achievementsScreen.earnedDaysPlayed')} {save.totals.days}{' '}
+          {t('ui.achievementsScreen.sunshardsDelivered')} {save.totals.treasures}{' '}
+          {t('ui.achievementsScreen.enemiesDefeated')} {save.totals.enemies}
         </p>
         <ul className="achievements">
           {listed.map((achievement) => {
@@ -39,20 +42,22 @@ export function AchievementsScreen() {
                   <strong>{achievement.name}</strong>
                   <span>{achievement.description}</span>
                   {when ? (
-                    <small>Earned {formatDate(when)}</small>
+                    <small>
+                      {t('ui.achievementsScreen.earned')} {formatDate(when)}
+                    </small>
                   ) : progress && progress[1] > 1 ? (
                     <span className="meter">
                       <progress
                         value={progress[0]}
                         max={progress[1]}
-                        aria-label={`${achievement.name} progress`}
+                        aria-label={t('ui.achievementsScreen.progress', { name: achievement.name })}
                       />
                       <small>
                         {progress[0]} / {progress[1]}
                       </small>
                     </span>
                   ) : (
-                    <small>Not earned yet</small>
+                    <small>{t('ui.achievementsScreen.notEarnedYet')}</small>
                   )}
                 </span>
               </li>

@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { startingKinds } from '../game/simulation/Simulation';
 import { TWIN } from '../game/core/config';
 import { bonusParts, shardCount, type LevelDefinition } from '../game/world/level';
@@ -23,7 +24,7 @@ function kindsOf(level: LevelDefinition): { kind: SproutKind; count: number; gro
 export function SquadRoster({ level }: { level: LevelDefinition }) {
   const kinds = kindsOf(level);
   return (
-    <ul className="roster" aria-label="Today's squad">
+    <ul className="roster" aria-label={t('ui.squadRoster.todaySSquad')}>
       {kinds.map(({ kind, count, grown }) => (
         <li key={kind} className={`kind ${kind}`}>
           <KindGlyph kind={kind} />
@@ -34,7 +35,7 @@ export function SquadRoster({ level }: { level: LevelDefinition }) {
           </strong>
           <small>
             {SPROUTS[kind].knack}
-            {count === 0 && grown ? ' Grown from seed pods today.' : ''}
+            {count === 0 && grown ? ` ${t('ui.squadRoster.grownFromSeedPods')}` : ''}
           </small>
         </li>
       ))}
@@ -46,11 +47,8 @@ export function SquadRoster({ level }: { level: LevelDefinition }) {
 export function SproutlingGuide() {
   return (
     <section className="sprout-guide">
-      <h2>The Sproutlings</h2>
-      <p>
-        The Kiln grows four kinds. A seed pod grows its own kind; anything else grows whichever kind
-        carried it home.
-      </p>
+      <h2>{t('ui.squadRoster.theSproutlings')}</h2>
+      <p>{t('ui.squadRoster.theKilnGrowsFour')}</p>
       <ul className="roster">
         {SPROUT_KINDS.map((kind, i) => (
           <li key={kind} className={`kind ${kind}`}>
@@ -76,33 +74,36 @@ export function OptionalTreasure({ level }: { level: LevelDefinition }) {
   return (
     <div className="optional-treasure">
       <p>
-        <strong>Required:</strong> {shardCount(level)} Sunshards, every one home to clear the
-        lesson.
+        <strong>{t('ui.squadRoster.required')}</strong> {shardCount(level)}{' '}
+        {t('ui.squadRoster.sunshardsEveryOneHome')}
       </p>
       {pairs.length > 0 && (
         <p>
-          <strong>Twin pairs:</strong> {pairs.length === 1 ? 'one pair' : `${pairs.length} pairs`}{' '}
-          of Sunshards, each pair marked by its own colour, shape and letter:{' '}
+          <strong>{t('ui.squadRoster.twinPairs')}</strong>{' '}
+          {pairs.length === 1
+            ? t('ui.squadRoster.onePair')
+            : t('ui.squadRoster.pairs', { length: pairs.length })}{' '}
+          {t('ui.squadRoster.ofSunshardsEachPair')}{' '}
           {pairs.map((pair, i) => (
             <span key={pair.letter} className="twin-tag" style={{ color: pair.colour }}>
               {pair.letter} ({pair.shape}){i < pairs.length - 1 ? ', ' : ''}
             </span>
           ))}
-          . Bring the second half of a pair home within {TWIN.window} seconds of the first for a
-          bonus; a countdown shows once the first is in.
+          {t('ui.squadRoster.bringTheSecondHalf')} {TWIN.window}{' '}
+          {t('ui.squadRoster.secondsOfTheFirst')}
         </p>
       )}
       {parts.dewglass > 0 && (
         <p>
-          <strong>Dewglass:</strong> {parts.dewglass} fragile{' '}
-          {parts.dewglass === 1 ? 'relic' : 'relics'}, worth more if home without a crack.
+          <strong>{t('ui.squadRoster.dewglass')}</strong> {parts.dewglass}{' '}
+          {t('ui.squadRoster.fragile')} {parts.dewglass === 1 ? 'relic' : 'relics'}
+          {t('ui.squadRoster.worthMoreIfHome')}
         </p>
       )}
       {parts.glowcaps > 0 && (
         <p>
-          <strong>Glowcaps:</strong> {parts.glowcaps} {parts.glowcaps === 1 ? 'sprouts' : 'sprout'}{' '}
-          later in the day and wilt if left. Extra points in the challenges, never needed for a
-          medal.
+          <strong>{t('ui.squadRoster.glowcaps')}</strong> {parts.glowcaps}{' '}
+          {parts.glowcaps === 1 ? 'sprouts' : 'sprout'} {t('ui.squadRoster.laterInTheDay')}
         </p>
       )}
     </div>
