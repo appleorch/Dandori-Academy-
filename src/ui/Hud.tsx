@@ -205,7 +205,7 @@ export function Hud({
         )}
         {hud.below ? (
           <div className="chip below-chip">
-            {t('hud.below', {
+            {t(mode === 'expedition' ? 'hud.floor' : 'hud.below', {
               place: hud.below,
               got: hud.treasuresCollected,
               of: hud.treasuresTotal,

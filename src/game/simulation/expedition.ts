@@ -1,7 +1,7 @@
 import { WORKER } from '../core/config';
 import { removeWorker } from '../workers/squad';
 import type { SproutKind } from '../workers/sprouts';
-import { LEVELS, type LevelDefinition } from '../world/level';
+import { defineLevel, LEVELS, type LevelDefinition } from '../world/level';
 import { STORY_CAVES } from '../campaign/sections';
 import { spawnWorker } from '../world/spawn';
 import { Simulation } from './Simulation';
@@ -43,6 +43,8 @@ export class Expedition {
   private readonly caves = new Map<string, Simulation>();
   /** Per cave: relics already counted, so coming up twice never counts one twice. */
   private readonly counted = new Map<string, number>();
+  /** Per cave: deliveries already pooled into the surface's day (an Expedition's caves). */
+  private readonly pooledDeliveries = new Map<string, number>();
   /** Per cave: the running counts already carried up to the surface's day. */
   private readonly carried = new Map<string, Record<CarriedStat, number>>();
   readonly haul: Haul = { relics: [], value: 0, caves: [], emptied: [] };
@@ -63,6 +65,25 @@ export class Expedition {
     this.surface = surface;
     this.active = surface;
     this.path.push(surface);
+  }
+
+  /**
+   * Whether the caves are the day's own (an Expedition): their treasure counts with the field's
+   * when it comes up, rather than going to the Field Guide as relics.
+   */
+  get pooled(): boolean {
+    return this.surface.level.floors !== undefined;
+  }
+
+  /**
+   * Whether the floor `id` and every floor below it have been emptied. An Expedition's floor with
+   * a way down never ends by itself, so it is judged by what is home.
+   */
+  emptied(id: string): boolean {
+    const cave = this.caves.get(id);
+    if (!cave || !cave.cleared) return false;
+    const deeper = cave.level.descent?.to;
+    return deeper === undefined || this.emptied(deeper);
   }
 
   get below(): boolean {
@@ -94,7 +115,9 @@ export class Expedition {
     const upper = this.active;
     const descent = upper.level.descent;
     if (!descent || this.blocked()) return false;
+    const floor = this.surface.level.floors?.find((spec) => spec.id === descent.to);
     const written =
+      (floor ? defineLevel(floor) : undefined) ??
       LEVELS.find((level) => level.id === descent.to) ??
       STORY_CAVES.find((level) => level.id === descent.to);
     const spec = written && this.caveFilter ? this.caveFilter(written) : written;
@@ -108,8 +131,12 @@ export class Expedition {
     upper.entityVersion++;
     let cave = this.caves.get(spec.id);
     if (!cave) {
-      // Created empty: whoever comes down is the squad.
-      cave = new Simulation({ ...spec, startingWorkers: 0, squad: {} }, { visit: true });
+      // Created empty: whoever comes down is the squad. An Expedition's floor with a way down
+      // stays open until left (its last floor ends, and sends everyone up, once emptied).
+      cave = new Simulation(
+        { ...spec, startingWorkers: 0, squad: {} },
+        { visit: true, ...(floor && spec.descent ? { endsWhen: 'clock' as const } : {}) },
+      );
       this.caves.set(spec.id, cave);
       this.counted.set(spec.id, 0);
       this.carried.set(spec.id, {
@@ -157,9 +184,25 @@ export class Expedition {
 
     const found = cave.stats.treasuresCollected;
     const already = this.counted.get(id) ?? 0;
-    for (const relic of found.slice(already)) this.haul.relics.push(`${id}:${relic}`);
+    if (this.pooled) {
+      // An Expedition's floors are the day's: what came up is the field's treasure too.
+      const surface = this.surface.stats;
+      for (const shard of found.slice(already)) surface.treasuresCollected.push(`${id}:${shard}`);
+      const deliveries = cave.stats.deliveries.slice(this.pooledDeliveries.get(id) ?? 0);
+      for (const delivery of deliveries) {
+        surface.deliveries.push(delivery);
+        surface.weightDelivered += delivery.weight;
+      }
+      this.pooledDeliveries.set(id, cave.stats.deliveries.length);
+      surface.treasureValue += cave.stats.treasureValue - this.pooledValue(id);
+      this.poolValue.set(id, cave.stats.treasureValue);
+    } else {
+      for (const relic of found.slice(already)) this.haul.relics.push(`${id}:${relic}`);
+    }
     this.counted.set(id, found.length);
-    this.haul.value = [...this.caves.values()].reduce((sum, c) => sum + c.stats.treasureValue, 0);
+    if (!this.pooled) {
+      this.haul.value = [...this.caves.values()].reduce((sum, c) => sum + c.stats.treasureValue, 0);
+    }
     // Losses, wins, growth and rescues below are the day's too.
     const carried = this.carried.get(id);
     if (carried) {
@@ -201,6 +244,12 @@ export class Expedition {
     }
     // Every relic found, or nobody left to carry them: back up.
     this.ascend();
+  }
+
+  /** Treasure value already pooled up from a cave. */
+  private readonly poolValue = new Map<string, number>();
+  private pooledValue(id: string): number {
+    return this.poolValue.get(id) ?? 0;
   }
 
   dispose(): void {

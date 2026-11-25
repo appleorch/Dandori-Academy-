@@ -42,6 +42,7 @@ export const EN = {
     'Daylight left. At sunset everyone away from the Kiln and the lit beacons is lost',
   'hud.sunset': 'Sunset: back to the Kiln or a lit beacon!',
   'hud.below': 'Below: {place} · Relics {got}/{of}',
+  'hud.floor': '{place} · Sunshards {got}/{of}',
   'hud.partsTitle': 'Parts of the Great Clock home, today and on earlier days',
   'hud.parts': 'Clock parts {got}/{of}',
   'hud.shardsLesson': 'Bring every Sunshard home to clear the lesson',

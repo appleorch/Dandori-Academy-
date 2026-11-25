@@ -25,13 +25,22 @@ export const MODE_IDS = [
   'dandori',
   'trial',
   'escort',
+  'expedition',
   'marble',
   'bingo',
   'duel',
 ] as const;
 export type ModeId = (typeof MODE_IDS)[number];
 
-export const CHALLENGE_IDS = ['growing', 'hunt', 'mission', 'dandori', 'trial', 'escort'] as const;
+export const CHALLENGE_IDS = [
+  'growing',
+  'hunt',
+  'mission',
+  'dandori',
+  'trial',
+  'escort',
+  'expedition',
+] as const;
 export type ChallengeId = (typeof CHALLENGE_IDS)[number];
 
 export const BATTLE_IDS = ['marble', 'bingo', 'duel'] as const;
@@ -64,6 +73,8 @@ export const MISSION_POINTS_PER_SECOND = 10;
 export const GROWING_PLATINUM_SHARE = 0.9;
 /** A Growing Season's Diamond asks for this many times the test player's headcount. */
 export const GROWING_DIAMOND_FACTOR = 1.15;
+/** Points per Sproutling alive at the end of an Expedition. */
+export const DIVE_POINTS_PER_SPROUTLING = 20;
 /** Points per Sproutling alive at the end of a Lean Squad Trial. */
 export const TRIAL_POINTS_PER_SPROUTLING = 50;
 
@@ -176,6 +187,22 @@ export const MODES: Record<ModeId, ModeSpec> = {
     endsWhen: 'shards',
     growth: true,
   },
+  expedition: {
+    id: 'expedition',
+    name: 'Expedition',
+    summary:
+      'No clock: take the squad down floor after floor of caves and bring every floor’s treasure up.',
+    rules: [
+      'There is no clock. A way down leads from the field into a cave, and from each cave to a deeper one.',
+      'Stand on the way down with a squad and press E to go down; walk back to where you came in to go up. What is found below counts once it comes up the way it went down.',
+      'Deeper floors hold heavier Sunshards and fiercer beasts. Each floor has a Kiln of its own.',
+      `Score: the treasure of every floor, plus ${DIVE_POINTS_PER_SPROUTLING} for every Sproutling alive at the end. The day ends when every floor is emptied, or when you call it.`,
+      'Medals go by score. Platinum and Diamond need every floor emptied.',
+    ],
+    kind: 'challenge',
+    endsWhen: 'shards',
+    growth: true,
+  },
   marble: {
     id: 'marble',
     name: 'Marble Race',
@@ -220,8 +247,11 @@ export const isBattle = (mode: ModeId): mode is BattleId =>
   (BATTLE_IDS as readonly string[]).includes(mode);
 
 /** Weight of every Sunshard in a lesson, those bosses drop included. */
-export function shardWeight(level: LevelDefinition): number {
+export function shardWeight(
+  level: Pick<LevelDefinition, 'treasures' | 'enemies' | 'roots' | 'floors'>,
+): number {
   return (
+    (level.floors ?? []).reduce((sum, floor) => sum + shardWeight(floor), 0) +
     level.treasures.reduce((sum, shard) => sum + shard.weight, 0) +
     level.enemies.reduce((sum, enemy) => sum + (enemy.drop ?? 0), 0) +
     (level.roots ?? []).reduce((sum, root) => sum + root.drop, 0)
@@ -229,8 +259,10 @@ export function shardWeight(level: LevelDefinition): number {
 }
 
 /** Weight of the carcasses of every beast placed in a lesson. */
-export function carcassWeight(level: LevelDefinition): number {
-  let weight = 0;
+export function carcassWeight(
+  level: Pick<LevelDefinition, 'enemies' | 'roots' | 'floors'>,
+): number {
+  let weight = (level.floors ?? []).reduce((sum, floor) => sum + carcassWeight(floor), 0);
   for (const enemy of level.enemies) {
     if (enemy.kind !== 'mound') weight += ENEMY_SPECS[enemy.kind].carcassWeight;
   }
@@ -257,7 +289,7 @@ function lossTrial(mode: ChallengeId, level: LevelDefinition): boolean {
 
 /** Whether a challenge's medals ask for a pace: every one but the Growing Season and the Trial. */
 export function challengeTimed(mode: ChallengeId, level: LevelDefinition): boolean {
-  return mode !== 'growing' && !lossTrial(mode, level);
+  return mode !== 'growing' && mode !== 'expedition' && !lossTrial(mode, level);
 }
 
 /**
@@ -281,6 +313,11 @@ export function challengeTimes(
         : undefined;
   if (measured === undefined) return { platinum: level.platinumTime, diamond: level.diamondTime };
   return { platinum: measured, diamond: Math.floor(measured * DIAMOND_SHARE) };
+}
+
+/** Sproutlings over the test player's headcount an Expedition's Diamond asks for. */
+export function diveMargin(pace: number): number {
+  return Math.max(2, Math.ceil(pace * 0.15));
 }
 
 /** Sproutlings a Lean Squad Trial may lose and still earn Platinum: as many as the test player. */
@@ -324,6 +361,17 @@ export function challengePar(mode: ChallengeId, level: LevelDefinition): Par {
       return {
         parScore: base + (day - platinum) * MISSION_POINTS_PER_SECOND,
         diamondScore: base + (day - diamond) * MISSION_POINTS_PER_SECOND,
+      };
+    }
+    case 'expedition': {
+      // The test player's headcount at the end is Platinum; Diamond asks for a few more, up to
+      // every Sproutling the floors can grow.
+      const pace = level.challenge?.pace ?? level.startingWorkers;
+      const best = Math.max(pace, Math.min(sproutlingsPossible(level), pace + diveMargin(pace)));
+      const base = treasureTotal(level);
+      return {
+        parScore: base + pace * DIVE_POINTS_PER_SPROUTLING,
+        diamondScore: base + best * DIVE_POINTS_PER_SPROUTLING,
       };
     }
     case 'dandori':
@@ -497,6 +545,20 @@ export function scoreChallenge(
         },
       ];
       break;
+    case 'expedition':
+      gateMet = facts.shardsHome === facts.shardsTotal;
+      rows = [
+        {
+          label: `Treasure (${facts.shardsHome} of ${facts.shardsTotal} Sunshards, every floor)`,
+          value: facts.treasureValue,
+        },
+        {
+          label: `Sproutlings alive: ${facts.alive}`,
+          note: `${DIVE_POINTS_PER_SPROUTLING} each`,
+          value: facts.alive * DIVE_POINTS_PER_SPROUTLING,
+        },
+      ];
+      break;
   }
   const total = rows.reduce((sum, row) => sum + row.value, 0);
   if (mode === 'hunt' || mode === 'mission') extra = glowValue;
@@ -561,6 +623,8 @@ export function medalGate(mode: ChallengeId, level?: LevelDefinition): string | 
     case 'dandori':
     case 'trial':
       return 'Platinum and Diamond need everything collected: every Sunshard, every beast and its carcass.';
+    case 'expedition':
+      return 'Platinum and Diamond need every floor emptied: every Sunshard on every floor home.';
     case 'hunt':
     case 'escort':
     case 'growing':

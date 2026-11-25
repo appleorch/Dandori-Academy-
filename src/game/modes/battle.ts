@@ -65,7 +65,8 @@ export function battleLevel(level: LevelDefinition): LevelDefinition {
  * a challenge or a battle is the one field, start to finish. Battles also have a shorter day.
  */
 export function levelForMode(level: LevelDefinition, mode: ModeId): LevelDefinition {
-  if (mode === 'lessons') return level;
+  // An Expedition's ways down are the day itself.
+  if (mode === 'lessons' || mode === 'expedition') return level;
   const field = isBattle(mode) ? battleLevel(level) : level;
   return { ...field, descent: undefined, secret: undefined };
 }

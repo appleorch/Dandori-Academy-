@@ -1,6 +1,6 @@
 import type { EnemyKind } from '../enemies/enemyKinds';
 import type { ChallengeId } from '../modes/modes';
-import type { FieldSpec } from './levels/challenges/field';
+import { dressField, type FieldSpec } from './levels/challenges/field';
 import type { Box } from '../navigation/NavGrid';
 import type { EnemySpawn, PodSpawn, TreasureSpawn } from './levelTypes';
 
@@ -183,4 +183,132 @@ export const TEMPLATE_RULE: Record<FieldTemplate, ChallengeId> = { hunt: 'hunt',
 /** A measured pace's day: half as long again, to the nearest five seconds, at least a minute. */
 export function dayFor(pace: number): number {
   return Math.max(60, Math.round((pace * 1.6) / 5) * 5);
+}
+
+/** Beasts on an Expedition's floors, by depth: the deeper, the fiercer. */
+const DEEP: readonly (readonly EnemyKind[])[] = [
+  ['mossback', 'slug', 'skitter'],
+  ['mossback', 'skitter', 'spitter', 'slug'],
+  ['ramhorn', 'spitter', 'mossback', 'skitter'],
+];
+
+/**
+ * An Expedition from a seed: a small field with a way down at its far end, and two or three
+ * caves beneath it, each with a Kiln by the foot of its stair and (but the last) a way down of
+ * its own. Deeper floors hold heavier Sunshards and fiercer beasts.
+ */
+export function generateDive(seed: number, id: string): Omit<FieldSpec, 'pace'> {
+  const random = seeded(seed);
+  const pick = <T>(list: readonly T[]): T => list[Math.floor(random() * list.length)];
+  const between = (lo: number, hi: number) => lo + random() * (hi - lo);
+  const depthOf = 2 + (random() < 0.5 ? 0 : 1);
+
+  /** One floor's layout: walls, Sunshards, beasts, pods and a way down to `down`, if any. */
+  const floor = (
+    level: number,
+    floorId: string,
+    down: string | null,
+  ): Omit<FieldSpec, 'pace' | 'name' | 'brief' | 'dayLength' | 'seed' | 'startingWorkers'> => {
+    const width = Math.round(level === 0 ? between(60, 72) : between(50, 62));
+    const depth = Math.round(level === 0 ? between(40, 48) : between(34, 42));
+    const hw = width / 2;
+    const hd = depth / 2;
+    const kiln = { x: -hw + 6, z: Math.round(between(-hd / 4, hd / 4)) };
+    const captain = { x: kiln.x + 3, z: kiln.z + 1 };
+    const taken: Placed[] = [{ x: kiln.x, z: kiln.z, r: 6 }];
+    const free = (x: number, z: number, r: number) =>
+      Math.abs(x) < hw - 3 - r &&
+      Math.abs(z) < hd - 3 - r &&
+      taken.every((p) => Math.hypot(p.x - x, p.z - z) > p.r + r);
+    const spot = (from: number, to: number, r: number): { x: number; z: number } | null => {
+      for (let tries = 0; tries < 40; tries++) {
+        const x = Math.round(-hw + width * between(from, to));
+        const z = Math.round(between(-hd + 4, hd - 4));
+        if (free(x, z, r)) {
+          taken.push({ x, z, r });
+          return { x, z };
+        }
+      }
+      return null;
+    };
+    // The way down first, at the far end, so nothing else stands on it.
+    const stair = down ? spot(0.84, 0.92, 3) : null;
+    const obstacles: Box[] = [];
+    for (let i = 0; i < 3; i++) {
+      const across = random() < 0.5;
+      const long = Math.round(between(5, 10));
+      const at = spot(0.25 + i * 0.2, 0.35 + i * 0.2, long / 2 + 2);
+      if (!at) continue;
+      obstacles.push(
+        across ? { x: at.x, z: at.z, w: 2, d: long } : { x: at.x, z: at.z, w: long, d: 2 },
+      );
+    }
+    for (let i = 0; i < 2; i++) {
+      const at = spot(0.2, 0.9, 2.5);
+      if (at) obstacles.push({ x: at.x, z: at.z, w: 3, d: 3 });
+    }
+    const treasures: TreasureSpawn[] = [];
+    const count = level === 0 ? Math.round(between(4, 6)) : 3 + level + Math.round(random());
+    for (let i = 0; i < count; i++) {
+      const at = spot(0.15, 0.95, 1.5);
+      if (at)
+        treasures.push({
+          id: `shard-${i + 1}`,
+          ...at,
+          weight: 1 + Math.min(4, level) + Math.floor(random() * 2),
+        });
+    }
+    const enemies: EnemySpawn[] = [];
+    const beasts = level === 0 ? 1 : level + 1;
+    for (let i = 0; i < beasts; i++) {
+      const at = spot(0.4, 0.95, 3);
+      if (at) enemies.push({ ...at, kind: pick(DEEP[Math.min(DEEP.length - 1, level)]) });
+    }
+    const pods: PodSpawn[] = [];
+    for (let i = 0; i < (level === 0 ? 2 : 1); i++) {
+      const at = spot(0.1, 0.4, 1.5);
+      if (at) pods.push(at);
+    }
+    return {
+      id: floorId,
+      theme: level === 0 ? pick(THEMES) : 'cave',
+      width,
+      depth,
+      captain,
+      kiln,
+      obstacles,
+      treasures,
+      pods,
+      enemies,
+      ...(stair && down ? { descent: { ...stair, to: down } } : {}),
+    };
+  };
+
+  const floorIds = Array.from({ length: depthOf }, (_, i) => `${id}-floor-${i + 1}`);
+  const surface = floor(0, id, floorIds[0]);
+  const floors = floorIds.map((floorId, i) => {
+    const below = floor(i + 1, floorId, floorIds[i + 1] ?? null);
+    const spec = {
+      ...below,
+      ...dressField({ theme: 'cave', width: below.width, depth: below.depth, seed: seed + i + 1 }),
+      name: `Floor ${i + 1}`,
+      brief: 'A cave under the field.',
+      stage: 0,
+      dayLength: 0,
+      platinumTime: 0,
+      untimed: true,
+      seed: seed * 10 + i + 1,
+      startingWorkers: 0,
+    };
+    return spec;
+  });
+  return {
+    ...surface,
+    name: `The ${pick(NAMES.first)} ${pick(NAMES.second)}`,
+    brief: `A way down at the far end leads into ${depthOf} floors of caves, each deeper than the last. Bring every floor’s treasure up, and as many Sproutlings as you can.`,
+    dayLength: 0,
+    seed,
+    startingWorkers: Math.round(between(14, 18)),
+    floors,
+  };
 }

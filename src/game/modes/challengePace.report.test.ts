@@ -1,10 +1,8 @@
 import { beforeAll, describe, it } from 'vitest';
 import { initPhysics } from '../simulation/physics';
-import { Simulation } from '../simulation/Simulation';
 import { CHALLENGE_LEVELS, sproutlingsPossible } from '../world/level';
-import { playGreedy } from '../world/testBot';
+import { playChallengeDay } from '../world/diveBot';
 import { challengeFacts } from './facts';
-import { MODES } from './modes';
 
 /**
  * Not a test: a measurement. `npm run paces` plays every challenge field with the test player
@@ -24,11 +22,8 @@ describe.skipIf(!enabled)('challenge paces', () => {
       // A field id prefix, or several separated by commas.
       if (only && !only.split(',').some((prefix) => level.id.startsWith(prefix))) continue;
       const mode = level.challenge?.mode ?? 'lessons';
-      const sim = new Simulation(level, {
-        endsWhen: MODES[mode].endsWhen,
-        growth: MODES[mode].growth,
-      });
-      playGreedy(sim);
+      const day = playChallengeDay(level, mode);
+      const sim = day.surface;
       const facts = challengeFacts(sim);
       rows.push({
         id: level.id,
@@ -43,7 +38,7 @@ describe.skipIf(!enabled)('challenge paces', () => {
         possible: sproutlingsPossible(level),
         lastDelivery: Math.round((sim.stats.deliveries.at(-1)?.time ?? 0) * 10) / 10,
       });
-      sim.dispose();
+      day.dispose();
     }
     for (const row of rows) console.log(`PACE ${JSON.stringify(row)}`);
   }, 3_600_000);

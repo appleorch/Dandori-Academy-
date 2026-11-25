@@ -30,13 +30,15 @@ function themeOf(stage: number): LevelTheme {
 
 /** Total value of every Sunshard in a lesson. */
 export function treasureTotal(
-  level: Pick<LevelDefinition, 'treasures' | 'enemies' | 'roots'>,
+  level: Pick<LevelDefinition, 'treasures' | 'enemies' | 'roots' | 'floors'>,
 ): number {
   const weights =
     level.treasures.reduce((sum, t) => sum + t.weight, 0) +
     level.enemies.reduce((sum, enemy) => sum + (enemy.drop ?? 0), 0) +
     (level.roots ?? []).reduce((sum, root) => sum + root.drop, 0);
-  return weights * SHARD_VALUE_PER_WEIGHT;
+  // An Expedition's caves are the day's too.
+  const below = (level.floors ?? []).reduce((sum, floor) => sum + treasureTotal(floor), 0);
+  return weights * SHARD_VALUE_PER_WEIGHT + below;
 }
 
 /** The optional treasure of a lesson: how many of each kind of bonus, and what each is worth. */
@@ -106,8 +108,16 @@ export function rankedBonusTotal(level: Pick<LevelDefinition, 'treasures' | 'blo
  * every mound hiding one), and every carcass of the beasts placed in it. Sproutlings grown
  * from beasts a boss calls in mid-fight come on top.
  */
-export function sproutlingsPossible(level: LevelDefinition): number {
+export function sproutlingsPossible(
+  level: Pick<
+    LevelDefinition,
+    'startingWorkers' | 'pods' | 'enemies' | 'roots' | 'ambushes' | 'floors'
+  >,
+): number {
   let total = level.startingWorkers + level.pods.length * POD.workerYield;
+  // An Expedition's caves grow Sproutlings too (each has a Kiln), and nobody starts there.
+  for (const floor of level.floors ?? [])
+    total += sproutlingsPossible({ ...floor, startingWorkers: 0 });
   for (const enemy of level.enemies) {
     if (enemy.kind === 'mound') total += enemy.reveals === 'pod' ? POD.workerYield : 0;
     else total += ENEMY_SPECS[enemy.kind].carcassYield;
@@ -121,9 +131,10 @@ export function sproutlingsPossible(level: LevelDefinition): number {
 
 /** Number of Sunshards in a lesson, counting those that bosses drop. */
 export function shardCount(
-  level: Pick<LevelDefinition, 'treasures' | 'enemies' | 'roots'>,
+  level: Pick<LevelDefinition, 'treasures' | 'enemies' | 'roots' | 'floors'>,
 ): number {
   return (
+    (level.floors ?? []).reduce((sum, floor) => sum + shardCount(floor), 0) +
     level.treasures.length +
     level.enemies.filter((enemy) => (enemy.drop ?? 0) > 0).length +
     (level.roots ?? []).length

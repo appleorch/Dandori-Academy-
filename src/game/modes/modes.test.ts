@@ -162,10 +162,12 @@ describe('the challenge fields', () => {
     }
   });
 
-  it('give a Lean Squad Trial no clock and no seed pods, and every other field a clock', () => {
+  it('give a Lean Squad Trial no clock and no seed pods, an Expedition no clock, and every other field a clock', () => {
     for (const level of CHALLENGE_LEVELS) {
       const trial = level.challenge?.mode === 'trial';
-      expect(level.untimed ?? false, level.id).toBe(trial);
+      const dive = level.challenge?.mode === 'expedition';
+      expect(level.untimed ?? false, level.id).toBe(trial || dive);
+      if (dive) continue;
       if (trial) expect(level.pods, level.id).toEqual([]);
       else expect(level.dayLength, level.id).toBeGreaterThan(0);
     }

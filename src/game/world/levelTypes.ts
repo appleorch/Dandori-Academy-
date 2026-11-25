@@ -280,6 +280,12 @@ export interface LevelDefinition {
   challenge?: ChallengeField;
   /** No clock: the day lasts until its goal is met, or the player calls it. `dayLength` is 0. */
   untimed?: boolean;
+  /**
+   * An Expedition's caves, shallowest first: the field's way down leads to the first, and each
+   * but the last has a way down to the next. Their treasure is the day's, counted with the
+   * field's own (see `shardCount`); each is played as its own simulation (see Expedition).
+   */
+  floors?: readonly LevelSpec[];
 }
 
 /** A lesson as written, before its par score is derived. The theme defaults to its chapter's. */

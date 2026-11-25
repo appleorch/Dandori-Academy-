@@ -5,6 +5,7 @@ import { HUNT_FIELDS } from './hunt';
 import { MISSION_FIELDS } from './mission';
 import { TRIAL_FIELDS } from './trial';
 import { ESCORT_FIELDS } from './escort';
+import { EXPEDITION_FIELDS } from './expedition';
 
 /** Every challenge field, challenge by challenge, each in its own order. */
 export const CHALLENGE_SPECS: readonly LevelSpec[] = [
@@ -14,4 +15,5 @@ export const CHALLENGE_SPECS: readonly LevelSpec[] = [
   ...DANDORI_FIELDS,
   ...TRIAL_FIELDS,
   ...ESCORT_FIELDS,
+  ...EXPEDITION_FIELDS,
 ];

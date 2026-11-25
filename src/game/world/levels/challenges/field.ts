@@ -60,7 +60,7 @@ export type FieldSpec = Omit<LevelSpec, 'stage' | 'platinumTime' | 'challenge' |
  * Squad Trial has no clock. Fields have no stage: they are not part of the numbered run.
  */
 export function challengeFields(mode: ChallengeId, specs: readonly FieldSpec[]): LevelSpec[] {
-  const timed = mode !== 'growing' && mode !== 'trial';
+  const timed = mode !== 'growing' && mode !== 'trial' && mode !== 'expedition';
   return specs.map(({ pace, ...spec }, index) => ({
     // Fields written without dressing of their own are dressed for their setting.
     ...(spec.props ? {} : dressField(spec)),
@@ -71,6 +71,8 @@ export function challengeFields(mode: ChallengeId, specs: readonly FieldSpec[]):
     platinumTime: timed ? pace : spec.dayLength,
     seed: spec.seed,
     challenge: { mode, order: index + 1, pace },
-    ...(mode === 'trial' ? { untimed: true, dayLength: 0, platinumTime: 0 } : {}),
+    ...(mode === 'trial' || mode === 'expedition'
+      ? { untimed: true, dayLength: 0, platinumTime: 0 }
+      : {}),
   }));
 }

@@ -169,6 +169,33 @@ function MORE_ACHIEVEMENTS(): Achievement[] {
       'Bring an Escort relic home without losing anyone.',
       (d) => d.mode === 'escort' && cleared(d) && d.workersLost === 0,
     ),
+    // Expedition.
+    counter('dive-1', 'Down the Stair', 'Earn a medal on an Expedition field.', 1, (save) =>
+      medalsIn(save, 'expedition', 'Bronze'),
+    ),
+    counter('dive-6', 'Spelunker', 'Earn a medal on six Expedition fields.', 6, (save) =>
+      medalsIn(save, 'expedition', 'Bronze'),
+    ),
+    counter(
+      'dive-12',
+      'The Bottom of Everything',
+      'Earn a medal on all twelve Expedition fields.',
+      12,
+      (save) => medalsIn(save, 'expedition', 'Bronze'),
+    ),
+    counter(
+      'dive-diamond',
+      'Lantern in the Dark',
+      'Earn Diamond on an Expedition field.',
+      1,
+      (save) => medalsIn(save, 'expedition', 'Diamond'),
+    ),
+    feat(
+      'dive-clean',
+      'Nobody Left Below',
+      'Empty every floor of an Expedition without losing anyone.',
+      (d) => d.mode === 'expedition' && cleared(d) && d.workersLost === 0,
+    ),
     // Relics and their sets.
     counter(
       'relics-50',

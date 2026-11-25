@@ -1,10 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { initPhysics } from '../simulation/physics';
-import { Simulation } from '../simulation/Simulation';
 import { CHALLENGE_LEVELS, type LevelDefinition } from '../world/level';
-import { playGreedy } from '../world/testBot';
+import { playChallengeDay } from '../world/diveBot';
 import { challengeFacts } from './facts';
-import { MODES, scoreChallenge, type ChallengeId } from './modes';
+import { challengePar, scoreChallenge, type ChallengeId } from './modes';
 
 beforeAll(async () => {
   await initPhysics();
@@ -17,14 +16,11 @@ beforeAll(async () => {
 
 /** Plays a field as its challenge's simulation would, to the end. */
 function play(level: LevelDefinition, mode: ChallengeId) {
-  const sim = new Simulation(level, {
-    endsWhen: MODES[mode].endsWhen,
-    growth: MODES[mode].growth,
-  });
-  playGreedy(sim);
+  const day = playChallengeDay(level, mode);
+  const sim = day.surface;
   const facts = challengeFacts(sim);
   const result = { ended: sim.ended, elapsed: sim.elapsed, facts };
-  sim.dispose();
+  day.dispose();
   return result;
 }
 
@@ -41,6 +37,14 @@ describe.each(CHALLENGE_LEVELS)('$id', (level) => {
       expect(day.ended).toBe('timeUp');
       expect(day.facts.alive).toBe(field.pace);
       expect(score.rank).toBe('Platinum');
+    } else if (mode === 'expedition') {
+      // No clock: every floor emptied, with the test player's headcount at the end.
+      expect(day.ended).toBe('allCollected');
+      expect(day.facts.shardsHome).toBe(day.facts.shardsTotal);
+      expect(day.facts.alive).toBe(field.pace);
+      // Where the test player grew every Sproutling the floors hold, Platinum is Diamond too.
+      const par = challengePar(mode, level);
+      expect(score.rank).toBe(par.diamondScore === par.parScore ? 'Diamond' : 'Platinum');
     } else if (mode === 'trial') {
       // No clock: every Sunshard home, losing exactly as many as Platinum allows.
       expect(day.ended).toBe('allCollected');

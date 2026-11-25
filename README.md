@@ -10,7 +10,7 @@ each challenge has twelve fields built for its own rules; battles race a rival W
 This repository implements the MVP defined in the project handoff document (one worker type,
 one captain, one home base, one enemy type, one treasure type, throwing, whistling, carrying,
 treasure delivery, a day timer and dandori scoring) plus the academy around it: twenty-five lessons
-across four terms and the caves under the school, four bosses, an open story expedition, sixty challenge
+across four terms and the caves under the school, four bosses, an open story expedition, eighty-four challenge
 fields, ranks, and progression from one lesson to the next.
 
 ## Run it
@@ -562,8 +562,15 @@ Before and after: `docs-design/art/ui-*-before.jpg` and `ui-*-after.jpg`.
   each (the Bellwether's arena).
 - **Sprays on challenge fields**: a field may grant sprays (`items`); the last two Escort fields
   do. Using one is noted in the replay.
-- Not done: the Expedition rule (a multi-floor cave dive): the test player cannot yet go down
-  stairs, so its fields could not be paced.
+- **Expedition** (a seventh challenge): no clock, a small field with a way down at its far end,
+  and two or three floors of caves beneath it (`floors` on the field), each with a Kiln by the
+  foot of its stair and, but the last, a way down of its own. Deeper floors hold heavier
+  Sunshards and fiercer beasts. What is found below counts with the field's own once it comes up
+  the stair (`Expedition.pooled`); the day ends when every floor is emptied. Score: treasure plus
+  20 a Sproutling alive at the end; Platinum is the test player's headcount and needs every floor
+  emptied. Its twelve fields are made by `generateDive` from fixed seeds and dived to the bottom
+  by the test player (`world/diveBot.ts`: the greedy player on each floor, down the stairs once a
+  floor's own Sunshards are home, and back up once everything below is emptied).
 
 ## Playing together
 
