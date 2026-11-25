@@ -131,10 +131,12 @@ export function modeKey(mode: string, levelId: string, difficulty: Difficulty): 
 }
 
 /** Where a player's own runs are kept: by challenge, or (for runs from before) by lesson alone. */
-export function runsKey(run: Pick<RunEntry, 'mode' | 'level' | 'difficulty'>): string {
-  return run.mode
+export function runsKey(run: Pick<RunEntry, 'mode' | 'level' | 'difficulty' | 'coop'>): string {
+  const key = run.mode
     ? modeKey(run.mode, run.level, run.difficulty)
     : splitKey(run.level, run.difficulty);
+  // Co-op runs are kept apart from the solo ones, as their boards are.
+  return run.coop ? `${key}+coop` : key;
 }
 
 /** Most posted-run keys a save remembers. */

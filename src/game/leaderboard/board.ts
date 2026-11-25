@@ -101,11 +101,20 @@ export function standings(
   levelId: string,
   difficulty: Difficulty,
   mode: BoardMode = 'classic',
+  coop = false,
 ): BoardEntry[] {
   return keepBest(entries).filter(
     (entry) =>
-      entry.level === levelId && entry.difficulty === difficulty && boardMode(entry) === mode,
+      entry.level === levelId &&
+      entry.difficulty === difficulty &&
+      boardMode(entry) === mode &&
+      (entry.coop === true) === coop,
   );
+}
+
+/** The board a run is kept on: its mode's, and apart from the solo runs if played in co-op. */
+export function boardGroup(entry: Pick<BoardEntry, 'mode' | 'coop'>): string {
+  return `${boardMode(entry)}${entry.coop ? '+coop' : ''}`;
 }
 
 /**
@@ -115,13 +124,13 @@ export function standings(
 export function keepBest(entries: readonly BoardEntry[]): BoardEntry[] {
   const best = new Map<string, BoardEntry>();
   for (const entry of entries) {
-    const key = `${entry.player}|${boardMode(entry)}|${entry.level}|${entry.difficulty}`;
+    const key = `${entry.player}|${boardGroup(entry)}|${entry.level}|${entry.difficulty}`;
     const held = best.get(key);
     if (!held || compareRuns(entry, held) < 0) best.set(key, entry);
   }
   const lessons = new Map<string, BoardEntry[]>();
   for (const entry of best.values()) {
-    const key = `${boardMode(entry)}|${entry.level}|${entry.difficulty}`;
+    const key = `${boardGroup(entry)}|${entry.level}|${entry.difficulty}`;
     lessons.set(key, [...(lessons.get(key) ?? []), entry]);
   }
   return [...lessons.values()].flatMap((list) => list.sort(compareRuns).slice(0, KEPT_PER_LESSON));
@@ -464,7 +473,7 @@ export async function collectBoard(
   const counted = new Map<string, number>();
   for (const entry of entries) {
     if (!entry.logHash || !(logs.has(entry.logHash) || hasLog(entry.logHash))) continue;
-    const key = `${boardMode(entry)}|${entry.level}|${entry.difficulty}`;
+    const key = `${boardGroup(entry)}|${entry.level}|${entry.difficulty}`;
     const count = counted.get(key) ?? 0;
     if (count >= LOGS_KEPT) continue;
     counted.set(key, count + 1);

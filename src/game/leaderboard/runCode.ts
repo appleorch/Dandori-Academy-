@@ -77,6 +77,8 @@ export interface RunEntry {
   beastsLeft?: number;
   everything?: boolean;
   survived?: boolean;
+  /** Played in local co-op, by two Wardens: on a board of its own. */
+  coop?: boolean;
 }
 
 /** Two FNV-1a hashes with different offsets: 16 hex digits, plenty to tell lessons apart. */
@@ -445,6 +447,7 @@ export function makeChallengeRun(
     facts: ChallengeFacts;
     score: ChallengeScore;
     elapsed: number;
+    coop?: boolean;
   },
   game: string,
   at: Date,
@@ -479,6 +482,7 @@ export function makeChallengeRun(
     everything: facts.everything,
     survived: facts.survived,
     at: at.toISOString(),
+    ...(day.coop ? { coop: true } : {}),
   };
 }
 

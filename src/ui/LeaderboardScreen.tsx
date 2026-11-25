@@ -207,6 +207,7 @@ export function LeaderboardScreen() {
   // Switching boards keeps the field if the new board has it, or starts at its first.
   const levelId = choices.some((level) => level.id === picked) ? picked : choices[0].id;
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+  const [coopBoard, setCoopBoard] = useState(false);
   const [load, setLoad] = useState<Load>(() =>
     cached ? { state: 'ready', ...cached } : { state: 'idle' },
   );
@@ -248,7 +249,9 @@ export function LeaderboardScreen() {
   // Challenges are played on the Normal day; only the Classic board has Hard runs.
   const shownDifficulty: Difficulty = mode === 'classic' ? difficulty : 'normal';
   const board =
-    load.state === 'ready' ? standings(load.entries, levelId, shownDifficulty, mode) : [];
+    load.state === 'ready'
+      ? standings(load.entries, levelId, shownDifficulty, mode, coopBoard && mode !== 'classic')
+      : [];
   const mine =
     save.runs[
       runsKey({
@@ -361,6 +364,21 @@ export function LeaderboardScreen() {
               </optgroup>
             </select>
           </label>
+          {mode !== 'classic' && (
+            <div className="board-difficulty" role="group" aria-label="Players">
+              {[false, true].map((option) => (
+                <button
+                  key={String(option)}
+                  type="button"
+                  className={option === coopBoard ? 'tab active' : 'tab'}
+                  aria-pressed={option === coopBoard}
+                  onClick={() => setCoopBoard(option)}
+                >
+                  {option ? 'Co-op' : 'Solo'}
+                </button>
+              ))}
+            </div>
+          )}
           {mode === 'classic' && (
             <div className="board-difficulty" role="group" aria-label="Difficulty">
               {DIFFICULTIES.map((option) => (
@@ -380,7 +398,8 @@ export function LeaderboardScreen() {
 
         <section className="board">
           <h2>
-            {boardName(mode)} board <small>{level.name}</small>
+            {boardName(mode)} {coopBoard && mode !== 'classic' ? 'co-op ' : ''}board{' '}
+            <small>{level.name}</small>
           </h2>
           {load.state === 'loading' && <p className="note">Reading the board…</p>}
           {load.state === 'error' && (

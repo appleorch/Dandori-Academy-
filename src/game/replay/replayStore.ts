@@ -14,8 +14,8 @@ const STORE = 'logs';
 const memory = new Map<string, DayLog>();
 
 /** The key a field's best replay is kept under. */
-export function bestKey(level: string, difficulty: Difficulty, mode: ModeId): string {
-  return `best:${mode}:${level}:${difficulty}`;
+export function bestKey(level: string, difficulty: Difficulty, mode: ModeId, coop = false): string {
+  return `best:${mode}:${level}:${difficulty}${coop ? ':coop' : ''}`;
 }
 
 export const LAST_KEY = 'last';

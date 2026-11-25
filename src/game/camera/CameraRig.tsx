@@ -1,3 +1,4 @@
+import { SPLIT_AT, wardensApart } from './SplitScreen';
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import type { InputController } from '../commands/input';
@@ -104,10 +105,11 @@ export function CameraRig({ sim, input, fx }: CameraRigProps): null {
       ? { x: captain.x * 0.35, z: captain.z * 0.35 }
       : peek
         ? idleSpot(sim)
-        : partner
+        : partner && wardensApart(sim) <= SPLIT_AT
           ? { x: (captain.x + partner.x) / 2, z: (captain.z + partner.z) / 2 }
           : captain;
-    const apart = partner ? Math.hypot(captain.x - partner.x, captain.z - partner.z) : 0;
+    // Split (see SplitScreen), each half follows its own Warden; together, one view fits both.
+    const apart = partner && wardensApart(sim) <= SPLIT_AT ? wardensApart(sim) : 0;
     // The lean is eased on its own, so a flick of the mouse does not jerk the view.
     const leanTo = peek || tactical || partner ? 0 : LOOK_AHEAD;
     const follow = 1 - Math.exp(-delta * 3);

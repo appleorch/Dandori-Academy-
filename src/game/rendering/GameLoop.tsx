@@ -8,7 +8,7 @@ import { assistAim, jobSpots } from '../commands/aimAssist';
 import { connectedPads } from '../commands/gamepad';
 import { FixedClock } from '../core/clock';
 import { CAPTAIN, SIM_DT } from '../core/config';
-import { coopDay, useGameStore } from '../core/gameStore';
+import { useGameStore } from '../core/gameStore';
 import { PartnerPad } from '../commands/partner';
 import { battleHash } from '../net/lockstep';
 import { splitKey } from '../save/saveManager';
@@ -171,7 +171,8 @@ async function keepReplay(recorder: Recorder, sim: Simulation, mode: ModeId): Pr
       ? result.clearTime !== null &&
         (result.previousBest === null || result.clearTime < result.previousBest)
       : result.isBestScore);
-  if (best) await putReplay(bestKey(log.level, log.difficulty, mode), log);
+  if (best)
+    await putReplay(bestKey(log.level, log.difficulty, mode, log.partner !== undefined), log);
 }
 
 /** How long a new kind's first try stays up, at most, and the first sunset's warning. */
@@ -208,11 +209,11 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
   const partsToday = useRef(0);
   // The day's inputs, noted for its replay (every day but the story's and battles).
   const [recorder] = useState(() => {
-    const { playMode, coop } = useGameStore.getState();
-    // A co-op day has two players' inputs; its replay is not kept (yet).
-    // Nor is a practice run's (it starts partway through another day).
+    const { playMode } = useGameStore.getState();
+    // A practice run's replay is not kept (it starts partway through another day). A co-op
+    // day's notes both players' inputs.
     const practising = useGameStore.getState().practice !== null;
-    return replayable(playMode) && !coopDay(coop, playMode) && !practising ? new Recorder() : null;
+    return replayable(playMode) && !practising ? new Recorder() : null;
   });
   const [partnerPad] = useState(() => new PartnerPad());
   const stalled = useRef(0);
@@ -454,10 +455,11 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
         );
       } else {
         const partner = sim.partnerWarden;
-        const second =
-          partner && live ? partnerPad.sample(shared.partner, partner.x, partner.z) : undefined;
+        const raw = partner ? partnerPad.sample(shared.partner, partner.x, partner.z) : undefined;
         // Recorded days are played on the log's grid, so the log replays them exactly.
-        sim.step(recorder ? recorder.input(sample) : sample, second);
+        const first = recorder ? recorder.input(sample) : sample;
+        const second = raw && recorder ? recorder.partner(raw) : raw;
+        sim.step(first, second);
       }
       // The rival keeps pace step by step, and the battle is called the moment it is won.
       if (battle && sim === surface && !surface.ended) {

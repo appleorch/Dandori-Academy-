@@ -151,7 +151,7 @@ export const EN = {
   'challenges.daily.failed': 'Today’s field could not be made. Try again.',
   'coop.toggle': 'Co-op: a second player on a gamepad',
   'coop.help':
-    'Player 2 (the last gamepad plugged in): left stick walks, right stick aims, RT throws, LT whistles, A charges, B dismisses, LB and RB change kind. Each player has a Warden and half the squad. Co-op runs are not posted to the board.',
+    'Player 2 (the last gamepad plugged in): left stick walks, right stick aims, RT throws, LT whistles, A charges, B dismisses, LB and RB change kind. Each player has a Warden and half the squad. Co-op runs go on co-op boards of their own.',
   'camp.difficulty': 'How hard a story?',
   'camp.difficultyNote': 'Chosen now, kept for this story.',
   'camp.diff.relaxed': 'Relaxed',

@@ -4,6 +4,7 @@ import { ACESFilmicToneMapping } from 'three';
 import { audio } from '../audio/audioManager';
 import { coopDay, useGameStore } from '../core/gameStore';
 import { CameraRig } from '../camera/CameraRig';
+import { SplitScreen } from '../camera/SplitScreen';
 import type { InputController } from '../commands/input';
 import { RESERVED_KEY } from '../commands/bindings';
 import { Battle, RIVAL_NAMES } from '../modes/battle';
@@ -270,7 +271,13 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         <PerfProbe />
         <QualityTuner />
         {quality.shadows && <ShadowBudget />}
-        {quality.postFx ? (
+        {/* Co-op draws its own (possibly split) frame, without the post-processing pass. */}
+        {sim?.coop ? (
+          <>
+            <SplitScreen sim={sim} zoom={() => input.zoom} />
+            <OverlayInMainPass />
+          </>
+        ) : quality.postFx ? (
           <PostFx ambientOcclusion={quality.ambientOcclusion} tiltShift={tiltShift} />
         ) : (
           <OverlayInMainPass />

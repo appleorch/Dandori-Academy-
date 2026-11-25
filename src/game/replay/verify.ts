@@ -41,6 +41,8 @@ export async function verifyRun(entry: BoardEntry | RunEntry, log: DayLog): Prom
       facts,
       score: scoreChallenge(mode, replay.level, facts),
       elapsed: sim.elapsed,
+      // A log with a second player's inputs was played in co-op.
+      coop: log.partner !== undefined,
     },
     entry.game,
     new Date(entry.at),

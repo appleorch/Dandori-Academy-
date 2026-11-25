@@ -2,7 +2,7 @@
  * The Academy board's server: a Cloudflare Worker over a D1 database (see `migrations/`). It keeps each player's best run per board, lesson and difficulty, checked with
  * the game's own rules (`src/game/leaderboard/`), so the board never resets.
  */
-import { boardMode, entryOf, type BoardEntry } from '../src/game/leaderboard/board';
+import { boardGroup, boardMode, entryOf, type BoardEntry } from '../src/game/leaderboard/board';
 import { compareRuns } from '../src/game/leaderboard/runCode';
 
 export interface Env {
@@ -24,7 +24,7 @@ export function json(body: unknown, status = 200, headers: Record<string, string
 }
 
 export function keyOf(entry: BoardEntry): string {
-  return `${entry.player}|${boardMode(entry)}|${entry.level}|${entry.difficulty}`;
+  return `${entry.player}|${boardGroup(entry)}|${entry.level}|${entry.difficulty}`;
 }
 
 export type Taken = 'kept' | 'not-better' | 'banned' | 'invalid';

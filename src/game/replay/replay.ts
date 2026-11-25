@@ -38,6 +38,8 @@ export interface DayLog {
   /** The inputs, packed and compressed (see inputLog.ts). */
   inputs: string;
   events: ReplayEvent[];
+  /** Co-op: the second player's inputs, packed like the first's. */
+  partner?: string;
   /** Seconds of day played, for the viewer's timeline before anything is replayed. */
   seconds: number;
 }
@@ -55,9 +57,11 @@ export function fieldFor(levelId: string, difficulty: Difficulty, mode: ModeId) 
 }
 
 /** A fresh day on a field, as the game starts one (see GameCanvas). */
-export function newDay(level: LevelDefinition, mode: ModeId): Expedition {
+export function newDay(level: LevelDefinition, mode: ModeId, coop = false): Expedition {
   const rules = MODES[mode];
-  return new Expedition(new Simulation(level, { endsWhen: rules.endsWhen, growth: rules.growth }));
+  return new Expedition(
+    new Simulation(level, { endsWhen: rules.endsWhen, growth: rules.growth, coop }),
+  );
 }
 
 /**
@@ -67,10 +71,19 @@ export function newDay(level: LevelDefinition, mode: ModeId): Expedition {
 export class Recorder {
   readonly inputs: InputState[] = [];
   readonly events: ReplayEvent[] = [];
+  /** Co-op: the second player's inputs, one per step alongside the first's. */
+  readonly partners: InputState[] = [];
 
   input(raw: InputState): InputState {
     const input = quantise(raw);
     this.inputs.push(input);
+    return input;
+  }
+
+  /** Co-op: notes the second player's input for the step just noted, and returns it. */
+  partner(raw: InputState): InputState {
+    const input = quantise(raw);
+    this.partners.push(input);
     return input;
   }
 
@@ -89,6 +102,7 @@ export class Recorder {
       ...day,
       inputs: await compress(packInputs(this.inputs)),
       events: [...this.events],
+      ...(this.partners.length > 0 ? { partner: await compress(packInputs(this.partners)) } : {}),
       seconds: this.inputs.length / 60,
     };
   }
@@ -106,8 +120,10 @@ export class ReplayRun {
     readonly log: DayLog,
     readonly inputs: readonly InputState[],
     readonly level: LevelDefinition,
+    /** Co-op: the second player's inputs. */
+    readonly partners: readonly InputState[] = [],
   ) {
-    this.expedition = newDay(level, log.mode);
+    this.expedition = newDay(level, log.mode, partners.length > 0);
   }
 
   /** Unpacks a log and sets up its day; null if the log is from another version or field. */
@@ -117,7 +133,8 @@ export class ReplayRun {
     const level = fieldFor(log.level, log.difficulty, log.mode);
     if (!level) return null;
     const inputs = unpackInputs(await decompress(log.inputs));
-    return new ReplayRun(log, inputs, level);
+    const partners = log.partner ? unpackInputs(await decompress(log.partner)) : [];
+    return new ReplayRun(log, inputs, level, partners);
   }
 
   get total(): number {
@@ -146,7 +163,8 @@ export class ReplayRun {
       }
       if (this.done) break;
       const sim = this.expedition.active;
-      sim.step(this.inputs[this.step++]);
+      const partner = this.partners.length > 0 ? this.partners[this.step] : undefined;
+      sim.step(this.inputs[this.step++], partner);
       if (this.expedition.below) this.expedition.settle();
       played++;
       if (this.step % SNAPSHOT_EVERY === 0 && !this.snapshots.has(this.step)) {
@@ -181,7 +199,7 @@ export class ReplayRun {
         this.step = best;
         this.nextEvent = snap.nextEvent;
       } else {
-        this.expedition = newDay(this.level, this.log.mode);
+        this.expedition = newDay(this.level, this.log.mode, this.partners.length > 0);
         this.step = 0;
         this.nextEvent = 0;
       }

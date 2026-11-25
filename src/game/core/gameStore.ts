@@ -919,7 +919,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         campaign: settled?.state,
         // Co-op days have no board of their own yet: they are not posted.
         run:
-          isChallenge(mode) && facts && challenge && !coopDay(get().coop, mode)
+          isChallenge(mode) && facts && challenge
             ? (makeChallengeRun(
                 {
                   levelId: level.id,
@@ -928,6 +928,7 @@ export const useGameStore = create<GameStore>((set, get) => {
                   facts,
                   score: challenge,
                   elapsed: sim.elapsed,
+                  coop: coopDay(get().coop, mode),
                 },
                 GAME_VERSION,
                 now,

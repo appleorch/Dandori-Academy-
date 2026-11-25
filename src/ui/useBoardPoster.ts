@@ -45,7 +45,9 @@ export function useBoardPoster(): void {
         if (sending.has(key)) continue;
         sending.add(key);
         // The run's replay goes with it, for the board to check; the post signs its hash.
-        const log = run.mode ? await getReplay(bestKey(run.level, run.difficulty, run.mode)) : null;
+        const log = run.mode
+          ? await getReplay(bestKey(run.level, run.difficulty, run.mode, run.coop === true))
+          : null;
         const matches =
           log !== null && log.level === run.level && Math.abs(log.seconds - run.time) < 1;
         const sent = await sendPost(
