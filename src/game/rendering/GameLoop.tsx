@@ -268,6 +268,9 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
       if (!store.save.scenesSeen.includes(KIND_SCENES[kind].id)) {
         store.playScene(KIND_SCENES[kind]);
         kindTry.current = { kind, shown: 0 };
+        // And a small, safe puzzle to try the new kind on.
+        const spot = sim.spawnPractice(kind);
+        if (spot) fx.popup('Something to try', spot.x, spot.z, '#bfe6ff');
       }
     }
     if (kindTry.current) {

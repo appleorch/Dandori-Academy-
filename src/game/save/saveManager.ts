@@ -607,7 +607,10 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
   const story = mode === 'lessons';
   const key = splitKey(day.levelId, day.difficulty);
   const ids = [
-    ...day.treasureIds.map((id) => `${day.levelId}:${id}`),
+    // A story practice shard is no relic for the Field Guide.
+    ...day.treasureIds
+      .filter((id) => !id.startsWith('practice-'))
+      .map((id) => `${day.levelId}:${id}`),
     ...(day.extraTreasures ?? []),
   ];
   let medals = save.medals;

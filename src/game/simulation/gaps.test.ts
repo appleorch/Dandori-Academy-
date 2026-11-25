@@ -138,3 +138,19 @@ describe('relic notes', () => {
     expect(relicNotes(RELICS[0])).toBeNull();
   });
 });
+
+describe('kind puzzles', () => {
+  it('set a Dewling’s shard in the nearest water and a heavy one for Stonelings', () => {
+    const quad = CAMPAIGN_SECTIONS[0].level;
+    const sim = new Simulation(defineLevel({ ...quad, id: 'test-quad' }));
+    const wet = sim.spawnPractice('dew');
+    expect(wet).not.toBeNull();
+    if (wet) expect(sim.inWater(wet.x, wet.z)).toBe(true);
+    expect(sim.spawnPractice('stone')).not.toBeNull();
+    const ids = [...sim.carryables.entries()].map(([, c]) => c.id);
+    expect(ids).toContain('practice-dew');
+    expect(ids).toContain('practice-stone');
+    expect(sim.spawnPractice('spark')).toBeNull();
+    sim.dispose();
+  });
+});

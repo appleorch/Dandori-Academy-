@@ -7,6 +7,7 @@ import { Simulation } from '../simulation/Simulation';
 import { initPhysics } from '../simulation/physics';
 import { forDifficulty, levelById, type LevelDefinition } from '../world/level';
 import { compress, decompress, packInputs, quantise, unpackInputs } from './inputLog';
+import { snapshotExpedition } from './snapshot';
 
 /**
  * Replays. A day is fully decided by its field, its mode and its inputs, so a log of those
@@ -95,9 +96,11 @@ export class Recorder {
 
 /** A logged day, ready to be played back step by step. */
 export class ReplayRun {
-  readonly expedition: Expedition;
+  expedition: Expedition;
   step = 0;
   private nextEvent = 0;
+  /** Snapshots taken as the replay plays, every SNAPSHOT_EVERY steps, for seeking back. */
+  private readonly snapshots = new Map<number, { expedition: Expedition; nextEvent: number }>();
 
   constructor(
     readonly log: DayLog,
@@ -146,6 +149,12 @@ export class ReplayRun {
       sim.step(this.inputs[this.step++]);
       if (this.expedition.below) this.expedition.settle();
       played++;
+      if (this.step % SNAPSHOT_EVERY === 0 && !this.snapshots.has(this.step)) {
+        this.snapshots.set(this.step, {
+          expedition: snapshotExpedition(this.expedition),
+          nextEvent: this.nextEvent,
+        });
+      }
     }
     // An end noted after the last input still ends the day.
     for (; this.nextEvent < this.log.events.length; this.nextEvent++) {
@@ -156,10 +165,39 @@ export class ReplayRun {
     return played;
   }
 
+  /**
+   * Goes to a step: forward by playing on; back from the latest snapshot at or before it (or
+   * from the start, if none has been taken yet). Returns the expedition now in play.
+   */
+  seekTo(target: number): Expedition {
+    if (target < this.step) {
+      let best = -1;
+      for (const at of this.snapshots.keys()) if (at <= target && at > best) best = at;
+      const snap = best >= 0 ? this.snapshots.get(best) : undefined;
+      this.expedition.dispose();
+      if (snap) {
+        // A copy of the snapshot, so it can be gone back to again.
+        this.expedition = snapshotExpedition(snap.expedition);
+        this.step = best;
+        this.nextEvent = snap.nextEvent;
+      } else {
+        this.expedition = newDay(this.level, this.log.mode);
+        this.step = 0;
+        this.nextEvent = 0;
+      }
+    }
+    this.advance(target - this.step);
+    return this.expedition;
+  }
+
   dispose(): void {
     this.expedition.dispose();
+    for (const snap of this.snapshots.values()) snap.expedition.dispose();
   }
 }
+
+/** Steps between replay snapshots: ten seconds of the day. */
+export const SNAPSHOT_EVERY = 600;
 
 /** Plays a log to its end, headless; null if it cannot be replayed here. */
 export async function replayToEnd(log: DayLog): Promise<ReplayRun | null> {

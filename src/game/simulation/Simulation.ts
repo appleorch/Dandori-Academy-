@@ -177,6 +177,8 @@ export interface WorkerCounts {
 export const TIMELINE_EVERY = 300;
 /** How often idle hands are counted, in steps. */
 const WORKLOAD_EVERY = 30;
+/** How far from the Kiln a practice puzzle may be set. */
+const PRACTICE_REACH = 60;
 
 export class Simulation {
   readonly ecs = new EcsWorld();
@@ -565,6 +567,40 @@ export class Simulation {
       hp: this.partner?.state.hp ?? this.captainState.hp,
       selected: this.partner?.selected ?? this.selected,
     };
+  }
+
+  /**
+   * Story: a small, safe puzzle for a kind met for the first time, near the Kiln and for today
+   * only. Dewlings: a shard in the nearest water, which only they can fetch. Stonelings: a heavy
+   * shard, which two of them lift as four of anyone else would. (Sparklings have the section's
+   * corner ledge.) Returns where it was put, or null.
+   */
+  spawnPractice(kind: SproutKind): { x: number; z: number } | null {
+    const { kiln } = this.level;
+    if (kind === 'dew') {
+      let best: { x: number; z: number } | null = null;
+      let bestDist = PRACTICE_REACH;
+      for (let dx = -PRACTICE_REACH; dx <= PRACTICE_REACH; dx += 2) {
+        for (let dz = -PRACTICE_REACH; dz <= PRACTICE_REACH; dz += 2) {
+          const x = kiln.x + dx;
+          const z = kiln.z + dz;
+          const dist = Math.hypot(dx, dz);
+          if (dist < bestDist && this.inWater(x, z)) {
+            best = { x, z };
+            bestDist = dist;
+          }
+        }
+      }
+      if (!best) return null;
+      spawnTreasure(this, { id: 'practice-dew', ...best, weight: 1 });
+      return best;
+    }
+    if (kind === 'stone') {
+      const spot = this.nav.nearestWalkable(kiln.x + 8, kiln.z + 6);
+      spawnTreasure(this, { id: 'practice-stone', x: spot.x, z: spot.z, weight: 4 });
+      return spot;
+    }
+    return null;
   }
 
   /** Sorts the squad by kind behind the Warden, or mixes it again. */

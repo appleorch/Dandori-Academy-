@@ -132,9 +132,11 @@ export function guideText(step: GuideStep, controls: CoachControls, touch: boole
 
 /** The line for a kind met for the first time in the story, and what to try with it. */
 export const KIND_TRIES: Record<Exclude<SproutKind, 'ember'>, string> = {
-  dew: 'Dewlings wade where others drown. Throw one at something in the water: it carries it out.',
-  stone: 'Stonelings lift like two, and only they crack crystal. Throw one at a heavy haul.',
-  spark: 'Sparklings shrug off sparks and fly farthest. Throw one past a spark coil.',
+  dew: 'Dewlings wade where others drown. I have dropped a shard in the water nearby: send a Dewling for it.',
+  stone:
+    'Stonelings lift like two. There is a heavy shard by the Kiln that wants four hands: try two Stonelings.',
+  spark:
+    'Sparklings fly farthest. The ledge in this ground\u2019s corner is out of every other kind\u2019s reach: try a Sparkling.',
 };
 
 /** The first day's gentle warning, three minutes before sunset. */

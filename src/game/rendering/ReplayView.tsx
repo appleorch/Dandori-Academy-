@@ -200,21 +200,16 @@ export function ReplayView({ log, title }: { log: DayLog; title: string }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [leaveReplay]);
 
-  /** Goes to a step: forward by playing on, back by starting again from the first step. */
+  /** Goes to a step: forward by playing on, back from the nearest snapshot before it. */
   const seek = (target: number) => {
     if (!run) return;
     setSeeking(true);
     window.setTimeout(() => {
-      let current = run;
-      if (target < current.step) {
-        current.dispose();
-        current = new ReplayRun(log, run.inputs, run.level);
-        setRun(current);
-        setGeneration((n) => n + 1);
-      }
-      current.advance(target - current.step);
-      setSim(current.expedition.active);
-      setStep(current.step);
+      const before = run.expedition;
+      const now = run.seekTo(target);
+      if (now !== before) setGeneration((n) => n + 1);
+      setSim(now.active);
+      setStep(run.step);
       setSeeking(false);
     }, 20);
   };

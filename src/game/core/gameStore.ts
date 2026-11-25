@@ -946,7 +946,10 @@ export const useGameStore = create<GameStore>((set, get) => {
       const unlocked = practising ? [] : earned.unlocked;
       if (!practising) persist(save);
       const relicKeys = [
-        ...stats.treasuresCollected.map((id) => `${level.id}:${id}`),
+        // A practice shard is no relic.
+        ...stats.treasuresCollected
+          .filter((id) => !id.startsWith('practice-'))
+          .map((id) => `${level.id}:${id}`),
         ...(haul?.relics ?? []),
       ];
       set({
