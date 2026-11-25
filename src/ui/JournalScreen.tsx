@@ -36,6 +36,16 @@ export function JournalScreen() {
             </button>
           )}
         </div>
+        {save.campaign.log.length > 0 && (
+          <section className="warden-log">
+            <h2>The Warden’s log</h2>
+            <ol reversed>
+              {[...save.campaign.log].reverse().map((entry) => (
+                <li key={entry.day}>{entry.text}</li>
+              ))}
+            </ol>
+          </section>
+        )}
         {CHAPTERS.map((chapter) => {
           const lessons = LEVELS.filter(
             (level) => level.stage >= chapter.from && level.stage <= chapter.to,

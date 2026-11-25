@@ -5,12 +5,22 @@ import { fieldTitle, formatTime } from './format';
 import { currentSection } from '../game/campaign/campaign';
 import type { InputController } from '../game/commands/input';
 import { SPROUT_KINDS, SPROUTS } from '../game/workers/sprouts';
-import { SprocketPortrait } from './Portrait';
 import { isChallenge, medalTargets, MODES } from '../game/modes/modes';
 import { levelById, type LevelDefinition } from '../game/world/level';
 import { RacePanel } from './RacePanel';
 import { KindGlyph } from './KindGlyph';
 import { ActionPrompt } from './Glyph';
+import { SPEAKER_NAMES, type Speaker } from '../game/story/scenes';
+import { AshwickPortrait, QuillPortrait, SprocketPortrait, TindlePortrait } from './Portrait';
+
+/** The portrait for whoever is speaking in a scene (the Warden has none: it is you). */
+function speakerPortrait(who: Speaker) {
+  if (who === 'sprocket') return <SprocketPortrait mood="muse" />;
+  if (who === 'ashwick') return <AshwickPortrait />;
+  if (who === 'tindle') return <TindlePortrait />;
+  if (who === 'quill') return <QuillPortrait />;
+  return null;
+}
 import { keyLabel, type Action } from '../game/commands/bindings';
 
 const KIND_ACTIONS: readonly Action[] = ['kind1', 'kind2', 'kind3', 'kind4'];
@@ -55,8 +65,15 @@ export function Hud({
   const below = nearDescent ? levelById(nearDescent) : undefined;
   const campaign = useGameStore((state) => state.save.campaign);
   useEffect(() => {
-    if (hint) audio.play('hint');
+    if (!hint) return;
+    audio.play('hint');
+    audio.speak('ashwick', hint);
   }, [hint]);
+  // The Headmaster's remarks are spoken as well as shown.
+  useEffect(() => {
+    if (sprocket) audio.speak('sprocket', sprocket.text);
+  }, [sprocket]);
+
   // The Headmaster's banner leaves once it has faded, so it never sits in the way unseen.
   const remark = sprocket?.id;
   useEffect(() => {
@@ -366,6 +383,33 @@ export function Hud({
       {phase === 'playing' && !hud.below && !untimed && hud.timeLeft <= 30 && hud.timeLeft > 0 && (
         <div className="urgent-vignette" aria-hidden="true" />
       )}
+    </div>
+  );
+}
+
+/**
+ * A story scene's current line: who is speaking, with their portrait, along the bottom of the
+ * screen. Click it for the next line, or Skip. Shown even before the day's HUD has anything to
+ * show, as the first morning's scene plays before the day begins.
+ */
+export function ScenePanel() {
+  const scene = useGameStore((state) => state.scene);
+  const nextSceneLine = useGameStore((state) => state.nextSceneLine);
+  const endScene = useGameStore((state) => state.endScene);
+  if (!scene) return null;
+  const line = scene.scene.lines[scene.line];
+  return (
+    <div className="scene-line" role="dialog" aria-label="Story scene">
+      <button type="button" className="scene-say" onClick={nextSceneLine}>
+        {speakerPortrait(line.who)}
+        <span>
+          <strong>{SPEAKER_NAMES[line.who]}</strong>
+          {line.text}
+        </span>
+      </button>
+      <button type="button" className="secondary small scene-skip" onClick={endScene}>
+        Skip
+      </button>
     </div>
   );
 }

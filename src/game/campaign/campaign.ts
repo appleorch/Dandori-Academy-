@@ -6,6 +6,10 @@ import { decodeFog, encodeFog, mergeFog } from './fog';
 import { CAMPAIGN_SECTIONS, sectionById, type CampaignSection } from './sections';
 import { endingFor, type Ending } from './endings';
 import { abilitiesFor, UPGRADE_EFFECT, type Ability } from './upgrades';
+import { wardenLog } from '../story/wardenLog';
+import { relicFor } from '../story/relics';
+import { t } from '../../i18n/i18n';
+import type { MessageKey } from '../../i18n/en';
 
 /**
  * The story: an open expedition played day after day on one section of the grounds at a time.
@@ -61,6 +65,8 @@ export interface CampaignState {
   /** The latest ending reached (see endings.ts), and whether its screen has been shown. */
   ending: Ending | null;
   endingShown: boolean;
+  /** The Warden's log: an entry for each day, newest last (see story/wardenLog.ts). */
+  log: { day: number; text: string }[];
 }
 
 /** A section's own progress, kept while another section is being explored. */
@@ -87,7 +93,23 @@ export function newCampaign(): CampaignState {
     others: {},
     ending: null,
     endingShown: false,
+    log: [],
   };
+}
+
+/** How many log entries the story keeps. */
+const LOG_KEPT = 120;
+
+/** Parts of a section home, by a parts record. */
+function partsHomeFor(section: CampaignSection, parts: Record<string, number>): number {
+  return section.parts.filter((id) => parts[id] !== undefined).length;
+}
+
+/** The gifts that parts newly home would grant. */
+function newGiftsFor(state: CampaignState, parts: Record<string, number>): Ability[] {
+  const before = campaignAbilities(state);
+  const after = abilitiesFor(allPartsHome({ ...state, parts }));
+  return [...after].filter((ability) => !before.has(ability));
 }
 
 /** Parts home in every section. */
@@ -500,6 +522,33 @@ export function settleDay(
     others: state.others,
     ending: state.ending,
     endingShown: state.endingShown,
+    log: [
+      ...state.log,
+      {
+        day,
+        text: wardenLog({
+          day,
+          section: section.name,
+          parts: newParts.map((id) => relicFor(base.id, id).name),
+          relics,
+          beasts,
+          gates,
+          bridges,
+          beacons,
+          grown: sim.stats.grown,
+          lost: sim.stats.workersLost,
+          leftBehind,
+          survivors: SPROUT_KINDS.reduce((sum, kind) => sum + survivors[kind], 0),
+          gifts: newGiftsFor(state, parts).map((ability) =>
+            t(`gift.${ability}.name` as MessageKey),
+          ),
+          firstDay:
+            state.done.length === 0 && Object.keys(state.parts).length === 0 && state.seen === '',
+          finished:
+            state.finished === null && partsHomeFor(section, parts) === section.parts.length,
+        }),
+      },
+    ].slice(-LOG_KEPT),
     done: [...done],
     wear: Object.fromEntries(Object.entries(wear).filter(([key]) => !finished.has(key))),
     parts,
@@ -618,6 +667,17 @@ export function parseCampaign(value: unknown): CampaignState | null {
     others: records(raw.others),
     ending: endings.find((e) => e === raw.ending) ?? null,
     endingShown: raw.endingShown === true,
+    log: Array.isArray(raw.log)
+      ? raw.log
+          .filter(
+            (entry): entry is { day: number; text: string } =>
+              typeof entry === 'object' &&
+              entry !== null &&
+              typeof (entry as Record<string, unknown>).day === 'number' &&
+              typeof (entry as Record<string, unknown>).text === 'string',
+          )
+          .map((entry) => ({ day: entry.day, text: entry.text }))
+      : [],
     day: count(raw.day),
     section: raw.section,
     stock,

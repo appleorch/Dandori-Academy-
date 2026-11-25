@@ -27,6 +27,8 @@ import { recordSteps } from './perf';
 const HEAVE_SECONDS = 1.1;
 const HEAVE_RANGE = 16;
 import { PLUCK_INTERVAL, pluckNearest, sproutInReach } from '../workers/growth';
+import { LINE_SECONDS, openingScene, partScene } from '../story/scenes';
+import { allPartsHome, currentSection } from '../campaign/campaign';
 import type { SproutKind } from '../workers/sprouts';
 
 const HUD_INTERVAL_FRAMES = 6;
@@ -144,6 +146,10 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
   const frame = useRef(0);
   const pluckWait = useRef(0);
   const introTime = useRef(0);
+  const sceneTime = useRef(0);
+  const sceneLine = useRef(-1);
+  const sceneOf = useRef('');
+  const partsToday = useRef(0);
   const heaveBeat = useRef(-1);
   const walked = useRef(0);
   const lastSpot = useRef({ x: surface.captainTransform.x, z: surface.captainTransform.z });
@@ -206,6 +212,32 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
     if (store.paused || store.briefing) {
       audio.setWhistle(false);
       return;
+    }
+    // A story scene: the day waits; each line stays a while, and a press moves it on.
+    if (store.scene) {
+      const line = store.scene.scene.lines[store.scene.line];
+      if (sceneLine.current !== store.scene.line || sceneOf.current !== store.scene.scene.id) {
+        sceneLine.current = store.scene.line;
+        sceneOf.current = store.scene.scene.id;
+        sceneTime.current = 0;
+        audio.speak(line.who, line.text);
+      }
+      sceneTime.current += Math.min(delta, 0.1);
+      if (sceneTime.current > (line.seconds ?? LINE_SECONDS) || input.takeInteract()) {
+        store.nextSceneLine();
+      }
+      audio.setWhistle(false);
+      return;
+    }
+    sceneLine.current = -1;
+    // The story's beats: the first day in a section opens with its scene.
+    if (sim.story && sim === surface && sim.tick === 0) {
+      const section = store.save.campaign.section;
+      const opening = openingScene(section);
+      if (opening && !store.save.scenesSeen.includes(opening.id)) {
+        store.playScene(opening);
+        return;
+      }
     }
     // A boss's intro: the day waits while it is shown; any press of the interact key, the
     // whistle or a click ends it early.
@@ -283,6 +315,12 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
       const relic = relicFor(sim.level.id, id, spawn?.variant);
       fx.popup(relic.name, sim.level.kiln.x, sim.level.kiln.z - 3, '#fff2c8');
       headmaster.relic(relic);
+      // A Clock part home in the story: a short scene at the Kiln.
+      if (sim.story && currentSection(store.save.campaign).parts.includes(id)) {
+        partsToday.current++;
+        const count = allPartsHome(store.save.campaign) + partsToday.current;
+        store.playScene(partScene(count, relic.name));
+      }
     }
     // Each Sunshard home is compared with the same shard on the best story clear (surface only).
     const splits = sim === surface && store.playMode === 'lessons';

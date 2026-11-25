@@ -320,6 +320,16 @@ camp**, which shows a map of the Quad, the Kiln's stock by kind and the Clock's 
   dome the **Hollow Warden**, the final boss: in each of its four phases only one kind truly
   hurts it (Stonelings, Emberlings, Dewlings, then Sparklings; the boss bar says which), and its
   slams leave the hazard only that kind can stand.
+- **Characters and scenes.** `docs-design/STORY_BIBLE.md` sets out the cast and their arcs:
+  the silent Warden, Proctor Ashwick on the radio, Headmaster Sprocket (whose secret is why the
+  Clock stopped), Tindle the first Emberling, and Warden Quill, met in the Foundry. Short scenes
+  (`src/game/story/scenes.ts`) play in the world at the story's beats, each once per save: the
+  first morning, each section's first day, and each part's return to the Kiln. The day waits;
+  the camera looks where each line says; a click moves on, Skip ends it. Characters speak in
+  blips pitched to each voice (`audio.speak`), as do the Headmaster's banner remarks and
+  Ashwick's tips. At every sunset the Warden writes a log entry from the day
+  (`src/game/story/wardenLog.ts`), collected in the Journal. Field Guide entries for beasts open
+  once each has been beaten, and every boss has a note from the Warden and one from Sprocket.
 - **The finale.** The whole story is 42 parts over four sections. When an ending is reached the
   base camp shows the Great Clock in the courtyard (`EndingScreen.tsx`), going or still, with the
   ending's words and the credits; every section stays open afterwards for everything left.

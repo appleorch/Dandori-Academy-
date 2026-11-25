@@ -64,6 +64,8 @@ function Turntable({ relic, found }: { relic: Relic; found: boolean }) {
  */
 export function FieldGuide() {
   const collected = useGameStore((state) => state.save.treasuresCollected);
+  const beatenList = useGameStore((state) => state.save.beastsBeaten);
+  const beaten = useMemo(() => new Set<string>(beatenList), [beatenList]);
   const found = useMemo(() => recoveredRelics(collected), [collected]);
   const [chosen, setChosen] = useState<Relic>(
     () => RELICS.find((r) => found.has(r.id)) ?? RELICS[0],
@@ -84,12 +86,21 @@ export function FieldGuide() {
         <section className="sprout-guide">
           <h2>Beasts</h2>
           <ul className="roster">
-            {BESTIARY.map(({ kind, note }) => (
-              <li key={kind}>
-                <strong>{ENEMY_SPECS[kind].name}</strong>
-                <small>{note}</small>
-              </li>
-            ))}
+            {BESTIARY.map(({ kind, note, warden, sprocket }) =>
+              beaten.has(kind) ? (
+                <li key={kind}>
+                  <strong>{ENEMY_SPECS[kind].name}</strong>
+                  <small>{note}</small>
+                  {warden && <small>Warden’s note: {warden}</small>}
+                  {sprocket && <small>The Headmaster adds: {sprocket}</small>}
+                </li>
+              ) : (
+                <li key={kind} className="unknown">
+                  <strong>{ENEMY_SPECS[kind].name}</strong>
+                  <small>Not yet beaten. Beat one to learn its ways.</small>
+                </li>
+              ),
+            )}
           </ul>
         </section>
         <div className="guide">

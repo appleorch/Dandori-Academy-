@@ -178,6 +178,17 @@ const LINES: Record<VoiceLine, readonly (readonly [number, number, number, numbe
   ],
 };
 
+/** The people of the story, for `speak`. */
+const SPEAKERS: Record<
+  string,
+  { pitch: number; wave: OscillatorType; formants: [number, number]; gap: number }
+> = {
+  sprocket: { pitch: 280, wave: 'triangle', formants: [700, 1900], gap: 0.11 },
+  ashwick: { pitch: 150, wave: 'sawtooth', formants: [900, 1400], gap: 0.12 },
+  tindle: { pitch: 560, wave: 'triangle', formants: [1100, 2700], gap: 0.08 },
+  quill: { pitch: 380, wave: 'square', formants: [1000, 2300], gap: 0.09 },
+};
+
 /** At most this many voice lines start in any VOICE_WINDOW seconds, so a crowd never becomes noise. */
 const VOICE_BUDGET = 5;
 const VOICE_WINDOW = 0.3;
@@ -454,6 +465,42 @@ class AudioManager {
     }
     // A lost Sproutling's spirit leaves with a soft bell.
     if (line === 'death') this.bell(out, 1319, 1.4, 0.07, 0.3);
+  }
+
+  /**
+   * A character speaks: a run of formant blips, one per syllable or so, in their own voice.
+   * Sprocket warm and wobbly, Ashwick low and thin as a radio, Tindle high and bright, Quill
+   * clipped. The Warden says nothing aloud.
+   */
+  speak(who: string, text: string): void {
+    const ctx = this.ctx;
+    const voice = SPEAKERS[who];
+    if (!ctx || !this.sfx || ctx.state !== 'running' || !voice) return;
+    const out = this.channel(undefined, this.sfx);
+    const syllables = Math.min(14, Math.max(3, Math.round(text.split(/\s+/).length * 0.9)));
+    const now = ctx.currentTime;
+    for (let i = 0; i < syllables; i++) {
+      const start = now + i * voice.gap * rand(0.85, 1.15);
+      const pitch = voice.pitch * rand(0.85, 1.2) * (i === syllables - 1 ? 0.85 : 1);
+      const osc = ctx.createOscillator();
+      osc.type = voice.wave;
+      osc.frequency.setValueAtTime(pitch, start);
+      osc.frequency.exponentialRampToValueAtTime(pitch * rand(0.85, 1.1), start + voice.gap * 0.8);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.06, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + voice.gap * 0.85);
+      for (const formant of voice.formants) {
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = formant;
+        filter.Q.value = 4;
+        osc.connect(filter).connect(gain);
+      }
+      gain.connect(out);
+      osc.start(start);
+      osc.stop(start + voice.gap);
+    }
   }
 
   play(name: SoundName, options?: PlayOptions): void {

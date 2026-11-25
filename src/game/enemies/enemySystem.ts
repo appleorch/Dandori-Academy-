@@ -279,6 +279,7 @@ function defeat(sim: Simulation, entity: Entity, enemy: Enemy, at: Transform): v
       spawnCarcass(sim, ground.x, ground.z, enemy.kind);
     dropDewdrop(sim, ground);
     sim.stats.enemiesDefeated++;
+    if (!sim.stats.beatenKinds.includes(enemy.kind)) sim.stats.beatenKinds.push(enemy.kind);
     if (spec.boss) sim.stats.bossesDefeated.push(enemy.kind);
     sim.emit('enemyDefeated', ground.x, ground.z);
   }

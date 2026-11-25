@@ -59,6 +59,22 @@ export function CameraRig({ sim, input, fx }: CameraRigProps): null {
       return;
     }
 
+    // A story scene: the camera looks where the line says.
+    const playing = useGameStore.getState().scene;
+    const look = playing?.scene.lines[playing.line]?.camera;
+    if (look && look !== 'warden') {
+      const ease = 1 - Math.exp(-delta * 2);
+      const spot = look === 'kiln' ? level.kiln : look === 'wide' ? { x: 0, z: 0 } : look;
+      const span = Math.max(level.width, level.depth);
+      const height = look === 'wide' ? span * 0.55 : 14;
+      const ground = heightAt(level, spot.x, spot.z);
+      camera.position.x += (spot.x - camera.position.x) * ease;
+      camera.position.y += (ground + height - camera.position.y) * ease;
+      camera.position.z += (spot.z + height * 0.7 - camera.position.z) * ease;
+      camera.lookAt(spot.x, ground, spot.z);
+      cut.current = false;
+      return;
+    }
     // A boss's intro: the camera swoops low over it.
     const intro = useGameStore.getState().bossIntro;
     if (intro) {

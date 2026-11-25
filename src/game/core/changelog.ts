@@ -8,6 +8,16 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.29.0',
+    date: '2026-11-25',
+    changes: [
+      'The story’s characters come into the world: short scenes play at its beats (the first morning, each section’s first day, every Clock part coming home), with Headmaster Sprocket, Proctor Ashwick on the radio, Tindle the first Emberling, and a new face, Warden Quill. Click to move on, or skip.',
+      'Characters speak in voices of their own, and so do the Headmaster’s remarks and Ashwick’s tips.',
+      'The Warden’s log: every story day ends with a journal entry about what happened, kept in the Journal.',
+      'The Field Guide’s beast entries open once you have beaten that beast, and every boss has a note from the Warden and one from the Headmaster. There is also a secret about why the Clock stopped.',
+    ],
+  },
+  {
     version: '0.28.0',
     date: '2026-11-25',
     changes: [

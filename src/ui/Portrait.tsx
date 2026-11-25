@@ -92,3 +92,25 @@ export function SprocketPortrait({ mood = 'cheer' }: { mood?: 'cheer' | 'alarm' 
     </svg>
   );
 }
+
+/** Warden Quill: the Academy's other Warden, in a blue coat with a feather in the cap. */
+export function QuillPortrait() {
+  return (
+    <svg className="portrait" viewBox="0 0 64 64" role="img" aria-label="Warden Quill">
+      <circle cx="32" cy="32" r="31" fill="#1e2c44" stroke="#7ac8ff" strokeWidth="2" />
+      <path d="M12 62c2-16 10-22 20-22s18 6 20 22z" fill="#2f5a8a" />
+      <circle cx="32" cy="28" r="12" fill="#e8c0a0" />
+      <path d="M18 22c3-8 9-11 14-11s11 3 14 11z" fill="#2a3a5a" />
+      <path d="M44 14c4-6 10-8 14-6-4 2-8 6-10 12z" fill="#f4ecdc" />
+      <circle cx="27" cy="28" r="1.4" fill="#2a1c14" />
+      <circle cx="37" cy="28" r="1.4" fill="#2a1c14" />
+      <path
+        d="M27 34c3 2 7 2 10 0"
+        stroke="#7a4a3a"
+        strokeWidth="1.4"
+        fill="none"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

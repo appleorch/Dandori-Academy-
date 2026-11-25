@@ -105,6 +105,8 @@ export interface SimStats {
   treasuresTotal: number;
   workersLost: number;
   enemiesDefeated: number;
+  /** Kinds of beast beaten today. */
+  beatenKinds: string[];
   bossesDefeated: string[];
   bloomsCollected: number;
   /** Seconds into the day at which each Sunshard arrived, in order: the day's splits. */
@@ -299,6 +301,7 @@ export class Simulation {
       treasuresTotal: shardCount(level),
       workersLost: 0,
       enemiesDefeated: 0,
+      beatenKinds: [],
       bossesDefeated: [],
       bloomsCollected: 0,
       deliveryTimes: [],

@@ -50,6 +50,7 @@ import type { SproutKind } from '../workers/sprouts';
 import { CHAIN, TWIN } from './config';
 import { twinStyle } from '../world/twins';
 import { penaltyPerLoss, type Difficulty } from './difficulty';
+import type { Scene } from '../story/scenes';
 import {
   loadSettings,
   newPlayerId,
@@ -225,6 +226,8 @@ interface GameStore {
   nearTelescope: boolean;
   /** A boss being introduced: the day waits while its name card shows. */
   bossIntro: BossIntro | null;
+  /** A story scene playing, and the line it is on; the day waits while it plays. */
+  scene: { scene: Scene; line: number } | null;
   /** Id of the side lesson whose way down the Warden is standing at, or null. */
   nearDescent: string | null;
   /** True while the Warden stands at the way back up out of a cave. */
@@ -260,6 +263,10 @@ interface GameStore {
   setNearTelescope: (near: boolean) => void;
   /** Starts a boss's intro and remembers it was shown on this field; null ends it. */
   showBossIntro: (intro: BossIntro | null) => void;
+  /** Plays a story scene (and remembers it was played); moves it on a line; ends it. */
+  playScene: (scene: Scene) => void;
+  nextSceneLine: () => void;
+  endScene: () => void;
   /** The Warden is at a way down (or has left it): the side lesson is found for good. */
   setNearDescent: (levelId: string | null) => void;
   setNearAscent: (near: boolean) => void;
@@ -422,6 +429,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     nearSprout: false,
     nearTelescope: false,
     bossIntro: null,
+    scene: null,
     nearDescent: null,
     nearAscent: false,
     pokerOpen: false,
@@ -455,6 +463,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         nearSecret: false,
         nearSprout: false,
         bossIntro: null,
+        scene: null,
         nearDescent: null,
         hud: null,
         result: null,
@@ -494,6 +503,21 @@ export const useGameStore = create<GameStore>((set, get) => {
     setNearTelescope: (near) => {
       if (near !== get().nearTelescope) set({ nearTelescope: near });
     },
+    playScene: (scene) => {
+      const before = get().save;
+      const save = before.scenesSeen.includes(scene.id)
+        ? before
+        : { ...before, scenesSeen: [...before.scenesSeen, scene.id] };
+      if (save !== before) persist(save);
+      set({ scene: { scene, line: 0 }, save });
+    },
+    nextSceneLine: () => {
+      const playing = get().scene;
+      if (!playing) return;
+      const line = playing.line + 1;
+      set({ scene: line < playing.scene.lines.length ? { ...playing, line } : null });
+    },
+    endScene: () => set({ scene: null }),
     showBossIntro: (intro) => {
       if (!intro) {
         set({ bossIntro: null });
@@ -676,6 +700,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         timeLeft: sim.timeLeft,
         dayLength: level.dayLength,
         bossesDefeated: stats.bossesDefeated,
+        beastsBeaten: stats.beatenKinds,
         bloomsCollected: stats.bloomsCollected,
         splits: cleared ? stats.deliveryTimes : undefined,
         extraTreasures: haul?.relics ?? [],
@@ -715,6 +740,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         nearSecret: false,
         nearSprout: false,
         bossIntro: null,
+        scene: null,
         nearDescent: null,
         hud: get().hud ?? snapshot(sim),
         save,

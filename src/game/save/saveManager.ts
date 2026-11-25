@@ -106,6 +106,10 @@ export interface SaveData {
   campaign: CampaignState;
   /** Fields where a boss's intro has been shown: each plays once per field per save. */
   bossIntros: string[];
+  /** Story scenes already played (see story/scenes.ts): each plays once per save. */
+  scenesSeen: string[];
+  /** Kinds of beast beaten at least once, which open their Field Guide entries. */
+  beastsBeaten: string[];
 }
 
 export interface StoryProgress {
@@ -167,6 +171,8 @@ export function markPosted(save: SaveData, run: RunEntry): SaveData {
 export const RUNS_KEPT = 10;
 
 export interface DayRecord {
+  /** Kinds of beast beaten today, for the Field Guide. */
+  beastsBeaten?: readonly string[];
   levelId: string;
   difficulty: Difficulty;
   /** How the day was played; a day from before modes existed was the story. */
@@ -242,6 +248,8 @@ export function emptySave(): SaveData {
     battles: {},
     campaign: newCampaign(),
     bossIntros: [],
+    scenesSeen: [],
+    beastsBeaten: [],
   };
 }
 
@@ -378,6 +386,12 @@ export function parseSave(value: unknown): SaveData | null {
     campaign: parseCampaign(value.campaign) ?? newCampaign(),
     bossIntros: Array.isArray(value.bossIntros)
       ? value.bossIntros.filter((id): id is string => typeof id === 'string')
+      : [],
+    scenesSeen: Array.isArray(value.scenesSeen)
+      ? value.scenesSeen.filter((id): id is string => typeof id === 'string')
+      : [],
+    beastsBeaten: Array.isArray(value.beastsBeaten)
+      ? value.beastsBeaten.filter((id): id is string => typeof id === 'string')
       : [],
   };
 }
@@ -640,6 +654,8 @@ export function recordDay(save: SaveData, day: DayRecord): SaveData {
     battles,
     campaign: day.campaign ?? save.campaign,
     bossIntros: save.bossIntros,
+    scenesSeen: save.scenesSeen,
+    beastsBeaten: [...new Set([...save.beastsBeaten, ...(day.beastsBeaten ?? [])])],
     totals: {
       days: save.totals.days + 1,
       treasures: save.totals.treasures + day.treasureIds.length,

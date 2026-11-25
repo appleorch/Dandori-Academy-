@@ -43,7 +43,11 @@ test('a story day can be played and called, and is settled at the base camp', as
   await page.getByRole('button', { name: /Begin the story/ }).click();
   await expect(page.getByRole('heading', { name: 'Story' })).toBeVisible();
   await page.getByRole('button', { name: /Begin the expedition/ }).click();
-  await inDay(page);
+  await expect(page.getByRole('button', { name: /Begin the day/ })).toBeVisible();
+  await page.getByRole('button', { name: /Begin the day/ }).click();
+  // The first morning opens with a scene; skip it, as a player may.
+  await page.getByRole('button', { name: 'Skip' }).click({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /^Pause/ })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: /Call it a day/ }).click();
   await expect(page.getByText('Sproutlings home by sunset')).toBeVisible();

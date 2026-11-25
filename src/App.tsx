@@ -11,7 +11,7 @@ import { CanvasErrorBoundary } from './ui/CanvasErrorBoundary';
 import { setLocale, t } from './i18n/i18n';
 import { CreditsScreen } from './ui/CreditsScreen';
 import { Briefing } from './ui/Briefing';
-import { Hud } from './ui/Hud';
+import { Hud, ScenePanel } from './ui/Hud';
 import { BattleSelect } from './ui/BattleSelect';
 import { ChallengeSelect } from './ui/ChallengeSelect';
 import { MainMenu } from './ui/MainMenu';
@@ -179,6 +179,7 @@ export function App() {
             </Suspense>
           </CanvasErrorBoundary>
           <Hud level={level} touch={touch} input={input} />
+          <ScenePanel />
           {touch && phase === 'playing' && !paused && !briefing && <TouchControls input={input} />}
           {phase === 'playing' && briefing && <Briefing level={level} />}
           {phase === 'playing' && paused && !pokerOpen && <PauseMenu level={level} />}
