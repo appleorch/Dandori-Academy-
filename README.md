@@ -394,6 +394,9 @@ opens with a medal on the one before. Challenges are always played on the Normal
 | Dandori Challenge | Yes   | When everything is in     | 10 per point of weight home; 1 per second left once everything is collected                                                   | Gates, bridges, beacons, ledges: jobs that unlock jobs  |
 | Lean Squad Trial  | No    | When every Sunshard is in | 10 per point of Sunshard weight home; once every Sunshard is home, 50 per Sproutling alive. The Kiln grows nothing            | Hazards that punish the wrong kind, beasts on the prize |
 
+Every challenge field is dressed for its setting: fields written without dressing of their own
+get their setting's walls and a giant object at each corner and side (`dressField` in
+`src/game/world/levels/challenges/field.ts`), art only, so no board ever resets for it.
 Every field's Platinum is the Academy's test player's own result there, playing under that
 challenge's rules (`ChallengeField.pace`): its finishing time for the timed challenges (Diamond
 in 85% of it), its headcount at sunset for a Growing Season (Diamond about 15% more), and how

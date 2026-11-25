@@ -8,6 +8,14 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.32.0',
+    date: '2026-11-25',
+    changes: [
+      'Every challenge field is now dressed for its setting, with walls and giant everyday objects round its edges. Nothing about how they play has changed.',
+      'Mossback Meadow, the first Mission, teaches again: the Thornback Hedgehog that made it the hardest opener has moved to Bramble Fort, near the end. Both have new targets.',
+    ],
+  },
+  {
     version: '0.31.0',
     date: '2026-11-25',
     changes: [
