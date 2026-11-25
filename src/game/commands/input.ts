@@ -24,7 +24,8 @@ export interface InputState {
   /** Switch the kind of Sproutling to throw: to the next one in the squad, the previous one, or a given kind. */
   cycleKind: boolean;
   cycleBack: boolean;
-  selectKind: SproutKind | null;
+  /** A kind to throw, or 'any' for whoever stands nearest the Warden. */
+  selectKind: SproutKind | 'any' | null;
 }
 
 export const NO_INPUT: InputState = {
@@ -65,6 +66,7 @@ const ONE_SHOTS = [
   'splitSquad',
   'emberbrew',
   'stillwater',
+  'sortSquad',
 ] as const;
 type OneShot = (typeof ONE_SHOTS)[number];
 const KIND_ACTIONS: readonly Action[] = ['kind1', 'kind2', 'kind3', 'kind4'];
@@ -139,7 +141,7 @@ export class InputController {
   /** A finger on the play field, which throws. */
   private touchDown = false;
   private readonly queued = new Set<OneShot>();
-  private selectQueued: SproutKind | null = null;
+  private selectQueued: SproutKind | 'any' | null = null;
   private whistleLatched = false;
   private fastLatched = false;
   private readonly pad = new PadReader();
@@ -180,7 +182,7 @@ export class InputController {
   }
 
   /** True once per press of a story action (switch Warden, split, a spray). */
-  take(action: 'switchWarden' | 'splitSquad' | 'emberbrew' | 'stillwater'): boolean {
+  take(action: 'switchWarden' | 'splitSquad' | 'emberbrew' | 'stillwater' | 'sortSquad'): boolean {
     const queued = this.queued.has(action);
     this.queued.delete(action);
     return queued;
@@ -205,7 +207,7 @@ export class InputController {
   }
 
   /** Chooses a kind of Sproutling to throw (a HUD chip). */
-  queueSelect(kind: SproutKind): void {
+  queueSelect(kind: SproutKind | 'any'): void {
     this.selectQueued = kind;
   }
 
@@ -248,6 +250,7 @@ export class InputController {
     if ((ONE_SHOTS as readonly Action[]).includes(action)) this.queued.add(action as OneShot);
     const kind = KIND_ACTIONS.indexOf(action);
     if (kind >= 0) this.selectQueued = SPROUT_KINDS[kind];
+    if (action === 'kindAny') this.selectQueued = 'any';
     if (action === 'tactical') this.tactical = !this.tactical;
     if (action === 'whistle' && this.whistleToggle) this.whistleLatched = !this.whistleLatched;
     if (action === 'fastForward' && this.fastToggle) this.fastLatched = !this.fastLatched;

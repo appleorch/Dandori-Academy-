@@ -23,7 +23,7 @@ export const SIM_VERSION = 1;
 /** What happened outside the inputs, and at which step (counted across the whole day). */
 export type ReplayEvent = readonly [
   step: number,
-  kind: 'down' | 'up' | 'end' | 'emberbrew' | 'stillwater',
+  kind: 'down' | 'up' | 'end' | 'emberbrew' | 'stillwater' | 'sort',
 ];
 
 export interface DayLog {
@@ -138,6 +138,7 @@ export class ReplayRun {
         else if (kind === 'up') this.expedition.ascend();
         else if (kind === 'emberbrew') this.expedition.active.sprayEmberbrew();
         else if (kind === 'stillwater') this.expedition.active.sprayStillwater();
+        else if (kind === 'sort') this.expedition.active.sortSquad();
         else this.expedition.surface.endNow();
       }
       if (this.done) break;

@@ -177,6 +177,19 @@ function reachable(sim: Simulation, entity: Entity, wading = false): boolean {
   return hasRoute(sim, sim.carryables.require(entity), sim.transforms.require(entity), wading);
 }
 
+/** From this many in the squad, a test player with two Wardens splits it between them. */
+const SPLIT_SQUAD = 20;
+const SPLIT_APART = 12;
+
+/** Sproutlings waiting round the other Warden, ready to be led. */
+function waitingWithOther(sim: Simulation): number {
+  let count = 0;
+  for (const [, worker] of sim.workers.entries()) {
+    if (worker.state === 'follow' && worker.party !== sim.activeWarden) count++;
+  }
+  return count;
+}
+
 /** The Warden gives a haul up after standing within this distance this many steps, unclaimed. */
 const STUCK_DISTANCE = 1;
 const STUCK_STEPS = 60 * 10;
@@ -573,6 +586,8 @@ export interface GreedyPlayer {
   input(tick: number): InputState;
   /** The job it is on, for watching. */
   readonly job: Entity;
+  /** Times it has switched to the other Warden. */
+  readonly switches: number;
 }
 
 /**
@@ -590,6 +605,8 @@ export function greedyPlayer(
   // Jobs given up on today: the Warden stood still at one for a while and nobody took it on
   // (a relic on a ledge out of every reach but a kind's it has not got, say).
   const skipped = new Set<Entity>();
+  let split = false;
+  let switches = 0;
   const still = { x: sim.captainTransform.x, z: sim.captainTransform.z, since: 0 };
   const input = (tick: number): InputState => {
     const from = sim.captainTransform;
@@ -610,6 +627,19 @@ export function greedyPlayer(
         skipped.add(job);
         job = NO_ENTITY;
         still.since = tick;
+      }
+    }
+    // With a second Warden (the story's gift): a big squad is split between them, and when this
+    // Warden's squad is all at work the other takes over with theirs.
+    if (sim.otherWarden && !sim.coop) {
+      const apart = Math.hypot(from.x - sim.otherWarden.x, from.z - sim.otherWarden.z);
+      // Split only well away from the other Warden: Wardens close together merge their squads.
+      if (!split && squad >= SPLIT_SQUAD && apart > SPLIT_APART) {
+        sim.splitSquad();
+        split = true;
+      } else if (squad <= 2 && waitingWithOther(sim) >= 5 && sim.switchWarden()) {
+        job = NO_ENTITY;
+        switches++;
       }
     }
     if (!unfinished(sim, job) || (squad === 0 && !bossFight(sim, job))) {
@@ -704,6 +734,9 @@ export function greedyPlayer(
     input,
     get job() {
       return job;
+    },
+    get switches() {
+      return switches;
     },
   };
 }

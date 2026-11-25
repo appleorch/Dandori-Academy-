@@ -35,7 +35,11 @@ function nextKind(from: SproutKind, kinds: Set<SproutKind>, direction: 1 | -1 = 
 export function updateSelection(sim: Simulation, input: InputState): void {
   const kinds = readyKinds(sim);
   const before = sim.selected;
-  if (input.selectKind && kinds.has(input.selectKind)) sim.selected = input.selectKind;
+  // 'Any' throws whoever stands nearest; choosing a kind (or cycling) ends it.
+  if (input.selectKind === 'any') sim.throwAny = kinds.size > 0;
+  else if (input.selectKind || input.cycleKind || input.cycleBack) sim.throwAny = false;
+  if (input.selectKind && input.selectKind !== 'any' && kinds.has(input.selectKind))
+    sim.selected = input.selectKind;
   else if (input.cycleKind) sim.selected = nextKind(sim.selected, kinds);
   else if (input.cycleBack) sim.selected = nextKind(sim.selected, kinds, -1);
   else if (!kinds.has(sim.selected) && kinds.size > 0) {
@@ -60,7 +64,8 @@ export function updateThrowing(sim: Simulation, input: InputState, dt: number): 
   let chosen: Entity = NO_ENTITY;
   let chosenDist: number = THROW.pickupRange;
   for (const [entity, worker] of sim.workers.entries()) {
-    if (worker.state !== 'follow' || worker.stun > 0 || worker.kind !== sim.selected) continue;
+    if (worker.state !== 'follow' || worker.stun > 0) continue;
+    if (!sim.throwAny && worker.kind !== sim.selected) continue;
     if (worker.party !== sim.activeWarden) continue;
     const at = sim.transforms.require(entity);
     const dist = Math.hypot(at.x - from.x, at.z - from.z);

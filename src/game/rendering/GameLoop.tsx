@@ -621,6 +621,11 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
         if (sent > 0) fx.popup(`${sent} sent to the other Warden`, spot.x, spot.z, '#bfe6ff');
       }
     }
+    // Sorting the squad by kind: noted for the replay, as it is not an input.
+    if (input.take('sortSquad')) {
+      sim.sortSquad();
+      recorder?.event('sort');
+    }
     // Sprays: the story's, or a field's own. Noted for the replay, as they are not inputs.
     if (input.take('emberbrew') && sim.sprayEmberbrew()) {
       recorder?.event('emberbrew');

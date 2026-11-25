@@ -17,6 +17,8 @@ import { SPROUT_KINDS } from '../workers/sprouts';
 const CURSOR = 20;
 const STICK = 100;
 const MAGIC = 0x44; // 'D'
+/** The kind index that stands for 'any kind' (after the four kinds). */
+const ANY_KIND = 4;
 const FORMAT = 1;
 
 /** The input as the simulation is given it: the cursor and the stick on the log's grid. */
@@ -125,7 +127,8 @@ export function packInputs(inputs: readonly InputState[]): Uint8Array {
       (input.selectKind !== null ? 64 : 0) |
       (moved ? 128 : 0);
     out.push(flags);
-    if (input.selectKind !== null) out.push(SPROUT_KINDS.indexOf(input.selectKind));
+    if (input.selectKind !== null)
+      out.push(input.selectKind === 'any' ? ANY_KIND : SPROUT_KINDS.indexOf(input.selectKind));
     if (moved) {
       out.push(int8(input.moveX));
       out.push(int8(input.moveZ));
@@ -156,7 +159,8 @@ export function unpackInputs(bytes: Uint8Array): InputState[] {
   let mz = 0;
   while (out.length < total) {
     const flags = read.byte();
-    const kind = flags & 64 ? SPROUT_KINDS[read.byte()] : null;
+    const index = flags & 64 ? read.byte() : -1;
+    const kind = index < 0 ? null : index === ANY_KIND ? ('any' as const) : SPROUT_KINDS[index];
     if (kind === undefined) throw new Error('An unknown kind in the input log.');
     if (flags & 128) {
       mx = fromInt8(read.byte());

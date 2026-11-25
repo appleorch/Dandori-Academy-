@@ -4456,3 +4456,20 @@ button.chip.guide-skip {
   width: auto;
   margin: 0;
 }
+
+button.chip.any-kind {
+  width: auto;
+  margin: 0;
+  pointer-events: auto;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid rgba(255, 246, 220, 0.3);
+}
+button.chip.any-kind.chosen {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.chip.formation-hint {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}

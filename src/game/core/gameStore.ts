@@ -158,6 +158,9 @@ export interface HudSnapshot {
   /** Sproutlings in the squad by kind, and the kind the Warden throws next. */
   squadKinds: Record<SproutKind, number>;
   selected: SproutKind;
+  /** Throwing whoever stands nearest, whatever their kind; and the squad walking sorted by kind. */
+  throwAny: boolean;
+  sorted: boolean;
   /** The cave the Warden is in, by name, or null on the surface (whose clock is then stopped). */
   below: string | null;
   /** In a challenge: the score so far and the next medal. */
@@ -432,6 +435,8 @@ function snapshot(sim: Simulation): HudSnapshot {
     below: null,
     challenge: null,
     selected: sim.selected,
+    throwAny: sim.throwAny,
+    sorted: sim.squadSorted,
     chain: sim.chain >= 2 && sim.elapsed - sim.lastDelivery <= CHAIN.window ? sim.chain : 0,
   };
 }

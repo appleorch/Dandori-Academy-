@@ -1,3 +1,4 @@
+import { SPROUT_KINDS } from './sprouts';
 import { PERIL_SECONDS, THROW, WORKER } from '../core/config';
 import type { Entity } from '../core/ecs';
 import { NO_ENTITY } from '../core/ecs';
@@ -57,6 +58,21 @@ function follow(sim: Simulation, worker: Worker, transform: Transform, dt: numbe
     return;
   }
   const { anchor } = sim;
+  // Sorted: each kind gathers in its own group in an arc behind the Warden.
+  if (sim.squadSorted) {
+    const facing = sim.captainTransform.facing;
+    const slot = SPROUT_KINDS.indexOf(worker.kind) - 1.5;
+    const angle = facing + Math.PI + slot * 0.55;
+    const reach = 1.6 + 0.22 * Math.sqrt(sim.squadSize);
+    const gx = anchor.x + Math.sin(angle) * reach;
+    const gz = anchor.z + Math.cos(angle) * reach;
+    if (Math.hypot(gx - transform.x, gz - transform.z) > 0.6 + 0.12 * Math.sqrt(sim.squadSize)) {
+      if (nav.lineOfSight(transform.x, transform.z, gx, gz)) {
+        walkToward(sim, worker, transform, gx, gz, dt);
+        return;
+      }
+    } else return;
+  }
   const dx = anchor.x - transform.x;
   const dz = anchor.z - transform.z;
   const dist = Math.hypot(dx, dz);

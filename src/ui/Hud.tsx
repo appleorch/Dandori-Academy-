@@ -27,6 +27,8 @@ function speakerPortrait(who: Speaker) {
 import { keyLabel, type Action } from '../game/commands/bindings';
 
 const KIND_ACTIONS: readonly Action[] = ['kind1', 'kind2', 'kind3', 'kind4'];
+/** From this many in the squad, the HUD suggests sorting it by kind. */
+const FORMATION_HINT = 40;
 
 /** How long a remark of the Headmaster's stays up: it fades out over the end of this. */
 const SPROCKET_SECONDS = 5.6;
@@ -108,6 +110,7 @@ export function Hud({
       )
     : [];
   const live = hud.challenge;
+  const squadSize = SPROUT_KINDS.reduce((sum, kind) => sum + hud.squadKinds[kind], 0);
   // Where the workforce is: along the bottom on a desktop; on touch, up top, clear of the controls.
   const counts = (
     <div className={touch ? 'hud-row counts' : 'hud-row bottom'}>
@@ -133,9 +136,25 @@ export function Hud({
           ) : null,
         )}
       </div>
+      {squadSize > 1 && (
+        <button
+          type="button"
+          className={hud.throwAny ? 'chip any-kind chosen' : 'chip any-kind'}
+          onClick={() => input?.queueSelect('any')}
+          aria-pressed={hud.throwAny}
+          title={t('hud.anyTitle')}
+        >
+          {t('hud.any')}
+        </button>
+      )}
       <div className={hud.idle > 0 ? 'chip idle-warning' : 'chip'}>
         <span className="dot idle" /> {t('hud.idle', { count: hud.idle })}
       </div>
+      {squadSize >= FORMATION_HINT && !hud.sorted && !touch && (
+        <div className="chip formation-hint" role="status">
+          {t('hud.formation', { key: keyLabel(bindings, 'sortSquad') || '—' })}
+        </div>
+      )}
     </div>
   );
 

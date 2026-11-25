@@ -278,6 +278,10 @@ export class Simulation {
   /** Story only: sprays in hand today, and seconds left of an Emberbrew. */
   readonly items = { emberbrew: 0, stillwater: 0 };
   brewTimer = 0;
+  /** Whether the Warden throws whoever stands nearest, whatever their kind. */
+  throwAny = false;
+  /** Whether the squad walks sorted by kind, each kind in its own group behind the Warden. */
+  squadSorted = false;
   /** Escort: how many of the level's ambushes have arrived. */
   private ambushed = 0;
   /** Local co-op: whether both Wardens are played at once, and the one not being stepped. */
@@ -561,6 +565,12 @@ export class Simulation {
       hp: this.partner?.state.hp ?? this.captainState.hp,
       selected: this.partner?.selected ?? this.selected,
     };
+  }
+
+  /** Sorts the squad by kind behind the Warden, or mixes it again. */
+  sortSquad(): void {
+    this.squadSorted = !this.squadSorted;
+    this.emit('select', this.captainTransform.x, this.captainTransform.z, 1);
   }
 
   /** Opens the guided morning's fence: every fence gate gives way at once. */
