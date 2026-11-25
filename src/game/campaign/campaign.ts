@@ -268,6 +268,8 @@ export function dayField(state: CampaignState): DayField {
         ? { ...bridge, built: true }
         : { ...bridge, laid: state.wear[`bridge:${index}`] ?? 0 },
     ),
+    // Once the telescope has been looked through, what it showed is simply there.
+    telescope: done.has('telescope') ? undefined : base.telescope,
     beacons: (base.beacons ?? []).map((beacon, index) => ({
       ...beacon,
       lit: done.has(`beacon:${index}`),
@@ -438,6 +440,7 @@ export function settleDay(
     ids.forEach((place, index) => {
       if (!lying.has(`${list}-${index}`)) add(`${list}:${place}`);
     });
+  if (sim.telescopeAimed) add('telescope');
   used('pod', origin.pods);
   used('log', origin.logs);
   used('sap', origin.saps);

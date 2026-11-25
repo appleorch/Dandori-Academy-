@@ -22,7 +22,8 @@ export type EnemyKind =
   | 'waspnest'
   | 'sparkwasp'
   | 'galewing'
-  | 'mirelord';
+  | 'mirelord'
+  | 'hollowwarden';
 
 /**
  * How an enemy attacks. `slam` rears up over a ring on the ground; `none` is for
@@ -420,6 +421,30 @@ export const ENEMY_SPECS: Record<EnemyKind, EnemySpec> = {
     carcassYield: 12,
     armour: 0.5,
     phases: [0.66, 0.33],
+    boss: true,
+  },
+  /**
+   * Final boss. The Academy's old clockwork Warden, wound wrong: it slams like the Gravelmaw,
+   * and in each of its four phases only one kind of Sproutling truly hurts it (Stonelings,
+   * then Emberlings, then Dewlings, then Sparklings), while every slam leaves behind the hazard
+   * that kind alone can stand: fire, then water, then sparks.
+   */
+  hollowwarden: {
+    ...BASE,
+    name: 'The Hollow Warden',
+    attack: 'slam',
+    hp: 640,
+    radius: 2.2,
+    speed: 2.4,
+    aggroRange: 10,
+    territory: 14,
+    windup: 1.2,
+    recover: 3.2,
+    shakeInterval: 4.5,
+    carcassWeight: 10,
+    carcassYield: 15,
+    armour: 0.5,
+    phases: [0.75, 0.5, 0.25],
     boss: true,
   },
   /**

@@ -356,6 +356,19 @@ function strike(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform): 
     enemy.state = 'charge';
     enemy.timer = spec.chargeTime;
     enemy.trampled = 0;
+  } else if (spec.attack === 'slam' && enemy.kind === 'hollowwarden') {
+    // Each slam leaves the hazard only this phase's kind can stand, scattered round it.
+    const hazard = (['stomp', 'flame', 'wave', 'arc'] as const)[Math.min(enemy.phase, 3)];
+    if (enemy.phase > 0) {
+      for (let i = 0; i < 4; i++) {
+        const angle = (i / 4) * Math.PI * 2 + sim.rng.range(0, 1);
+        const spot = sim.nav.nearestWalkable(
+          at.x + Math.sin(angle) * 5,
+          at.z + Math.cos(angle) * 5,
+        );
+        spawnHazard(sim, hazard, at, spot, HAZARDS[hazard].flight, i * 0.25);
+      }
+    }
   } else if (spec.attack === 'slam') {
     if (enemy.phase > 0) {
       for (let i = 0; i < PEBBLES; i++) {

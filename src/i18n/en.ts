@@ -122,6 +122,9 @@ export const EN = {
   'ending.silent.text':
     'Term begins under a Clock that will not strike. Lessons start whenever somebody remembers. It is not the end of the world, only of the deadline: the grounds are still out there, and so are the parts. Bring them home, and the Clock will strike when it is ready.',
   'ending.carryOn': 'Carry on',
+  'ending.credits': 'Roll the credits',
+  'ending.postGame':
+    'The grounds stay open: every relic, beast and corner still to find is waiting for you.',
   'ending.eyebrow': 'An ending',
 
   // Choosing a challenge field.

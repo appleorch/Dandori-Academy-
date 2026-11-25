@@ -7,6 +7,15 @@ import { ENEMY_SPECS } from './enemyKinds';
 import type { GateSpawn } from '../world/levelTypes';
 import { SPROUTS, type SproutKind } from '../workers/sprouts';
 
+/** The kind that truly hurts the Hollow Warden in each of its phases. */
+export const WARDEN_WEAKNESS: readonly SproutKind[] = ['stone', 'ember', 'dew', 'spark'];
+/** The share of damage any other kind does to it. */
+export const WARDEN_GLANCING = 0.12;
+
+export function wardenWeakness(enemy: Enemy): SproutKind {
+  return WARDEN_WEAKNESS[Math.min(enemy.phase, WARDEN_WEAKNESS.length - 1)];
+}
+
 /** Distance from a point to an enemy's surface: its circle, or a gate's rectangle. */
 export function enemyReach(enemy: Enemy, at: Transform, x: number, z: number): number {
   if (enemy.shape) {
@@ -62,7 +71,9 @@ export function damageEnemy(
   kind: SproutKind = 'ember',
 ): void {
   const crystal = (enemy.shape as GateSpawn | null)?.style === 'crystal';
-  const share = crystal ? SPROUTS[kind].crystal : 1;
+  let share = crystal ? SPROUTS[kind].crystal : 1;
+  // The Hollow Warden: in each phase only one kind truly hurts it.
+  if (enemy.kind === 'hollowwarden' && kind !== wardenWeakness(enemy)) share *= WARDEN_GLANCING;
   enemy.hp -= amount * share * damageTaken(sim, entity, enemy);
 }
 

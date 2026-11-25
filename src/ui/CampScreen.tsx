@@ -30,6 +30,7 @@ import {
   sectionName,
 } from '../i18n/gameText';
 import { KindGlyph } from './KindGlyph';
+import { EndingScreen } from './EndingScreen';
 
 const giftName = (ability: Ability) => t(`gift.${ability}.name` as MessageKey);
 const giftText = (ability: Ability) => t(`gift.${ability}.text` as MessageKey);
@@ -171,18 +172,7 @@ export function CampScreen() {
   const seenShare = Math.round(explored(decodeFog(state.seen, section.level)) * 100);
 
   if (state.ending && !state.endingShown) {
-    return (
-      <main className="screen">
-        <div className="panel ending">
-          <p className="eyebrow">{t('ending.eyebrow')}</p>
-          <h1>{t(`ending.${state.ending}.title` as MessageKey)}</h1>
-          <p>{t(`ending.${state.ending}.text` as MessageKey)}</p>
-          <button type="button" onClick={dismissEnding} autoFocus>
-            {t('ending.carryOn')}
-          </button>
-        </div>
-      </main>
-    );
+    return <EndingScreen ending={state.ending} onDone={dismissEnding} />;
   }
 
   return (

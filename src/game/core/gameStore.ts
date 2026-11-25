@@ -16,7 +16,7 @@ import {
   type DayRecord,
   type SaveData,
 } from '../save/saveManager';
-import { damageTaken } from '../enemies/combat';
+import { damageTaken, wardenWeakness } from '../enemies/combat';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { DayEnd, Simulation } from '../simulation/Simulation';
 import { bonusParts, LEVELS } from '../world/level';
@@ -152,6 +152,8 @@ export interface BossSnapshot {
   /** Health fractions where its phases begin, highest first, and the phase it is in. */
   phases: readonly number[];
   phase: number;
+  /** The one kind that truly hurts it right now, for a boss like the Hollow Warden. */
+  weakTo: SproutKind | null;
 }
 
 export interface DayResult {
@@ -219,6 +221,8 @@ interface GameStore {
   nearSecret: boolean;
   /** Story: a sprout is in the Warden's reach to pluck. */
   nearSprout: boolean;
+  /** Story: the Warden stands by a telescope not yet looked through. */
+  nearTelescope: boolean;
   /** A boss being introduced: the day waits while its name card shows. */
   bossIntro: BossIntro | null;
   /** Id of the side lesson whose way down the Warden is standing at, or null. */
@@ -253,6 +257,7 @@ interface GameStore {
   say: (line: Line) => void;
   setNearSecret: (near: boolean) => void;
   setNearSprout: (near: boolean) => void;
+  setNearTelescope: (near: boolean) => void;
   /** Starts a boss's intro and remembers it was shown on this field; null ends it. */
   showBossIntro: (intro: BossIntro | null) => void;
   /** The Warden is at a way down (or has left it): the side lesson is found for good. */
@@ -370,6 +375,7 @@ function bossSnapshot(sim: Simulation): BossSnapshot | null {
       name: spec.name,
       phases: spec.phases,
       phase: enemy.phase,
+      weakTo: enemy.kind === 'hollowwarden' ? wardenWeakness(enemy) : null,
       health: Math.max(0, enemy.hp / enemy.maxHp),
       guard:
         taken === 0
@@ -414,6 +420,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     sprocket: null,
     nearSecret: false,
     nearSprout: false,
+    nearTelescope: false,
     bossIntro: null,
     nearDescent: null,
     nearAscent: false,
@@ -483,6 +490,9 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
     setNearSprout: (near) => {
       if (near !== get().nearSprout) set({ nearSprout: near });
+    },
+    setNearTelescope: (near) => {
+      if (near !== get().nearTelescope) set({ nearTelescope: near });
     },
     showBossIntro: (intro) => {
       if (!intro) {

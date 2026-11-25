@@ -1053,6 +1053,82 @@ function MirelordBody({ r, gait, jaw }: { r: number; gait: Gait; jaw: React.Ref<
   );
 }
 
+/**
+ * Final boss: the Academy's old clockwork Warden, grown huge and wound wrong. A brass body on
+ * two legs, a clock face for a head with its hands spinning, and a glowing heart that shows
+ * when it is open.
+ */
+function HollowWardenBody({
+  r,
+  gait,
+  belly,
+}: {
+  r: number;
+  gait: Gait;
+  belly: React.Ref<MeshStandardMaterial>;
+}) {
+  const hands = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    if (hands.current) hands.current.rotation.z = -clock.elapsedTime * 3;
+  });
+  return (
+    <>
+      {[-1, 1].map((side, i) => (
+        <Leg
+          key={side}
+          gait={gait}
+          x={side * r * 0.35}
+          z={0}
+          length={r * 0.9}
+          radius={r * 0.14}
+          color="#6a4a2a"
+          offset={i * Math.PI}
+        />
+      ))}
+      <mesh position={[0, r * 1.5, 0]} castShadow>
+        <cylinderGeometry args={[r * 0.5, r * 0.62, r * 1.3, 12]} />
+        <meshStandardMaterial color="#b8863a" metalness={0.7} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, r * 1.55, r * 0.5]}>
+        <sphereGeometry args={[r * 0.2, 14, 10]} />
+        <meshStandardMaterial
+          ref={belly}
+          color="#ffcf6a"
+          emissive="#ff8a2a"
+          emissiveIntensity={0}
+        />
+      </mesh>
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          position={[side * r * 0.75, r * 1.5, 0]}
+          rotation={[0, 0, side * 0.3]}
+          castShadow
+        >
+          <cylinderGeometry args={[r * 0.12, r * 0.1, r * 1.1, 8]} />
+          <meshStandardMaterial color="#8a6a3a" metalness={0.6} roughness={0.35} />
+        </mesh>
+      ))}
+      <group position={[0, r * 2.45, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[r * 0.5, r * 0.5, r * 0.25, 24]} />
+          <meshStandardMaterial color="#efe4c8" roughness={0.5} />
+        </mesh>
+        <group ref={hands} position={[0, 0, r * 0.14]}>
+          <mesh position={[0, r * 0.18, 0]}>
+            <boxGeometry args={[r * 0.04, r * 0.36, r * 0.02]} />
+            <meshStandardMaterial color="#2a1d14" />
+          </mesh>
+          <mesh position={[r * 0.12, 0, 0]}>
+            <boxGeometry args={[r * 0.24, r * 0.04, r * 0.02]} />
+            <meshStandardMaterial color="#2a1d14" />
+          </mesh>
+        </group>
+      </group>
+    </>
+  );
+}
+
 interface EnemyMeshProps {
   sim: Simulation;
   entity: Entity;
@@ -1082,6 +1158,7 @@ const BAR_HEIGHT: Record<EnemyKind, number> = {
   sparkwasp: 1.6,
   galewing: 4.6,
   mirelord: 3,
+  hollowwarden: 5.4,
 };
 
 /**
@@ -1332,6 +1409,7 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
         {enemy.kind === 'sparkwasp' && <SparkWaspBody r={r} wings={wings} />}
         {enemy.kind === 'galewing' && <GalewingBody r={r} wings={wings} />}
         {enemy.kind === 'mirelord' && <MirelordBody r={r} gait={gait} jaw={jaw} />}
+        {enemy.kind === 'hollowwarden' && <HollowWardenBody r={r} gait={gait} belly={belly} />}
         {enemy.shape &&
           ((enemy.shape as GateSpawn).style === 'crystal' ? (
             <CrystalGateBody box={enemy.shape} />

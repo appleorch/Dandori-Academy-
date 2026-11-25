@@ -92,3 +92,38 @@ describe('the Sunken Orchard over five days', () => {
     expect(found.at(-1), found.join(', ')).toBeGreaterThanOrEqual(10);
   }, 900_000);
 });
+
+describe.each(['foundry', 'observatory'])('the %s over three days', (id) => {
+  it('lets the greedy player make progress there', () => {
+    const earlier = CAMPAIGN_SECTIONS.filter((section) => section.id !== id).flatMap(
+      (section) => section.parts,
+    );
+    let state: CampaignState = switchSection(
+      {
+        ...newCampaign(),
+        parts: Object.fromEntries(earlier.slice(0, 24).map((part) => [part, 1])),
+        stock: { ember: 20, dew: 8, stone: 6, spark: 6 },
+        growth: {
+          ember: Array(20).fill(0),
+          dew: Array(8).fill(0),
+          stone: Array(6).fill(0),
+          spark: Array(6).fill(0),
+        },
+      },
+      id,
+    );
+    const found: number[] = [];
+    for (let day = 0; day < 3; day++) {
+      const { field, sim } = story(state);
+      expect(field.section.id).toBe(id);
+      playGreedy(sim);
+      const settled = settleDay(state, field, sim);
+      sim.dispose();
+      state = settled.state;
+      const progress = sectionProgress(state);
+      found.push(progress.parts + progress.relics);
+    }
+    expect(found[2], found.join(', ')).toBeGreaterThan(found[0]);
+    expect(found[2], found.join(', ')).toBeGreaterThanOrEqual(6);
+  }, 900_000);
+});

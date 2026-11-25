@@ -442,6 +442,153 @@ export const CLOCK_PARTS: Readonly<Record<string, Relic>> = {
     description:
       'Taken from beside the Mire Lord’s pond. It rang once when lifted, as if in thanks.',
   },
+  // The Foundry's parts (the Clock's case and face) and the Observatory's (its heart and hands).
+  'part-dial-plate': {
+    id: 'part-dial-plate',
+    name: 'The Dial Plate',
+    shape: 'watch',
+    material: 'brass',
+    description:
+      'The Clock’s face starts here. It has been face-down in soot for a century and looks it.',
+  },
+  'part-chapter-ring': {
+    id: 'part-chapter-ring',
+    name: 'The Chapter Ring',
+    shape: 'compass',
+    material: 'silver',
+    description:
+      'Twelve hours in a ring. Somebody has scratched a thirteenth, small, between eleven and twelve.',
+  },
+  'part-motion-work': {
+    id: 'part-motion-work',
+    name: 'The Motion Work',
+    shape: 'gear',
+    material: 'brass',
+    description:
+      'It turns the minutes into hours. It has had a great deal of practice and nothing to show for it.',
+  },
+  'part-bezel': {
+    id: 'part-bezel',
+    name: 'The Bezel',
+    shape: 'crystal',
+    material: 'glass',
+    description: 'The rim that holds the Clock’s glass. Found in the moulding shop, still warm.',
+  },
+  'part-pendulum-rod': {
+    id: 'part-pendulum-rod',
+    name: 'The Pendulum Rod',
+    shape: 'key',
+    material: 'iron',
+    description: 'Long, straight and stubborn. It swings for nobody but the Clock.',
+  },
+  'part-crutch': {
+    id: 'part-crutch',
+    name: 'The Crutch',
+    shape: 'key',
+    material: 'brass',
+    description: 'It keeps the pendulum company. It has been lonely in the loft.',
+  },
+  'part-seatboard': {
+    id: 'part-seatboard',
+    name: 'The Seatboard',
+    shape: 'musicbox',
+    material: 'wood',
+    description: 'The whole movement sits on it. Heavy, patient, and slightly charred.',
+  },
+  'part-weights': {
+    id: 'part-weights',
+    name: 'The Driving Weights',
+    shape: 'bell',
+    material: 'iron',
+    description:
+      'They fall slowly, and the Clock goes. Lifting them back up is the Sproutlings’ job now.',
+  },
+  'part-hand-nut': {
+    id: 'part-hand-nut',
+    name: 'The Hand Nut',
+    shape: 'thimble',
+    material: 'gold',
+    description: 'Small enough to lose, which someone clearly did. Twice.',
+  },
+  'part-great-dial': {
+    id: 'part-great-dial',
+    name: 'The Great Dial',
+    shape: 'orrery',
+    material: 'gold',
+    description: 'Taken from under the Galewing’s wing. It had kept it polished.',
+  },
+  'part-star-wheel': {
+    id: 'part-star-wheel',
+    name: 'The Star Wheel',
+    shape: 'gear',
+    material: 'silver',
+    description: 'It counts the stars as they turn. It has lost count, and is cross about it.',
+  },
+  'part-regulator': {
+    id: 'part-regulator',
+    name: 'The Regulator',
+    shape: 'compass',
+    material: 'brass',
+    description: 'Slower, faster: the Clock’s conscience. It insists it was never wrong.',
+  },
+  'part-cock-bridge': {
+    id: 'part-cock-bridge',
+    name: 'The Cock Bridge',
+    shape: 'key',
+    material: 'gold',
+    description: 'A bridge of gold for a wheel to turn on. Not, alas, for Sproutlings to cross.',
+  },
+  'part-suspension-spring': {
+    id: 'part-suspension-spring',
+    name: 'The Suspension Spring',
+    shape: 'watch',
+    material: 'silver',
+    description: 'Thin as a hair. Hold your breath while you carry it.',
+  },
+  'part-moon-wheel': {
+    id: 'part-moon-wheel',
+    name: 'The Moon Wheel',
+    shape: 'orrery',
+    material: 'silver',
+    description: 'It knows the moon’s every phase, and it crawled off by itself, as Lodestones do.',
+  },
+  'part-hour-wheel': {
+    id: 'part-hour-wheel',
+    name: 'The Hour Wheel',
+    shape: 'gear',
+    material: 'brass',
+    description: 'It turns once in twelve hours, and never hurries. The Proctor approves.',
+  },
+  'part-equation-cam': {
+    id: 'part-equation-cam',
+    name: 'The Equation Cam',
+    shape: 'crystal',
+    material: 'crystal',
+    description:
+      'It squares the Clock with the sun. Very clever. Very fragile-looking. Not fragile.',
+  },
+  'part-sun-hand': {
+    id: 'part-sun-hand',
+    name: 'The Sun Hand',
+    shape: 'lantern',
+    material: 'gold',
+    description: 'It points at the sun, wherever the sun is, even here under glass.',
+  },
+  'part-star-hand': {
+    id: 'part-star-hand',
+    name: 'The Star Hand',
+    shape: 'lantern',
+    material: 'silver',
+    description: 'It points at the brightest star. Today, oddly, it points at the Kiln.',
+  },
+  'part-heart-of-the-clock': {
+    id: 'part-heart-of-the-clock',
+    name: 'The Heart of the Clock',
+    shape: 'bell',
+    material: 'gold',
+    description:
+      'Taken from the Hollow Warden’s keeping. It beats, very faintly, when you hold it close.',
+  },
 };
 
 function poolFor(variant: ShardVariant | undefined): readonly Relic[] {
@@ -510,6 +657,13 @@ export const BOSS_RELICS: Readonly<Record<string, Relic>> = {
     shape: 'compass',
     material: 'crystal',
     description: 'Hold it up and the needle swings towards wherever the wind is going next.',
+  },
+  'hollowwarden-shard': {
+    id: 'hollowwarden-key',
+    name: 'The Key That Wound It Wrong',
+    shape: 'key',
+    material: 'gold',
+    description: 'Turned the wrong way, a hundred years ago, by someone in a hurry. Never again.',
   },
   'mirelord-shard': {
     id: 'mirelord-crown',

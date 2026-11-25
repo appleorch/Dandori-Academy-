@@ -39,6 +39,8 @@ import { WaterAndBridges } from './WaterAndBridges';
 import { Butterflies } from './Butterflies';
 import { Dewdrops } from './Dewdrops';
 import { Fallen } from './Fallen';
+import { Conveyors } from './Conveyors';
+import { Telescope } from './Telescope';
 import { WorkerInstances } from './WorkerInstances';
 import { PerfProbe, ShadowBudget } from './perf';
 import { QualityTuner } from './QualityTuner';
@@ -280,6 +282,8 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
             <WorkerInstances sim={sim} />
             <Dewdrops sim={sim} />
             <Fallen sim={sim} />
+            <Conveyors sim={sim} />
+            <Telescope sim={sim} />
             <Butterflies sim={sim} />
             <CarryableMeshes sim={sim} />
             <EnemyMeshes sim={sim} />

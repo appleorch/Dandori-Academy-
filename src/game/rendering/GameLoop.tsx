@@ -83,6 +83,7 @@ const BOSS_KEYS: Partial<Record<EnemyKind, number>> = {
   snuffer: -5,
   galewing: 5,
   mirelord: -3,
+  hollowwarden: -7,
 };
 
 /** A line under each boss's name in its intro. */
@@ -93,6 +94,7 @@ const BOSS_TITLES: Partial<Record<string, string>> = {
   snuffer: 'Keeper of the Undercroft Dark',
   galewing: 'Rider of the Evening Wind',
   mirelord: 'Sovereign of the Flooded Pool',
+  hollowwarden: 'Keeper of the Stopped Hour',
 };
 
 /** The first boss to be roused (hunting, hurt or clung to), with where it is. */
@@ -365,6 +367,18 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
     // through a whole patch, one sprout at a time.
     const pressed = input.takeInteract();
     store.setNearSprout(sim.story && sproutInReach(sim));
+    // The Observatory's telescope: look through it and hidden treasure appears.
+    const scope = sim.level.telescope;
+    const atScope =
+      scope !== undefined &&
+      !sim.telescopeAimed &&
+      Math.hypot(spot.x - scope.x, spot.z - scope.z) < SECRET_RANGE;
+    store.setNearTelescope(atScope);
+    if (atScope && pressed) {
+      sim.aimTelescope();
+      fx.popup('Something glints out there…', scope.x, scope.z, '#9ad0ff');
+      return;
+    }
     if (sim.story && !atDoor && !atStair && !atAscent) {
       pluckWait.current = Math.max(0, pluckWait.current - delta);
       if ((pressed || input.held('interact')) && pluckWait.current === 0 && pluckNearest(sim)) {

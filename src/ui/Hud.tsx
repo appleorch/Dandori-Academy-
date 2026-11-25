@@ -46,6 +46,7 @@ export function Hud({
   const sprocket = useGameStore((state) => state.sprocket);
   const nearSecret = useGameStore((state) => state.nearSecret);
   const nearSprout = useGameStore((state) => state.nearSprout);
+  const nearTelescope = useGameStore((state) => state.nearTelescope);
   const bossIntro = useGameStore((state) => state.bossIntro);
   const showBossIntro = useGameStore((state) => state.showBossIntro);
   const openPoker = useGameStore((state) => state.openPoker);
@@ -254,6 +255,9 @@ export function Hud({
         >
           <span className="bossbar-name">
             {hud.boss.name} <small>{GUARD_TEXT[hud.boss.guard]}</small>
+            {hud.boss.weakTo && (
+              <small> · only {SPROUTS[hud.boss.weakTo].plural} hurt it now</small>
+            )}
           </span>
           <span className="bossbar-track">
             <span className="bossbar-fill" style={{ width: `${hud.boss.health * 100}%` }} />
@@ -302,7 +306,12 @@ export function Hud({
       {touch && counts}
       {phase === 'playing' && (
         <div className="callouts">
-          {nearSprout && !nearSecret && (
+          {nearTelescope && (
+            <button type="button" className="chip knock" onClick={() => input?.queueInteract()}>
+              Look through the telescope {!touch && <ActionPrompt action="interact" />}
+            </button>
+          )}
+          {nearSprout && !nearSecret && !nearTelescope && (
             <button type="button" className="chip knock" onClick={() => input?.queueInteract()}>
               Pluck (hold to sweep) {!touch && <ActionPrompt action="interact" />}
             </button>

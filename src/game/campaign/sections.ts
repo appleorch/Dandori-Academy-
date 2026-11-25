@@ -2,6 +2,8 @@ import { terrace, terraces } from '../world/course';
 import { defineLevel } from '../world/level';
 import type { LevelDefinition, LevelSpec } from '../world/levelTypes';
 import { ORCHARD_PARTS, ORCHARD_ROOTS, SUNKEN_ORCHARD } from './orchard';
+import { CLOCKWORK_FOUNDRY, FOUNDRY_PARTS } from './foundry';
+import { FROSTGLASS_OBSERVATORY, OBSERVATORY_PARTS } from './observatory';
 import type { Ability } from './upgrades';
 
 /**
@@ -259,6 +261,24 @@ export const CAMPAIGN_SECTIONS: readonly CampaignSection[] = [
     opensAt: 6,
     needs: { 'part-going-barrel': 'bridgekit', 'part-centre-arbor': 'lantern' },
     caves: [defineLevel(ORCHARD_ROOTS)],
+  },
+  {
+    id: 'foundry',
+    name: 'The Clockwork Foundry',
+    brief:
+      'Up the hill from the Orchard stands the forge where the Great Clock was cast. Its furnaces still burn and its belts still run, carrying whatever lands on them. Ten parts of the Clock’s case and face lie across the casting floor, the pattern loft above it and the bell tower’s top, where the Galewing roosts. Bring Emberlings: the vents breathe fire everywhere.',
+    level: CLOCKWORK_FOUNDRY,
+    parts: FOUNDRY_PARTS,
+    opensAt: 14,
+  },
+  {
+    id: 'observatory',
+    name: 'The Frostglass Observatory',
+    brief:
+      'The glasshouse dome on the hill, where the Clock’s time was set by the stars. Its star machines arc with sparks, its great telescope shows what no one else can see, and under the dome the Academy’s old clockwork Warden, wound wrong, keeps the Clock’s heart. Ten parts, the last of all. Bring Sparklings, and every kind besides.',
+    level: FROSTGLASS_OBSERVATORY,
+    parts: OBSERVATORY_PARTS,
+    opensAt: 22,
   },
 ];
 

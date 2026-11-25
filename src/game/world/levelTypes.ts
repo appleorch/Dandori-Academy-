@@ -138,6 +138,12 @@ export interface EnemySpawn extends Point {
   reveals?: 'pod' | 'sap';
 }
 
+/** A belt over a box of ground that carries what is on it in direction (dx, dz), a unit vector. */
+export interface Conveyor extends Box {
+  dx: number;
+  dz: number;
+}
+
 /** A bramble wall across a path, with the health it takes to break. */
 export interface GateSpawn extends Box {
   hp: number;
@@ -216,6 +222,13 @@ export interface LevelDefinition {
   pods: PodSpawn[];
   /** Flame vents: they flare every `period` seconds. Only Emberlings walk through fire. */
   vents?: VentSpawn[];
+  /** Conveyor belts: anything on one (hauls, Sproutlings on foot) is carried along it. */
+  conveyors?: Conveyor[];
+  /**
+   * Story only: a telescope that, once looked through (the interact key beside it), shows
+   * treasure hidden until then: the treasures listed in `reveals`.
+   */
+  telescope?: Point & { reveals: string[] };
   /** Spark coils: a pair of pylons that arc across the gap between them now and then. Only Sparklings are safe. */
   coils?: CoilSpawn[];
   enemies: EnemySpawn[];

@@ -306,6 +306,23 @@ camp**, which shows a map of the Quad, the Kiln's stock by kind and the Clock's 
   Glowcaps, Sapdrops, Dewdrops, drips and four beacons. Treasure found in a section's caves
   counts for the section (`settleDay`'s cave finds), and caves keep what was taken from them
   (`caveField`). Pictures of each zone are in `docs-design/art/orchard-*.jpg`.
+- **The Clockwork Foundry** (`foundry.ts`, 200 × 200, dusk) opens with 14 parts home: the forge
+  where the Clock was cast, Emberlings' ground. Flame vents everywhere, crystal gates, three
+  tiers (the casting floor, the pattern loft on a terrace above it, the tower top on a terrace
+  on the loft, with ramps up and ledges down), and **conveyor belts** (`conveyors` in a level,
+  `src/game/world/conveyorSystem.ts`) that carry hauls and Sproutlings on foot the way they run:
+  the long belt home helps, the contrary one by the east furnace does not. The Galewing roosts
+  on the tower top over the last part.
+- **The Frostglass Observatory** (`observatory.ts`, 240 × 160, terrarium) opens with 22 parts
+  home: Sparklings' ground, with spark coils across the glass halls, Lodestones and the hardest
+  beasts, and **the telescope** (`telescope` in a level): looked through with the interact key,
+  it shows three relics no one could see before, and the story remembers it was used. Under the
+  dome the **Hollow Warden**, the final boss: in each of its four phases only one kind truly
+  hurts it (Stonelings, Emberlings, Dewlings, then Sparklings; the boss bar says which), and its
+  slams leave the hazard only that kind can stand.
+- **The finale.** The whole story is 42 parts over four sections. When an ending is reached the
+  base camp shows the Great Clock in the courtyard (`EndingScreen.tsx`), going or still, with the
+  ending's words and the credits; every section stays open afterwards for everything left.
 - **Sections.** The story is built for several sections of the grounds (`CAMPAIGN_SECTIONS`).
   Each keeps its own record (what is done, worn, home and seen); the one being explored is held
   at the top of `CampaignState`, the others in `others`, and the base camp lists them all: a

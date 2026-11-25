@@ -2828,6 +2828,38 @@ svg.camp-map {
   shape-rendering: crispEdges;
 }
 
+.ending-screen {
+  position: relative;
+}
+
+.ending-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+.ending-screen .panel.ending {
+  position: relative;
+  z-index: 1;
+  margin-top: 46vh;
+  background: rgba(28, 20, 16, 0.86);
+}
+
+.credits-roll {
+  max-height: 40vh;
+  overflow: hidden;
+  animation: credits-roll 30s linear;
+}
+
+@keyframes credits-roll {
+  from {
+    transform: translateY(40vh);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 .panel.ending {
   max-width: 40rem;
   text-align: center;

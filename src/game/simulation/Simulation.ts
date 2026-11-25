@@ -2,6 +2,7 @@ import { updateCaptain } from '../captain/captainSystem';
 import { updateCarrying } from '../carry/carrySystem';
 import type { InputState } from '../commands/input';
 import { CAPTAIN, KILN, SIM_DT } from '../core/config';
+import type { TreasureSpawn } from '../world/levelTypes';
 import { HARD } from '../core/difficulty';
 import { EcsWorld, type Entity, type Store } from '../core/ecs';
 import { Rng } from '../core/rng';
@@ -12,6 +13,7 @@ import { updateHazards } from '../enemies/hazardSystem';
 import { updateBlooms } from '../carry/bloomSystem';
 import { applySeparation } from '../flocking/separation';
 import { updateKiln } from '../kiln/kilnSystem';
+import { updateConveyors } from '../world/conveyorSystem';
 import { updateDewdrops } from '../workers/growth';
 import { emptyFog, reveal } from '../campaign/fog';
 import type { Ability } from '../campaign/upgrades';
@@ -232,6 +234,9 @@ export class Simulation {
   readonly abilities: ReadonlySet<Ability>;
   /** Story only: the fog-of-war map of what the Warden has seen (see campaign/fog.ts). */
   readonly explored: Uint8Array | null;
+  /** Treasure the telescope has yet to show, and whether it has been looked through today. */
+  readonly hiddenTreasures: TreasureSpawn[] = [];
+  telescopeAimed = false;
   /** Dewdrops lying on the field, waiting to be drunk. */
   readonly dewdrops: Point[];
   /** Recent losses, newest last, for drawing each one's last moment (never read by the rules). */
@@ -353,7 +358,12 @@ export class Simulation {
       for (const drop of level.dewdrops ?? [])
         this.dewdrops.push(this.nav.nearestWalkable(drop.x, drop.z));
     }
-    for (const treasure of level.treasures) spawnTreasure(this, treasure);
+    // Treasure shown only by the telescope waits until it is looked through.
+    const hidden = new Set(level.telescope?.reveals ?? []);
+    for (const treasure of level.treasures) {
+      if (hidden.has(treasure.id)) this.hiddenTreasures.push(treasure);
+      else spawnTreasure(this, treasure);
+    }
     level.pods.forEach((pod, index) => spawnPod(this, pod, index, pod.kind));
     for (const pod of level.pods) if (pod.kind) this.knownKinds.add(pod.kind);
     (level.logs ?? []).forEach((log, index) => spawnLog(this, log, index));
@@ -432,6 +442,7 @@ export class Simulation {
     updateWorkers(this, dt);
     applySeparation(this);
     updateCarrying(this, dt);
+    updateConveyors(this, dt);
     updateKiln(this, dt);
     updateDewdrops(this);
     // The fog lifts round the Warden: a few times a second is plenty.
@@ -496,6 +507,16 @@ export class Simulation {
 
   emit(type: SimEventType, x: number, z: number, amount = 0, kind?: SproutKind): void {
     this.events.push(kind ? { type, x, z, amount, kind } : { type, x, z, amount });
+  }
+
+  /** Looks through the telescope: the treasure it shows appears where it lies. */
+  aimTelescope(): boolean {
+    if (this.telescopeAimed || !this.level.telescope) return false;
+    this.telescopeAimed = true;
+    for (const treasure of this.hiddenTreasures.splice(0)) spawnTreasure(this, treasure);
+    this.entityVersion++;
+    this.emit('beaconLit', this.level.telescope.x, this.level.telescope.z);
+    return true;
   }
 
   countWorkers(): WorkerCounts {

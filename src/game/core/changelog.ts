@@ -8,6 +8,15 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.28.0',
+    date: '2026-11-25',
+    changes: [
+      'Two more story sections, completing the Great Clock’s 42 parts: the Clockwork Foundry, where conveyor belts carry hauls and Sproutlings where they run and the Galewing roosts on the bell tower; and the Frostglass Observatory, with spark coils, Lodestones and a great telescope that shows hidden relics when you look through it.',
+      'The final boss, the Hollow Warden: in each of its four phases only one kind of Sproutling truly hurts it, and the boss bar tells you which.',
+      'A finale: the Great Clock in the Academy courtyard, your ending, and the credits. Every section stays open afterwards.',
+    ],
+  },
+  {
     version: '0.27.0',
     date: '2026-11-25',
     changes: [
