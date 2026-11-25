@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect, useMemo } from 'react';
 import { useGameStore } from '../game/core/gameStore';
 import { connectedPads } from '../game/commands/gamepad';
 import { t } from '../i18n/i18n';
@@ -16,13 +16,38 @@ const MILLERS = Array.from({ length: 16 }, (_, i) => ({
 
 const KIND_COLOURS = { ember: '#ff7a3d', dew: '#5cc4ff', stone: '#b9a48a', spark: '#ffe066' };
 
+/** The courtyard in 3D, loaded only when it will be shown. */
+const TitleScene3D = lazy(() => import('./TitleScene3D'));
+
+/** Whether this browser can draw WebGL at all. */
+function webgl(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
+
+/** Whether motion is to be kept still: the setting, or the system's preference. */
+function stillness(): boolean {
+  return (
+    document.documentElement.classList.contains('reduced-motion') ||
+    (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+  );
+}
+
 /**
  * The title: the Academy courtyard at dusk with the Great Clock in its tower, Sproutlings
  * milling about below, and the logo. Any key, click, tap or pad button goes on to the menu.
- * Drawn as an animated picture rather than the 3D scene, so the title needs no download.
+ * Drawn as an animated picture first, so the title needs no download; on Medium and High
+ * graphics the courtyard in 3D is loaded and fades in over it.
  */
 export function TitleScreen() {
   const leaveTitle = useGameStore((state) => state.leaveTitle);
+  const graphics = useGameStore((state) => state.settings.graphics);
+  const fancy = useMemo(() => graphics !== 'low' && webgl(), [graphics]);
+  const still = useMemo(() => stillness(), []);
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (event.repeat || event.key === 'Tab') return;
@@ -162,6 +187,11 @@ export function TitleScreen() {
           ))}
         </g>
       </svg>
+      {fancy && (
+        <Suspense fallback={null}>
+          <TitleScene3D still={still} />
+        </Suspense>
+      )}
       <button type="button" className="title-start" onClick={leaveTitle} autoFocus>
         <span className="title-logo">{t('menu.title')}</span>
         <span className="title-tagline">{t('title.tagline')}</span>
