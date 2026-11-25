@@ -5,6 +5,7 @@ import { useGameStore } from '../game/core/gameStore';
 import { RelicModel } from '../game/rendering/models/RelicModel';
 import { allRelics, recoveredRelics, relicLocations, type Relic } from '../game/story/relics';
 import { RELIC_SETS, setProgress } from '../game/story/relicSets';
+import { relicNotes } from '../game/story/relicNotes';
 
 /** Every relic in the cabinet: ordinary finds, bosses', the Clock's parts, secrets, the sets. */
 const RELICS: readonly Relic[] = allRelics();
@@ -67,6 +68,7 @@ export function FieldGuide() {
   );
   const isFound = found.has(chosen.id);
   const places = useMemo(() => relicLocations(chosen.id), [chosen]);
+  const notes = relicNotes(chosen);
 
   return (
     <main className="screen">
@@ -146,6 +148,12 @@ export function FieldGuide() {
                       : `Somewhere in ${places.length > 0 ? places[0] : 'a lesson boss or mound'}.`}
               </p>
               {isFound && places.length > 0 && <small>Found in: {places.join(', ')}</small>}
+              {isFound && notes && (
+                <>
+                  <small>Warden’s note: {notes.warden}</small>
+                  <small>The Headmaster adds: {notes.sprocket}</small>
+                </>
+              )}
             </figcaption>
           </figure>
           <ul className="guide-list">

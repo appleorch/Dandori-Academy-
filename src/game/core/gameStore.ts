@@ -53,7 +53,7 @@ import type { SproutKind } from '../workers/sprouts';
 import { CHAIN, TWIN } from './config';
 import { twinStyle } from '../world/twins';
 import { penaltyPerLoss, type Difficulty } from './difficulty';
-import type { DayLog } from '../replay/replay';
+import { ReplayRun, type DayLog } from '../replay/replay';
 import { Lockstep, type Transport } from '../net/lockstep';
 import type { Scene } from '../story/scenes';
 import { encodeTrack } from '../modes/timeAttack';
@@ -285,6 +285,9 @@ interface GameStore {
   /** Bumped to take a picture: the scene's PhotoShot watches it. */
   photoShot: number;
   takePhoto: () => void;
+  /** Time Attack practice: a best run replayed to a chosen moment, to play on from there. */
+  practice: { run: ReplayRun; shard: number } | null;
+  startPractice: (log: DayLog, shard: number, step: number) => Promise<boolean>;
   /** Local co-op: a second player on a gamepad, in the story and challenges. */
   coop: boolean;
   setCoop: (coop: boolean) => void;
@@ -535,6 +538,16 @@ export const useGameStore = create<GameStore>((set, get) => {
     titleDone: false,
     replay: null,
     coop: false,
+    practice: null,
+    startPractice: async (log, shard, step) => {
+      const run = await ReplayRun.open(log);
+      if (!run) return false;
+      run.advance(step);
+      // Started first (which clears any practice), then marked: the scene reads both at once.
+      get().startDay(log.level, 'lessons');
+      set({ practice: { run, shard } });
+      return true;
+    },
     photo: null,
     setPhoto: (photo) => set({ photo }),
     photoShot: 0,
@@ -586,6 +599,7 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     startDay: (levelId, mode, rival) =>
       set((state) => ({
+        practice: null,
         phase: 'playing',
         levelId,
         playMode: mode ?? state.playMode,
@@ -628,6 +642,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         hud: null,
         result: null,
         ghostRace: null,
+        practice: null,
       }),
 
     endDay: () => set({ endRequested: true, paused: false }),
@@ -919,8 +934,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       // A new personal best goes in the outbox for the Academy board; it is sent while posting
       // is on, and waits there while it is off.
       const queued = day.run ? queueForBoard(previous, recorded, day.run) : recorded;
-      const { save, unlocked } = unlockAchievements(queued, day, now);
-      persist(save);
+      const earned = unlockAchievements(queued, day, now);
+      // A practice run (started partway through a best run) never counts: nothing is kept.
+      const practising = get().practice !== null;
+      const save = practising ? previous : earned.save;
+      const unlocked = practising ? [] : earned.unlocked;
+      if (!practising) persist(save);
       const relicKeys = [
         ...stats.treasuresCollected.map((id) => `${level.id}:${id}`),
         ...(haul?.relics ?? []),

@@ -1,3 +1,4 @@
+import type { TreasureSpawn } from '../world/levelTypes';
 import type { Entity } from '../core/ecs';
 import type { EnemyKind, HazardKind } from '../enemies/enemyKinds';
 import type { Box } from '../navigation/NavGrid';
@@ -131,6 +132,8 @@ export interface Enemy {
   drop: number;
   /** What a dug-up mound leaves besides a shard: a pod, a Sapdrop, or nothing. */
   reveals: 'pod' | 'sap' | null;
+  /** A mound over buried treasure: what comes up when it is dug. */
+  buried: TreasureSpawn | null;
   hp: number;
   maxHp: number;
   radius: number;

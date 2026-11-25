@@ -1,4 +1,4 @@
-import { terrace, terraces } from '../world/course';
+import { cornerLedge, terrace, terraces } from '../world/course';
 import type { LevelSpec } from '../world/levelTypes';
 
 /**
@@ -28,6 +28,8 @@ const TIERS = terraces(
   ),
 );
 
+const FOUNDRY_LEDGE = cornerLedge(200, 200, 'NW');
+
 export const CLOCKWORK_FOUNDRY: LevelSpec = {
   id: 'campaign-foundry',
   stage: 0,
@@ -50,6 +52,8 @@ export const CLOCKWORK_FOUNDRY: LevelSpec = {
   captain: { x: -84, z: 82 },
   kiln: { x: -88, z: 86 },
   obstacles: [
+    // The high ledge in the corner, reached only by a thrown Sparkling.
+    ...FOUNDRY_LEDGE.walls,
     // The secret glade's wall.
     { x: 92, z: 96, w: 2, d: 8 },
     ...TIERS.walls,
@@ -62,9 +66,9 @@ export const CLOCKWORK_FOUNDRY: LevelSpec = {
     { x: 50, z: 60, w: 2, d: 30 },
     { x: 76, z: 46, w: 52, d: 2 },
   ],
-  plateaus: TIERS.plateaus,
-  ramps: TIERS.ramps,
-  ledges: TIERS.ledges,
+  plateaus: [...TIERS.plateaus, ...FOUNDRY_LEDGE.plateaus],
+  ramps: [...TIERS.ramps, ...FOUNDRY_LEDGE.ramps],
+  ledges: [...TIERS.ledges, ...FOUNDRY_LEDGE.ledges],
   gates: [
     // The moulding shop's door, crystal.
     { x: 50, z: 84, w: 2, d: 18, hp: 200, style: 'crystal' },
@@ -128,6 +132,12 @@ export const CLOCKWORK_FOUNDRY: LevelSpec = {
     { x: 90, z: 56 },
   ],
   treasures: [
+    // Up on the corner ledge: a Sparkling's throw away.
+    { id: 'ledge-foundry', x: FOUNDRY_LEDGE.top.x, z: FOUNDRY_LEDGE.top.z, weight: 3 },
+    // Buried relics, under mounds with a faint sparkle.
+    { id: 'buried-1', x: -70, z: 40, weight: 2, buried: true },
+    { id: 'buried-2', x: 24, z: 20, weight: 2, buried: true },
+    { id: 'buried-3', x: -20, z: -76, weight: 3, buried: true },
     // The secret, in the glade behind the hidden wall.
     { id: 'secret-foundry', x: 96, z: 96, weight: 2 },
     // The Great Clock's ten parts in the Foundry: its case and its face.

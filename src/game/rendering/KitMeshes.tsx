@@ -188,6 +188,32 @@ export function kitBatches(level: LevelDefinition, density = 1): Batch[] {
     if (KIT_LOOKS.includes(look)) pieces.push(...wallPieces(wall, look));
   }
   for (const prop of level.props ?? []) pieces.push(...propPieces(prop));
+  // Glass floors over drops: the dark below, then a pane with a brass frame.
+  for (const pane of level.glassFloors ?? []) {
+    pieces.push(
+      {
+        shape: 'box',
+        color: '#0a0f1a',
+        x: pane.x,
+        y: 0.012,
+        z: pane.z,
+        sx: pane.w,
+        sy: 0.02,
+        sz: pane.d,
+      },
+      {
+        shape: 'box',
+        color: '#bfe8ff',
+        finish: 'glass',
+        x: pane.x,
+        y: 0.05,
+        z: pane.z,
+        sx: pane.w,
+        sy: 0.04,
+        sz: pane.d,
+      },
+    );
+  }
   const batches = new Map<string, Batch>();
   for (const piece of pieces) {
     const finish = piece.finish ?? 'matte';

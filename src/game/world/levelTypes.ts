@@ -56,7 +56,9 @@ export type WallLook =
   | 'tile'
   | 'root'
   | 'glass'
-  | 'gear';
+  | 'gear'
+  /** A drop: no walking across, though a throw carries over. */
+  | 'pit';
 
 /** A giant everyday object placed for art only (see `LevelDefinition.props`). */
 export type PropKind =
@@ -113,6 +115,8 @@ export interface TreasureSpawn extends Point {
   variant?: ShardVariant;
   /** Rune shared with exactly one other treasure: both home within 10 s earns a bonus. */
   twin?: string;
+  /** Buried: under a mound with a faint sparkle, until dug up by Sproutlings. */
+  buried?: boolean;
 }
 
 /** A river crossing waiting to be built: a water box that becomes walkable once enough Span-logs arrive at its bank. */
@@ -149,7 +153,7 @@ export interface GateSpawn extends Box {
   hp: number;
   /** Bramble by default; crystal gates are the Academy's own, grown over the old doorways. */
   /** `hidden`: a weak wall that looks like any other, but for a crack: a secret way in. */
-  style?: 'bramble' | 'crystal' | 'hidden' | 'fence';
+  style?: 'bramble' | 'crystal' | 'hidden' | 'fence' | 'pillar';
   /** Health it has left, when worn down on an earlier day of the story; `hp` otherwise. */
   left?: number;
 }
@@ -238,6 +242,10 @@ export interface LevelDefinition {
   /** Spark coils: a pair of pylons that arc across the gap between them now and then. Only Sparklings are safe. */
   coils?: CoilSpawn[];
   enemies: EnemySpawn[];
+  /** Sprays the day starts with, outside the story (two Escort fields grant some). */
+  items?: { emberbrew: number; stillwater: number };
+  /** Glass floors over drops: walkable panes, drawn over the dark below (art only). */
+  glassFloors?: { x: number; z: number; w: number; d: number }[];
   /** Escort: beasts that arrive during the day, each `at` seconds in (see Simulation.step). */
   ambushes?: (EnemySpawn & { at: number })[];
   gates?: GateSpawn[];

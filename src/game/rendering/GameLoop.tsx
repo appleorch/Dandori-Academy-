@@ -210,7 +210,9 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
   const [recorder] = useState(() => {
     const { playMode, coop } = useGameStore.getState();
     // A co-op day has two players' inputs; its replay is not kept (yet).
-    return replayable(playMode) && !coopDay(coop, playMode) ? new Recorder() : null;
+    // Nor is a practice run's (it starts partway through another day).
+    const practising = useGameStore.getState().practice !== null;
+    return replayable(playMode) && !coopDay(coop, playMode) && !practising ? new Recorder() : null;
   });
   const [partnerPad] = useState(() => new PartnerPad());
   const stalled = useRef(0);
@@ -618,10 +620,15 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
         const sent = sim.splitSquad();
         if (sent > 0) fx.popup(`${sent} sent to the other Warden`, spot.x, spot.z, '#bfe6ff');
       }
-      if (input.take('emberbrew') && sim.sprayEmberbrew())
-        fx.popup('Emberbrew!', spot.x, spot.z, '#ff9a5a');
-      if (input.take('stillwater') && sim.sprayStillwater())
-        fx.popup('Stillwater!', spot.x, spot.z, '#9ad0ff');
+    }
+    // Sprays: the story's, or a field's own. Noted for the replay, as they are not inputs.
+    if (input.take('emberbrew') && sim.sprayEmberbrew()) {
+      recorder?.event('emberbrew');
+      fx.popup('Emberbrew!', spot.x, spot.z, '#ff9a5a');
+    }
+    if (input.take('stillwater') && sim.sprayStillwater()) {
+      recorder?.event('stillwater');
+      fx.popup('Stillwater!', spot.x, spot.z, '#9ad0ff');
     }
     const pressed = input.takeInteract();
     store.setNearSprout(sim.story && sproutInReach(sim));

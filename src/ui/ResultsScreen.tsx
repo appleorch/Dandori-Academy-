@@ -23,7 +23,9 @@ import { timeMedal } from '../game/modes/timeAttack';
 import { ActionPrompt } from './Glyph';
 import { DayGraphs } from './DayGraphs';
 import { replayable } from '../game/replay/replay';
-import { getReplay, LAST_KEY } from '../game/replay/replayStore';
+import { bestKey, getReplay, LAST_KEY } from '../game/replay/replayStore';
+import { splitKey } from '../game/save/saveManager';
+import { SIM_DT } from '../game/core/config';
 import { awardFor, MedalCeremony, ShareCardButton } from './ResultCeremony';
 
 const HEADLINES: Record<DayEnd, string> = {
@@ -148,6 +150,46 @@ function resultSummary(result: DayResult): string {
   return result.tally.cleared
     ? `Cleared${result.clearTime !== null ? ` in ${formatTime(result.clearTime)}` : ''}.`
     : 'Not cleared yet.';
+}
+
+/**
+ * Practice from here: start a lesson at the moment a Sunshard came home on your fastest clear,
+ * replayed up to there, and play on from that point. Practice runs are never kept.
+ */
+function PracticePanel({ level }: { level: LevelDefinition }) {
+  const save = useGameStore((state) => state.save);
+  const practising = useGameStore((state) => state.practice);
+  const startPractice = useGameStore((state) => state.startPractice);
+  const [note, setNote] = useState<string | null>(null);
+  const splits = save.bestSplits[splitKey(level.id, level.difficulty)] ?? [];
+  if (practising) {
+    return <p className="note">Practice run from Sunshard {practising.shard}: nothing was kept.</p>;
+  }
+  if (splits.length < 2) return null;
+  return (
+    <section className="practice">
+      <p className="eyebrow">Practice from your fastest clear</p>
+      <div className="button-row">
+        {splits.slice(0, -1).map((time, i) => (
+          <button
+            key={i}
+            type="button"
+            className="secondary small"
+            onClick={() =>
+              void getReplay(bestKey(level.id, level.difficulty, 'lessons')).then(async (log) => {
+                if (!log) return setNote('Your fastest clear has no replay kept in this browser.');
+                const ok = await startPractice(log, i + 1, Math.round(time / SIM_DT) + 1);
+                if (!ok) setNote('That replay is from another version of the game.');
+              })
+            }
+          >
+            After Sunshard {i + 1} ({formatTime(time)})
+          </button>
+        ))}
+      </div>
+      {note && <p className="note">{note}</p>}
+    </section>
+  );
 }
 
 /** Watches the day just played again, from the replay kept of it. */
@@ -280,6 +322,7 @@ function StoryBody({ result, level }: { result: DayResult; level: LevelDefinitio
           Bring every Sunshard home to clear {level.name} and open the next lesson.
         </p>
       )}
+      <PracticePanel level={level} />
     </>
   );
 }

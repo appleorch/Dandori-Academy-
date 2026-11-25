@@ -41,6 +41,24 @@ export function updateCaptain(sim: Simulation, input: InputState, dt: number): v
 }
 
 /**
+ * Hurts every Warden within `range` of (x, z): the one in play, and in co-op the second
+ * player's too.
+ */
+export function hurtWardensNear(
+  sim: Simulation,
+  x: number,
+  z: number,
+  range: number,
+  fromX: number,
+  fromZ: number,
+): void {
+  const captain = sim.captainTransform;
+  if (Math.hypot(captain.x - x, captain.z - z) <= range) damageCaptain(sim, fromX, fromZ);
+  const partner = sim.partnerWarden;
+  if (partner && Math.hypot(partner.x - x, partner.z - z) <= range) sim.hurtPartner();
+}
+
+/**
  * Applies a hit from the given point: the captain loses a heart and is knocked
  * back, unless still invulnerable from the last hit.
  */

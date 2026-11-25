@@ -1,3 +1,4 @@
+import { cornerLedge } from '../world/course';
 import type { LevelSpec } from '../world/levelTypes';
 
 /**
@@ -34,6 +35,8 @@ const ROOTS = [
   { x: 72, z: -50, w: 20, d: 3, look: 'root' as const },
 ];
 
+const ORCHARD_LEDGE = cornerLedge(220, 160, 'SE');
+
 export const SUNKEN_ORCHARD: LevelSpec = {
   id: 'campaign-orchard',
   stage: 0,
@@ -57,6 +60,8 @@ export const SUNKEN_ORCHARD: LevelSpec = {
   kiln: { x: -96, z: 0 },
   descent: { x: 72, z: -40, to: 'campaign-orchard-roots' },
   obstacles: [
+    // The high ledge in the corner, reached only by a thrown Sparkling.
+    ...ORCHARD_LEDGE.walls,
     // The secret glade's wall.
     { x: -102, z: 75, w: 2, d: 10 },
     ...CRATE,
@@ -72,6 +77,9 @@ export const SUNKEN_ORCHARD: LevelSpec = {
     { x: 54, z: 34, w: 2, d: 30 },
     { x: 54, z: 72, w: 2, d: 16 },
   ],
+  plateaus: ORCHARD_LEDGE.plateaus,
+  ramps: ORCHARD_LEDGE.ramps,
+  ledges: ORCHARD_LEDGE.ledges,
   gates: [
     // The crate's bramble door.
     { x: -37, z: -26, w: 8, d: 2, hp: 180 },
@@ -146,6 +154,12 @@ export const SUNKEN_ORCHARD: LevelSpec = {
     { x: 96, z: 14 },
   ],
   treasures: [
+    // Up on the corner ledge: a Sparkling's throw away.
+    { id: 'ledge-orchard', x: ORCHARD_LEDGE.top.x, z: ORCHARD_LEDGE.top.z, weight: 3 },
+    // Buried relics, under mounds with a faint sparkle.
+    { id: 'buried-1', x: -60, z: -40, weight: 2, buried: true },
+    { id: 'buried-2', x: 10, z: 30, weight: 2, buried: true },
+    { id: 'buried-3', x: 70, z: -30, weight: 3, buried: true },
     // The secret, in the glade behind the hidden wall.
     { id: 'secret-orchard', x: -106, z: 75, weight: 2 },
     // The Great Clock's ten parts in the Orchard.

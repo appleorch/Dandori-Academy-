@@ -8,6 +8,20 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.42.0',
+    date: '2026-11-25',
+    changes: [
+      'Story: every section now has three buried relics (watch for a faint sparkle on a mound) and a high ledge in a corner that only a thrown Sparkling can reach.',
+      'Story: the Frostglass Observatory’s halls have drops, crossed by glass floors.',
+      'The Field Guide has the Warden’s and the Headmaster’s notes on every Clock part and boss relic.',
+      'Time Attack: practise from any Sunshard of your fastest clear, straight from the results. Practice runs are never kept.',
+      'The Bellwether’s pillars now crumble after two of its charges.',
+      'The last two Escort fields start you with sprays.',
+      'Co-op: beasts now go for the second player’s Warden too.',
+      'The test player gives up on a haul it cannot get at, instead of standing by it all day.',
+    ],
+  },
+  {
     version: '0.41.0',
     date: '2026-11-25',
     changes: [

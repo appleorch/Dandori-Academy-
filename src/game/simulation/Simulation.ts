@@ -310,8 +310,13 @@ export class Simulation {
     this.growth = options.growth ?? true;
     this.untimed = level.untimed ?? false;
     this.story = options.story ?? false;
-    this.items.emberbrew = this.story ? (options.items?.emberbrew ?? 0) : 0;
-    this.items.stillwater = this.story ? (options.items?.stillwater ?? 0) : 0;
+    // The story brings its own sprays; a field may grant some of its own.
+    this.items.emberbrew = this.story
+      ? (options.items?.emberbrew ?? 0)
+      : (level.items?.emberbrew ?? 0);
+    this.items.stillwater = this.story
+      ? (options.items?.stillwater ?? 0)
+      : (level.items?.stillwater ?? 0);
     this.abilities = this.story ? (options.abilities ?? new Set()) : new Set();
     this.explored = this.story ? (options.explored ?? emptyFog(level)) : null;
     this.dewdrops = [];
@@ -436,6 +441,9 @@ export class Simulation {
     const hidden = new Set(level.telescope?.reveals ?? []);
     for (const treasure of level.treasures) {
       if (hidden.has(treasure.id)) this.hiddenTreasures.push(treasure);
+      // Buried treasure lies under a mound until the mound is dug.
+      else if (treasure.buried)
+        spawnEnemy(this, treasure.x, treasure.z, 'mound', { buried: treasure });
       else spawnTreasure(this, treasure);
     }
     level.pods.forEach((pod, index) => spawnPod(this, pod, index, pod.kind));
@@ -526,6 +534,22 @@ export class Simulation {
     this.anchor.x = anchor.x;
     this.anchor.z = anchor.z;
     this.squadField.compute(this.nav.cellIndexAt(anchor.x, anchor.z));
+  }
+
+  /** Co-op: the second player's Warden takes a hit (no knock-back: they are not in play). */
+  hurtPartner(): void {
+    if (!this.coop || !this.otherWarden) return;
+    // Before their first turn their side is not yet set aside: take it as it starts.
+    if (!this.partner) {
+      this.swapSides();
+      this.swapSides();
+    }
+    const side = this.partner;
+    if (!side || side.state.invuln > 0) return;
+    side.state.hp--;
+    side.state.invuln = CAPTAIN.invulnTime;
+    this.emit('captainHurt', side.x, side.z);
+    if (side.state.hp <= 0) this.ended = 'captainDown';
   }
 
   /** Co-op: where the second player's Warden is, and how they stand, between steps. */

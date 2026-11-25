@@ -1,4 +1,4 @@
-import { damageCaptain } from '../captain/captainSystem';
+import { hurtWardensNear } from '../captain/captainSystem';
 import type { Hazard } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { killWorker, setIdle, type DeathCause } from '../workers/squad';
@@ -60,12 +60,8 @@ function land(sim: Simulation, hazard: Hazard): void {
       worker.stun = spec.stun;
     }
   }
-  const captain = sim.captainTransform;
-  if (
-    spec.hurtsCaptain &&
-    Math.hypot(captain.x - hazard.toX, captain.z - hazard.toZ) <= hazard.radius
-  ) {
-    damageCaptain(sim, hazard.toX, hazard.toZ);
+  if (spec.hurtsCaptain) {
+    hurtWardensNear(sim, hazard.toX, hazard.toZ, hazard.radius, hazard.toX, hazard.toZ);
   }
   sim.emit(LANDING_EVENT[hazard.kind], hazard.toX, hazard.toZ);
 }

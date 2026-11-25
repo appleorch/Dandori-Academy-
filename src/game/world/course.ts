@@ -160,3 +160,54 @@ export function ruin(rect: Rect): Wall {
   const [x0, z0, x1, z1] = rect;
   return wall(x0, z0, x1, z1, 'ruin');
 }
+
+/**
+ * A high ledge only a Sparkling can reach: a broad low terrace with a small high one on it, its
+ * middle at (x + 15, z). Neither has a ramp, only a one-way drop back down (both on the west),
+ * so the Warden stands at least eleven units from the high top: beyond every kind's throw but a
+ * Sparkling's. Whatever lands up there comes down the drops on its own.
+ */
+export function sparkLedge(x: number, z: number) {
+  return terraces(
+    terrace([x, z - 15, x + 30, z + 15], 3, [{ side: 'w', from: z - 3, to: z + 3, kind: 'ledge' }]),
+    terrace(
+      [x + 11, z - 4, x + 19, z + 4],
+      6,
+      [{ side: 'w', from: z - 2, to: z + 2, kind: 'ledge' }],
+      3,
+    ),
+  );
+}
+
+/** Which corner of a field a corner ledge sits in. */
+export type Corner = 'NE' | 'NW' | 'SE' | 'SW';
+
+/**
+ * A high ledge in a corner of the field, only a Sparkling can reach: a low terrace twenty units
+ * square in the corner with a small high one in the very corner on it. The field's edges guard
+ * two sides; the low terrace keeps the Warden at least eleven units from the high top on the
+ * others. Both have only drops back down, facing into the field. `top` is the high top's middle.
+ */
+export function cornerLedge(width: number, depth: number, corner: Corner) {
+  const S = 20;
+  const H = 8;
+  const east = corner.endsWith('E');
+  const north = corner.startsWith('N');
+  const x0 = east ? width / 2 - S : -width / 2;
+  const z0 = north ? -depth / 2 : depth / 2 - S;
+  const hx0 = east ? width / 2 - H : -width / 2;
+  const hz0 = north ? -depth / 2 : depth / 2 - H;
+  const side = east ? 'w' : 'e';
+  const course = terraces(
+    terrace([x0, z0, x0 + S, z0 + S], 3, [
+      { side, from: z0 + S / 2 - 3, to: z0 + S / 2 + 3, kind: 'ledge' },
+    ]),
+    terrace(
+      [hx0, hz0, hx0 + H, hz0 + H],
+      6,
+      [{ side, from: hz0 + 2, to: hz0 + H - 2, kind: 'ledge' }],
+      3,
+    ),
+  );
+  return { ...course, top: { x: hx0 + H / 2, z: hz0 + H / 2 } };
+}

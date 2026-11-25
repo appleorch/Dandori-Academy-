@@ -21,11 +21,18 @@ const ESCORTS: readonly { seed: number; name: string; pace: number }[] = [
   { seed: 3019, name: 'The Last Lodestone', pace: 192 },
 ];
 
+/** The last two fields grant sprays to start with: the Escort's hardest, a little help. */
+const GRANTED: Readonly<Record<number, { emberbrew: number; stillwater: number }>> = {
+  10: { emberbrew: 1, stillwater: 1 },
+  11: { emberbrew: 2, stillwater: 1 },
+};
+
 const FIELDS: FieldSpec[] = ESCORTS.map(({ seed, name, pace }, i) => ({
   ...generateField(seed, 'escort', `route-${i + 1}`),
   name,
   pace,
   dayLength: dayFor(pace),
+  ...(GRANTED[i] ? { items: GRANTED[i] } : {}),
 }));
 
 export const ESCORT_FIELDS = challengeFields('escort', FIELDS);

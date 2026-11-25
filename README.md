@@ -522,6 +522,19 @@ Before and after: `docs-design/art/ui-*-before.jpg` and `ui-*-after.jpg`.
   HUD, filters, a tilt-shift depth of field and Sproutlings cheering for the camera; _Save
   picture_ bakes the filter and blur into a PNG.
 - **Achievements**: forty-one more over the new content, four of them secret.
+- **Secrets in every section**: three buried relics under mounds with a faint sparkle (a
+  treasure marked `buried` starts under a mound and comes up when it is dug), and a high ledge
+  in a corner (`cornerLedge` in course.ts: a low terrace with a high top on it, only drops back
+  down) that only a thrown Sparkling reaches. The Observatory's halls have drops (`pit` walls)
+  crossed by glass floors.
+- **Notes**: every Clock part and boss relic has the Warden's and the Headmaster's notes in the
+  Field Guide (`story/relicNotes.ts`).
+- **Practice from here** (Time Attack results): start at the moment any Sunshard came home on
+  your fastest clear, replayed up to there; practice runs are never kept.
+- **Arena pillars**: gates of style `pillar` that only a charging beast can crack, two charges
+  each (the Bellwether's arena).
+- **Sprays on challenge fields**: a field may grant sprays (`items`); the last two Escort fields
+  do. Using one is noted in the replay.
 - Not done: the Expedition rule (a multi-floor cave dive): the test player cannot yet go down
   stairs, so its fields could not be paced.
 
@@ -534,8 +547,8 @@ Before and after: `docs-design/art/ui-*-before.jpg` and `ui-*-after.jpg`.
   orders) once for each player, swapping the two Wardens' state in between
   (`Simulation.swapSides`), so it stays deterministic; the world then steps once. The camera
   frames both, drawing back as they part (up to a limit). Not yet: a split screen when they are
-  far apart, co-op boards (co-op runs are not posted), co-op replays, and beasts going for the
-  second Warden (they only target the first).
+  far apart, co-op boards (co-op runs are not posted) and co-op replays. Beasts go for either
+  Warden, and a blow landing by the second player's hurts them.
 - **Online battles** (Marble Race, Bingo Race and Dandori Duel; _Play online_ on the Battles
   screen). One player hosts and reads out a six-letter room code; the other joins with it. The
   two browsers are introduced through the same public relay the board uses (one offer and one

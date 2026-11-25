@@ -79,8 +79,9 @@ export function flightHeight(enemy: Enemy): number {
 /** Whether a thrown Sproutling landing on it can hit it at all: not a grub underground. */
 export function canBeHit(enemy: Enemy): boolean {
   // The guided morning's fence is not for breaking: it opens by itself.
-  if (enemy.kind === 'gate' && (enemy.shape as { style?: string } | null)?.style === 'fence')
-    return false;
+  // Nor is a boss arena's pillar: only a charging beast cracks it.
+  const style = (enemy.shape as { style?: string } | null)?.style;
+  if (enemy.kind === 'gate' && (style === 'fence' || style === 'pillar')) return false;
   return !(enemy.kind === 'grub' && enemy.special !== GRUB_SURFACED);
 }
 

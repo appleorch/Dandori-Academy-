@@ -129,19 +129,24 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   useEffect(() => {
     if (!ready) return;
     // The mode and rival are fixed when the day starts; the scene is rebuilt for every new day.
-    const { playMode, rival, coop, online } = useGameStore.getState();
+    const { playMode, rival, coop, online, practice } = useGameStore.getState();
     const rules = MODES[playMode];
-    const created = new Expedition(
-      new Simulation(level, {
-        endsWhen: rules.endsWhen,
-        growth: rules.growth,
-        story: playMode === 'campaign',
-        coop: coopDay(coop, playMode),
-        ...(playMode === 'campaign'
-          ? storyOptions(useGameStore.getState().save.campaign, level)
-          : {}),
-      }),
-    );
+    // Practice: the day picks up where the best run was at the chosen Sunshard.
+    const practised =
+      practice && practice.run.level.id === level.id ? practice.run.expedition : null;
+    const created =
+      practised ??
+      new Expedition(
+        new Simulation(level, {
+          endsWhen: rules.endsWhen,
+          growth: rules.growth,
+          story: playMode === 'campaign',
+          coop: coopDay(coop, playMode),
+          ...(playMode === 'campaign'
+            ? storyOptions(useGameStore.getState().save.campaign, level)
+            : {}),
+        }),
+      );
     if (playMode === 'campaign') {
       const state = useGameStore.getState().save.campaign;
       created.caveFilter = (spec) => caveField(state, spec);

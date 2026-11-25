@@ -1,4 +1,5 @@
-import { damageCaptain } from '../captain/captainSystem';
+import type { Box } from '../navigation/NavGrid';
+import { hurtWardensNear } from '../captain/captainSystem';
 import { HARD } from '../core/difficulty';
 import type { Entity } from '../core/ecs';
 import { moveAgent, steerTo } from '../navigation/steering';
@@ -66,6 +67,9 @@ function pickPrey(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform)
     bestDist = dist;
   };
   consider(sim.captainTransform);
+  // Co-op: the second player's Warden is fair game too.
+  const partner = sim.partnerWarden;
+  if (partner) consider({ x: partner.x, y: 0, z: partner.z, facing: 0 });
   for (const [entity, worker] of sim.workers.entries()) {
     // A Spark Wasp does not bother with a Sparkling it cannot sting.
     if (enemy.kind === 'sparkwasp' && worker.kind === 'spark') continue;
@@ -146,10 +150,7 @@ function bite(sim: Simulation, enemy: Enemy, at: Transform): void {
       eaten++;
     }
   }
-  const captain = sim.captainTransform;
-  if (Math.hypot(captain.x - mouthX, captain.z - mouthZ) <= ENEMY.biteRange) {
-    damageCaptain(sim, at.x, at.z);
-  }
+  hurtWardensNear(sim, mouthX, mouthZ, ENEMY.biteRange, at.x, at.z);
   sim.emit('bite', mouthX, mouthZ);
 }
 
@@ -189,13 +190,30 @@ function charge(
       worker.stun = ENEMY.shakeStun;
     }
   }
-  const captain = sim.captainTransform;
-  if (Math.hypot(captain.x - at.x, captain.z - at.z) <= enemy.radius + 0.5) {
-    damageCaptain(sim, at.x, at.z);
-  }
+  hurtWardensNear(sim, at.x, at.z, enemy.radius + 0.5, at.x, at.z);
   enemy.timer -= dt;
-  if (blocked) return 'wall';
+  if (blocked) {
+    crackPillar(
+      sim,
+      at.x + enemy.aimX * (enemy.radius + 0.8),
+      at.z + enemy.aimZ * (enemy.radius + 0.8),
+    );
+    return 'wall';
+  }
   return enemy.timer <= 0 ? 'done' : null;
+}
+
+/** A charge that ends against an arena pillar cracks it: two and it comes down. */
+function crackPillar(sim: Simulation, x: number, z: number): void {
+  for (const [, gate] of sim.enemies.entries()) {
+    const box = gate.shape as (Box & { style?: string }) | null;
+    if (gate.kind !== 'gate' || box?.style !== 'pillar' || gate.hp <= 0) continue;
+    if (Math.abs(x - box.x) <= box.w / 2 + 0.8 && Math.abs(z - box.z) <= box.d / 2 + 0.8) {
+      gate.hp -= 1;
+      sim.emit('crack', box.x, box.z);
+      return;
+    }
+  }
 }
 
 /** Throws every clinging worker to the ground nearby and leaves them dazed. */
@@ -273,6 +291,7 @@ function defeat(sim: Simulation, entity: Entity, enemy: Enemy, at: Transform): v
   } else if (enemy.kind === 'mound') {
     if (enemy.reveals === 'pod') spawnPod(sim, ground, 200 + entity);
     if (enemy.reveals === 'sap') spawnSap(sim, ground, entity);
+    if (enemy.buried) spawnTreasure(sim, { ...enemy.buried, x: ground.x, z: ground.z });
     sim.emit('dug', ground.x, ground.z);
   } else {
     if (spec.carcassYield > 0 && enemy.parent !== BROOD)

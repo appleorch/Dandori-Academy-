@@ -1,4 +1,4 @@
-import { terrace, terraces } from '../world/course';
+import { cornerLedge, terrace, terraces } from '../world/course';
 import type { LevelSpec } from '../world/levelTypes';
 
 /**
@@ -16,6 +16,8 @@ const GALLERIES = terraces(
     { side: 'w', from: 40, to: 48, kind: 'ledge' },
   ]),
 );
+
+const OBS_LEDGE = cornerLedge(240, 160, 'SE');
 
 export const FROSTGLASS_OBSERVATORY: LevelSpec = {
   id: 'campaign-observatory',
@@ -44,6 +46,13 @@ export const FROSTGLASS_OBSERVATORY: LevelSpec = {
     reveals: ['relic-24', 'relic-25', 'relic-26'],
   },
   obstacles: [
+    // The high ledge in the corner, reached only by a thrown Sparkling.
+    ...OBS_LEDGE.walls,
+    // Drops in the west halls, each crossed by a glass floor between two pits.
+    { x: -96, z: -61, w: 8, d: 12, look: 'pit' },
+    { x: -80, z: -61, w: 8, d: 12, look: 'pit' },
+    { x: -82, z: 52, w: 8, d: 12, look: 'pit' },
+    { x: -66, z: 52, w: 8, d: 12, look: 'pit' },
     // The secret glade's wall.
     { x: 112, z: -76, w: 2, d: 8 },
     ...GALLERIES.walls,
@@ -60,9 +69,9 @@ export const FROSTGLASS_OBSERVATORY: LevelSpec = {
     { x: 40, z: -66, w: 6, d: 6 },
     { x: 40, z: 66, w: 6, d: 6 },
   ],
-  plateaus: GALLERIES.plateaus,
-  ramps: GALLERIES.ramps,
-  ledges: GALLERIES.ledges,
+  plateaus: [...GALLERIES.plateaus, ...OBS_LEDGE.plateaus],
+  ramps: [...GALLERIES.ramps, ...OBS_LEDGE.ramps],
+  ledges: [...GALLERIES.ledges, ...OBS_LEDGE.ledges],
   gates: [
     // The doors between the halls: crystal to the middle hall, bramble to the dome.
     { x: -60, z: 0, w: 2, d: 40, hp: 240, style: 'crystal' },
@@ -73,6 +82,10 @@ export const FROSTGLASS_OBSERVATORY: LevelSpec = {
     // A weak stretch of wall, cracked: the way into the secret glade. Last in the
     // list, so saved stories keep every other gate's place.
     { x: 116, z: -72, w: 8, d: 2, hp: 140, style: 'hidden' },
+  ],
+  glassFloors: [
+    { x: -88, z: -61, w: 8, d: 12 },
+    { x: -74, z: 52, w: 8, d: 12 },
   ],
   coils: [
     { a: { x: -50, z: -24 }, b: { x: -50, z: -12 }, period: 4, offset: 0 },
@@ -118,6 +131,12 @@ export const FROSTGLASS_OBSERVATORY: LevelSpec = {
     { x: 100, z: 50 },
   ],
   treasures: [
+    // Up on the corner ledge: a Sparkling's throw away.
+    { id: 'ledge-observatory', x: OBS_LEDGE.top.x, z: OBS_LEDGE.top.z, weight: 3 },
+    // Buried relics, under mounds with a faint sparkle.
+    { id: 'buried-1', x: -100, z: 20, weight: 2, buried: true },
+    { id: 'buried-2', x: -10, z: 24, weight: 2, buried: true },
+    { id: 'buried-3', x: 70, z: 0, weight: 3, buried: true },
     // The secret, in the glade behind the hidden wall.
     { id: 'secret-observatory', x: 116, z: -76, weight: 2 },
     // The Great Clock's ten parts in the Observatory: its heart and its hands.

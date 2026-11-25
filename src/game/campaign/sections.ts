@@ -1,4 +1,4 @@
-import { terrace, terraces } from '../world/course';
+import { cornerLedge, terrace, terraces } from '../world/course';
 import { defineLevel } from '../world/level';
 import type { LevelDefinition, LevelSpec } from '../world/levelTypes';
 import { ORCHARD_DEEP, ORCHARD_PARTS, ORCHARD_ROOTS, SUNKEN_ORCHARD } from './orchard';
@@ -44,6 +44,8 @@ const QUAD_TERRACES = terraces(
  * with two bridges to build and a ford, and the old terraces beyond it with a crystal vault
  * and a Gravelmaw. Kinds of Sproutling other than Emberlings are found here as seed pods.
  */
+const QUAD_LEDGE = cornerLedge(200, 140, 'SW');
+
 const WILD_QUAD: LevelSpec = {
   id: 'campaign-quad',
   stage: 0,
@@ -60,6 +62,8 @@ const WILD_QUAD: LevelSpec = {
   captain: { x: -78, z: 2 },
   kiln: { x: -82, z: 0 },
   obstacles: [
+    // The high ledge in the corner, reached only by a thrown Sparkling.
+    ...QUAD_LEDGE.walls,
     // The secret glade's wall.
     { x: -92, z: -66, w: 2, d: 8 },
     ...QUAD_TERRACES.walls,
@@ -80,9 +84,9 @@ const WILD_QUAD: LevelSpec = {
     { x: 36, z: 14, w: 3, d: 3 },
     { x: 30, z: -26, w: 3, d: 3 },
   ],
-  plateaus: QUAD_TERRACES.plateaus,
-  ramps: QUAD_TERRACES.ramps,
-  ledges: QUAD_TERRACES.ledges,
+  plateaus: [...QUAD_TERRACES.plateaus, ...QUAD_LEDGE.plateaus],
+  ramps: [...QUAD_TERRACES.ramps, ...QUAD_LEDGE.ramps],
+  ledges: [...QUAD_TERRACES.ledges, ...QUAD_LEDGE.ledges],
   gates: [
     { x: -28, z: -30, w: 8, d: 2, hp: 200 },
     { x: 60, z: 6, w: 2, d: 12, hp: 220, style: 'crystal' },
@@ -121,7 +125,7 @@ const WILD_QUAD: LevelSpec = {
     { x: 46, z: -32, period: 4, offset: 0 },
   ],
   coils: [
-    { a: { x: -88, z: 52 }, b: { x: -80, z: 52 }, period: 4, offset: 2 },
+    { a: { x: -88, z: 44 }, b: { x: -80, z: 44 }, period: 4, offset: 2 },
     { a: { x: -70, z: 62 }, b: { x: -64, z: 62 }, period: 5, offset: 0 },
   ],
   drips: [
@@ -157,6 +161,12 @@ const WILD_QUAD: LevelSpec = {
     { x: 70, z: -6 },
   ],
   treasures: [
+    // The Chime Hammer, up on the corner ledge: a Sparkling's throw away.
+    { id: 'part-chime-hammer', x: QUAD_LEDGE.top.x, z: QUAD_LEDGE.top.z, weight: 2 },
+    // Buried relics, under mounds with a faint sparkle.
+    { id: 'buried-1', x: -50, z: 40, weight: 2, buried: true },
+    { id: 'buried-2', x: 0, z: -4, weight: 2, buried: true },
+    { id: 'buried-3', x: 66, z: 20, weight: 3, buried: true },
     // The secret, in the glade behind the hidden wall.
     { id: 'secret-quad', x: -96, z: -67, weight: 2 },
     // The Great Clock's twelve parts.
@@ -164,7 +174,6 @@ const WILD_QUAD: LevelSpec = {
     { id: 'part-escapement', x: -4, z: -60, weight: 4 },
     { id: 'part-pendulum', x: -26, z: 40, weight: 3 },
     { id: 'part-crown-wheel', x: -74, z: -58, weight: 2 },
-    { id: 'part-chime-hammer', x: -84, z: 52, weight: 2 },
     { id: 'part-hour-hand', x: 40, z: -2, weight: 4 },
     { id: 'part-balance-wheel', x: 84, z: -2, weight: 4 },
     { id: 'part-moon-dial', x: 84, z: 46, weight: 3 },

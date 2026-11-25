@@ -287,7 +287,8 @@ const THE_BELLWETHER: LevelSpec = {
   width: 70,
   depth: 44,
   dayLength: 420,
-  platinumTime: 191,
+  // Re-measured in 0.42.0, when the pillars began to crumble after two charges.
+  platinumTime: 246,
   seed: 16,
   startingWorkers: 20,
   squad: { ember: 12, stone: 8 },
@@ -296,11 +297,14 @@ const THE_BELLWETHER: LevelSpec = {
   obstacles: [
     { x: -8, z: -13, w: 2, d: 18 },
     { x: -8, z: 13, w: 2, d: 18 },
-    { x: 6, z: -8, w: 3, d: 3 },
-    { x: 6, z: 8, w: 3, d: 3 },
-    { x: 20, z: 0, w: 3, d: 3 },
   ],
-  gates: [{ x: -8, z: 0, w: 2, d: 8, hp: 160 }],
+  gates: [
+    { x: -8, z: 0, w: 2, d: 8, hp: 160 },
+    // The arena's pillars: each stands two of the Bellwether's charges, then crumbles.
+    { x: 6, z: -8, w: 3, d: 3, hp: 2, style: 'pillar' },
+    { x: 6, z: 8, w: 3, d: 3, hp: 2, style: 'pillar' },
+    { x: 20, z: 0, w: 3, d: 3, hp: 2, style: 'pillar' },
+  ],
   treasures: [
     { id: 'shard-1', x: -20, z: -14, weight: 2 },
     { id: 'shard-2', x: -18, z: 14, weight: 3 },

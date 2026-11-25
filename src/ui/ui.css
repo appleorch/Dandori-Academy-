@@ -4037,3 +4037,13 @@ button.chip.guide-skip {
 .photo-panel select {
   font: inherit;
 }
+
+.practice .button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.practice button {
+  width: auto;
+  margin: 0;
+}

@@ -43,6 +43,7 @@ export const KIT_LOOKS: readonly WallLook[] = [
   'root',
   'glass',
   'gear',
+  'pit',
 ];
 
 const pick = <T>(rng: Rng, list: readonly T[]): T => list[Math.floor(rng.next() * list.length)];
@@ -79,6 +80,37 @@ function along(length: number, step: number): number[] {
 }
 
 const BUILDERS: Partial<Record<WallLook, Builder>> = {
+  /** A drop: darkness below a broken rim of glass and brass, flush with the floor. */
+  pit(length, thick) {
+    const pieces: Piece[] = [
+      { shape: 'box', color: '#05070c', x: 0, y: 0.015, z: 0, sx: length, sy: 0.03, sz: thick },
+    ];
+    for (const side of [-1, 1]) {
+      pieces.push({
+        shape: 'box',
+        color: '#b08a4a',
+        finish: 'metal',
+        x: 0,
+        y: 0.06,
+        z: side * (thick / 2),
+        sx: length,
+        sy: 0.12,
+        sz: 0.18,
+      });
+      pieces.push({
+        shape: 'box',
+        color: '#b08a4a',
+        finish: 'metal',
+        x: side * (length / 2),
+        y: 0.06,
+        z: 0,
+        sx: 0.18,
+        sy: 0.12,
+        sz: thick,
+      });
+    }
+    return pieces;
+  },
   /** A clipped hedge: a dark core with leafy clumps over its top and sides. */
   hedge(length, thick, rng) {
     const height = 2.7;

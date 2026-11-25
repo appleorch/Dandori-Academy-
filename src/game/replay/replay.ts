@@ -21,7 +21,10 @@ import { compress, decompress, packInputs, quantise, unpackInputs } from './inpu
 export const SIM_VERSION = 1;
 
 /** What happened outside the inputs, and at which step (counted across the whole day). */
-export type ReplayEvent = readonly [step: number, kind: 'down' | 'up' | 'end'];
+export type ReplayEvent = readonly [
+  step: number,
+  kind: 'down' | 'up' | 'end' | 'emberbrew' | 'stillwater',
+];
 
 export interface DayLog {
   v: 1;
@@ -133,6 +136,8 @@ export class ReplayRun {
         const kind = this.log.events[this.nextEvent++][1];
         if (kind === 'down') this.expedition.descend();
         else if (kind === 'up') this.expedition.ascend();
+        else if (kind === 'emberbrew') this.expedition.active.sprayEmberbrew();
+        else if (kind === 'stillwater') this.expedition.active.sprayStillwater();
         else this.expedition.surface.endNow();
       }
       if (this.done) break;

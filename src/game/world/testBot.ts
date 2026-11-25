@@ -177,6 +177,11 @@ function reachable(sim: Simulation, entity: Entity, wading = false): boolean {
   return hasRoute(sim, sim.carryables.require(entity), sim.transforms.require(entity), wading);
 }
 
+/** The Warden gives a haul up after standing within this distance this many steps, unclaimed. */
+const STUCK_DISTANCE = 1;
+const STUCK_STEPS = 60 * 10;
+const STUCK_ABOVE = 2;
+
 /** Farthest the Warden ever stands from a job to throw at it (the widest style's throw). */
 const THROW_REACH = 7.5;
 const REACH_RINGS = [2, 4, 6, THROW_REACH];
@@ -276,11 +281,13 @@ function chooseJob(
   squad: number,
   total: number,
   prefer?: (carryable: Carryable) => boolean,
+  skip: ReadonlySet<Entity> = new Set(),
 ): Entity {
   const nearest = (candidates: Entity[]): Entity => {
     let best: Entity = NO_ENTITY;
     let bestDist = Infinity;
     for (const entity of candidates) {
+      if (skip.has(entity)) continue;
       const at = sim.transforms.require(entity);
       const foe = sim.enemies.get(entity);
       const wet = sim.inWater(at.x, at.z);
@@ -580,11 +587,33 @@ export function greedyPlayer(
   const mover = createMover();
   const dir = { x: 0, z: 0 };
   let job: Entity = NO_ENTITY;
+  // Jobs given up on today: the Warden stood still at one for a while and nobody took it on
+  // (a relic on a ledge out of every reach but a kind's it has not got, say).
+  const skipped = new Set<Entity>();
+  const still = { x: sim.captainTransform.x, z: sim.captainTransform.z, since: 0 };
   const input = (tick: number): InputState => {
     const from = sim.captainTransform;
     const { squad, total } = sim.countWorkers();
+    if (Math.hypot(from.x - still.x, from.z - still.z) > STUCK_DISTANCE) {
+      still.x = from.x;
+      still.z = from.z;
+      still.since = tick;
+    } else if (tick - still.since > STUCK_STEPS && job !== NO_ENTITY) {
+      const haul = sim.carryables.get(job);
+      const at = sim.transforms.get(job);
+      // Only a haul well above the Warden, up where they stood still below it, is given up on
+      // (a high ledge); one waiting on a bridge, a gate or the water is worth waiting for.
+      const above =
+        at !== undefined &&
+        heightAt(sim.level, at.x, at.z) - heightAt(sim.level, from.x, from.z) > STUCK_ABOVE;
+      if (haul && above && haul.claimed.length === 0 && haul.carriers.length === 0) {
+        skipped.add(job);
+        job = NO_ENTITY;
+        still.since = tick;
+      }
+    }
     if (!unfinished(sim, job) || (squad === 0 && !bossFight(sim, job))) {
-      job = chooseJob(sim, squad, total, prefer);
+      job = chooseJob(sim, squad, total, prefer, skipped);
     }
     // An enemy this close is dealt with first: fought with a squad, avoided without one.
     const threat = nearestEnemy(sim);

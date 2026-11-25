@@ -170,6 +170,8 @@ interface EnemyOptions {
   /** Weight of the Sunshard it drops on defeat. */
   drop?: number;
   reveals?: 'pod' | 'sap';
+  /** A mound over buried treasure. */
+  buried?: TreasureSpawn;
   /** Its place in the lesson's list (see `Enemy.spawn`). */
   spawn?: number;
 }
@@ -194,6 +196,7 @@ export function spawnEnemy(
     charges: 0,
     drop: options.drop ?? 0,
     reveals: options.reveals ?? null,
+    buried: options.buried ?? null,
     hp,
     maxHp: hp,
     radius: spec.radius,

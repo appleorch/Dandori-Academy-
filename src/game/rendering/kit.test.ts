@@ -26,8 +26,9 @@ describe('the kit', () => {
         expect(Math.abs(piece.z - wall.z), look).toBeLessThanOrEqual(wall.d / 2 + BULGE);
         top = Math.max(top, piece.y + piece.sy / 2);
       }
-      // The Warden is 1.2 tall; walls are thrown over, never seen over.
-      expect(top, look).toBeGreaterThan(1.6);
+      // The Warden is 1.2 tall; walls are thrown over, never seen over. A pit is a drop: flush.
+      if (look === 'pit') expect(top, look).toBeLessThan(0.3);
+      else expect(top, look).toBeGreaterThan(1.6);
     },
   );
 

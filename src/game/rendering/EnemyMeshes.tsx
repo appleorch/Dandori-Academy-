@@ -485,6 +485,57 @@ function MoundBody({ r, glint }: { r: number; glint: string }) {
   );
 }
 
+/** An arena pillar: a stone column, cracked once a charge has struck it. */
+function PillarBody({ box, cracked }: { box: Box; cracked: boolean }) {
+  return (
+    <>
+      <mesh position={[0, 1.6, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[box.w * 0.45, box.w * 0.5, 3.2, 10]} />
+        <meshStandardMaterial color="#a8a294" roughness={0.95} />
+      </mesh>
+      <mesh position={[0, 3.3, 0]} castShadow>
+        <boxGeometry args={[box.w * 1.05, 0.25, box.d * 1.05]} />
+        <meshStandardMaterial color="#8e887a" roughness={0.95} />
+      </mesh>
+      {cracked &&
+        [0, 1, 2].map((i) => (
+          <mesh
+            key={i}
+            position={[
+              Math.sin(i * 2.1) * box.w * 0.46,
+              1 + i * 0.6,
+              Math.cos(i * 2.1) * box.w * 0.46,
+            ]}
+            rotation={[0, i * 2.1, i % 2 ? 0.8 : -0.8]}
+          >
+            <planeGeometry args={[0.08, 0.8]} />
+            <meshBasicMaterial color="#2a2420" side={2} />
+          </mesh>
+        ))}
+    </>
+  );
+}
+
+/** Buried treasure's tell: a faint star that glints over the mound every few seconds. */
+function BuriedSparkle({ r, seed }: { r: number; seed: number }) {
+  const star = useRef<Mesh>(null);
+  useFrame(({ clock }) => {
+    if (!star.current) return;
+    // A glint about a third of a second long, every four seconds, each mound in its own time.
+    const phase = (clock.elapsedTime + seed * 0.37) % 4;
+    const glint = phase < 0.35 ? Math.sin((phase / 0.35) * Math.PI) : 0;
+    star.current.visible = glint > 0.01;
+    star.current.scale.setScalar(0.2 + glint);
+    star.current.rotation.z = clock.elapsedTime * 2;
+  });
+  return (
+    <mesh ref={star} position={[0, r * 0.9, 0]} visible={false}>
+      <octahedronGeometry args={[r * 0.3, 0]} />
+      <meshBasicMaterial color="#fff8d0" toneMapped={false} transparent opacity={0.9} />
+    </mesh>
+  );
+}
+
 /** The guided morning's fence: white pickets on two rails, opened by itself, never broken. */
 function FenceBody({ box }: { box: Box }) {
   const long = box.w >= box.d;
@@ -1471,6 +1522,8 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
         {enemy.shape &&
           ((enemy.shape as GateSpawn).style === 'crystal' ? (
             <CrystalGateBody box={enemy.shape} />
+          ) : (enemy.shape as GateSpawn).style === 'pillar' ? (
+            <PillarBody box={enemy.shape} cracked={enemy.hp < enemy.maxHp} />
           ) : (enemy.shape as GateSpawn).style === 'fence' ? (
             <FenceBody box={enemy.shape} />
           ) : (enemy.shape as GateSpawn).style === 'hidden' ? (
@@ -1486,6 +1539,7 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
             }
           />
         )}
+        {enemy.buried && <BuriedSparkle r={r} seed={enemy.homeX + enemy.homeZ} />}
       </group>
       {enemy.kind === 'grub' && (
         <mesh ref={ripple} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
