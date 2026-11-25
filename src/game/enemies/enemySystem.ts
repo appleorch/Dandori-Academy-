@@ -13,6 +13,7 @@ import {
   spawnSap,
   spawnTreasure,
 } from '../world/spawn';
+import { dropDewdrop } from '../workers/growth';
 import { ENEMY, ENEMY_SPECS, HAZARDS, type EnemySpec } from './enemyKinds';
 
 const dir = { x: 0, z: 0 };
@@ -58,7 +59,8 @@ function pickPrey(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform)
   };
   consider(sim.captainTransform);
   for (const [entity, worker] of sim.workers.entries()) {
-    if (worker.state === 'thrown' || worker.state === 'attacking') continue;
+    if (worker.state === 'thrown' || worker.state === 'attacking' || worker.state === 'planted')
+      continue;
     consider(sim.transforms.require(entity));
   }
   return best;
@@ -68,7 +70,8 @@ function pickPrey(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform)
 function densestCluster(sim: Simulation, at: Transform, range: number): Transform | null {
   const grounded: Transform[] = [];
   for (const [entity, worker] of sim.workers.entries()) {
-    if (worker.state === 'thrown' || worker.state === 'attacking') continue;
+    if (worker.state === 'thrown' || worker.state === 'attacking' || worker.state === 'planted')
+      continue;
     const spot = sim.transforms.require(entity);
     if (Math.hypot(spot.x - at.x, spot.z - at.z) <= range) grounded.push(spot);
   }
@@ -122,7 +125,8 @@ function bite(sim: Simulation, enemy: Enemy, at: Transform): void {
   let eaten = 0;
   for (const [entity, worker] of sim.workers.entries()) {
     if (eaten >= ENEMY_SPECS[enemy.kind].biteVictims) break;
-    if (worker.state === 'thrown' || worker.state === 'attacking') continue;
+    if (worker.state === 'thrown' || worker.state === 'attacking' || worker.state === 'planted')
+      continue;
     const prey = sim.transforms.require(entity);
     if (Math.hypot(prey.x - mouthX, prey.z - mouthZ) <= ENEMY.biteRange) {
       killWorker(sim, entity, worker);
@@ -151,7 +155,13 @@ function charge(
   const blocked = Math.hypot(at.x - beforeX, at.z - beforeZ) < step * 0.5;
 
   for (const [entity, worker] of sim.workers.entries()) {
-    if (worker.state === 'thrown' || worker.state === 'attacking' || worker.stun > 0) continue;
+    if (
+      worker.state === 'thrown' ||
+      worker.state === 'attacking' ||
+      worker.state === 'planted' ||
+      worker.stun > 0
+    )
+      continue;
     const prey = sim.transforms.require(entity);
     if (Math.hypot(prey.x - at.x, prey.z - at.z) > enemy.radius + 0.25) continue;
     if (enemy.trampled < spec.trampleKills) {
@@ -248,6 +258,7 @@ function defeat(sim: Simulation, entity: Entity, enemy: Enemy, at: Transform): v
     sim.emit('dug', ground.x, ground.z);
   } else {
     if (spec.carcassYield > 0) spawnCarcass(sim, ground.x, ground.z, enemy.kind);
+    dropDewdrop(sim, ground);
     sim.stats.enemiesDefeated++;
     if (spec.boss) sim.stats.bossesDefeated.push(enemy.kind);
     sim.emit('enemyDefeated', ground.x, ground.z);

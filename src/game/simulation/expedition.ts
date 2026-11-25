@@ -76,10 +76,10 @@ export class Expedition {
     if (!descent || this.blocked()) return false;
     const spec = LEVELS.find((level) => level.id === descent.to);
     if (!spec) return false;
-    const squad: SproutKind[] = [];
+    const squad: Traveller[] = [];
     for (const [entity, worker] of [...this.surface.workers.entries()]) {
       if (worker.state !== 'follow') continue;
-      squad.push(worker.kind);
+      squad.push({ kind: worker.kind, growth: worker.growth });
       removeWorker(this.surface, entity, worker);
     }
     this.surface.entityVersion++;
@@ -107,7 +107,9 @@ export class Expedition {
     cave.captainState.invuln = 0;
     arrive(cave, squad, spec.captain);
     if (squad.length > 0)
-      cave.selected = squad.includes(this.surface.selected) ? this.surface.selected : squad[0];
+      cave.selected = squad.some(({ kind }) => kind === this.surface.selected)
+        ? this.surface.selected
+        : squad[0].kind;
     this.active = cave;
     return true;
   }
@@ -117,13 +119,13 @@ export class Expedition {
     const cave = this.cave;
     if (!cave) return;
     const id = cave.level.id;
-    const party: SproutKind[] = [];
+    const party: Traveller[] = [];
     for (const [entity, worker] of [...cave.workers.entries()]) {
-      party.push(worker.kind);
+      party.push({ kind: worker.kind, growth: worker.growth });
       removeWorker(cave, entity, worker);
     }
     // Sproutlings still growing below come up with the rest.
-    party.push(...cave.kiln.queue.splice(0));
+    party.push(...cave.kiln.queue.splice(0).map((kind) => ({ kind, growth: 0 })));
     cave.entityVersion++;
 
     const found = cave.stats.treasuresCollected;
@@ -178,8 +180,14 @@ export class Expedition {
 }
 
 /** Places arriving Sproutlings round a point as the squad; any over the field's limit wait in the Kiln. */
-function arrive(sim: Simulation, kinds: readonly SproutKind[], at: { x: number; z: number }): void {
-  kinds.forEach((kind, i) => {
+/** A Sproutling going down or coming up: its kind and how grown it is. */
+interface Traveller {
+  kind: SproutKind;
+  growth: number;
+}
+
+function arrive(sim: Simulation, kinds: readonly Traveller[], at: { x: number; z: number }): void {
+  kinds.forEach(({ kind, growth }, i) => {
     if (sim.workers.size >= WORKER.maxOnField) {
       sim.kiln.queue.push(kind);
       return;
@@ -189,6 +197,6 @@ function arrive(sim: Simulation, kinds: readonly SproutKind[], at: { x: number; 
       at.x + Math.sin(angle) * 1.6,
       at.z + Math.cos(angle) * 1.6,
     );
-    spawnWorker(sim, spot.x, spot.z, 'follow', kind);
+    spawnWorker(sim, spot.x, spot.z, 'follow', kind, growth);
   });
 }

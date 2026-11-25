@@ -194,6 +194,8 @@ interface GameStore {
   sprocket: (Line & { id: number }) | null;
   /** True while the Warden stands at the little door. */
   nearSecret: boolean;
+  /** Story: a sprout is in the Warden's reach to pluck. */
+  nearSprout: boolean;
   /** Id of the side lesson whose way down the Warden is standing at, or null. */
   nearDescent: string | null;
   /** True while the Warden stands at the way back up out of a cave. */
@@ -225,6 +227,7 @@ interface GameStore {
   setHint: (hint: string | null) => void;
   say: (line: Line) => void;
   setNearSecret: (near: boolean) => void;
+  setNearSprout: (near: boolean) => void;
   /** The Warden is at a way down (or has left it): the side lesson is found for good. */
   setNearDescent: (levelId: string | null) => void;
   setNearAscent: (near: boolean) => void;
@@ -370,6 +373,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     hint: null,
     sprocket: null,
     nearSecret: false,
+    nearSprout: false,
     nearDescent: null,
     nearAscent: false,
     pokerOpen: false,
@@ -401,6 +405,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         hint: null,
         sprocket: null,
         nearSecret: false,
+        nearSprout: false,
         nearDescent: null,
         hud: null,
         result: null,
@@ -433,6 +438,9 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     setNearSecret: (near) => {
       if (near !== get().nearSecret) set({ nearSecret: near });
+    },
+    setNearSprout: (near) => {
+      if (near !== get().nearSprout) set({ nearSprout: near });
     },
 
     setNearDescent: (levelId) => {
@@ -620,6 +628,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         paused: false,
         hint: null,
         nearSecret: false,
+        nearSprout: false,
         nearDescent: null,
         hud: get().hud ?? snapshot(sim),
         save,

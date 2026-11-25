@@ -30,6 +30,11 @@ export interface CampaignState {
   /** Sproutlings waiting in the Kiln, by kind. */
   stock: Record<SproutKind, number>;
   /**
+   * How grown each of them is (see `stageOf`), most grown first, one entry per Sproutling in
+   * `stock`. Saves from before 0.23 have none: everyone is a leaf.
+   */
+  growth: Record<SproutKind, number[]>;
+  /**
    * What is done for good on the section: `treasure:<id>` brought home, and `enemy:<n>`,
    * `gate:<n>`, `bridge:<n>`, `beacon:<n>`, `pod:<n>`, `log:<n>` and `sap:<n>` beaten,
    * broken, built, lit or used up, by their place in the section's lists.
@@ -50,12 +55,27 @@ export function newCampaign(): CampaignState {
     day: 0,
     section: CAMPAIGN_SECTIONS[0].id,
     stock: { ...STARTING_STOCK },
+    growth: fitGrowth({ ...STARTING_STOCK }, undefined),
     done: [],
     wear: {},
     parts: {},
     finished: null,
     totals: { grown: 0, lost: 0, leftBehind: 0 },
   };
+}
+
+/** One entry per Sproutling in stock, most grown first: missing ones are leaves, extras dropped. */
+export function fitGrowth(
+  stock: Record<SproutKind, number>,
+  growth: Partial<Record<SproutKind, readonly number[]>> | undefined,
+): Record<SproutKind, number[]> {
+  return Object.fromEntries(
+    SPROUT_KINDS.map((kind) => {
+      const known = [...(growth?.[kind] ?? [])].sort((a, b) => b - a).slice(0, stock[kind]);
+      while (known.length < stock[kind]) known.push(0);
+      return [kind, known];
+    }),
+  ) as Record<SproutKind, number[]>;
 }
 
 /** The section a story is on. */
@@ -130,6 +150,10 @@ export function dayField(state: CampaignState): DayField {
     seed: base.seed + state.day,
     startingWorkers: SPROUT_KINDS.reduce((sum, kind) => sum + (party[kind] ?? 0), 0),
     squad: party,
+    // The most grown go out first.
+    squadGrowth: Object.fromEntries(
+      SPROUT_KINDS.map((kind) => [kind, state.growth[kind].slice(0, party[kind] ?? 0)]),
+    ),
     treasures: base.treasures.filter((treasure) => !done.has(`treasure:${treasure.id}`)),
     enemies: enemies.kept,
     gates: gates.kept.map((gate, i) => {
@@ -301,15 +325,23 @@ export function settleDay(
 
   // Sunset: who made it home.
   const survivors: Record<SproutKind, number> = { ember: 0, dew: 0, stone: 0, spark: 0 };
+  const grownHome: Record<SproutKind, number[]> = { ember: [], dew: [], stone: [], spark: [] };
   let leftBehind = 0;
   if (sim.ended !== 'wipedOut') {
     for (const [entity, worker] of sim.workers.entries()) {
       const at = sim.transforms.require(entity);
-      if (worker.state === 'follow' || safe(sim, at.x, at.z)) survivors[worker.kind]++;
-      else leftBehind++;
+      if (worker.state === 'follow' || safe(sim, at.x, at.z)) {
+        survivors[worker.kind]++;
+        grownHome[worker.kind].push(worker.growth);
+      } else {
+        leftBehind++;
+      }
     }
     // The Kiln keeps whatever it had not yet grown.
-    for (const kind of sim.kiln.queue) survivors[kind]++;
+    for (const kind of sim.kiln.queue) {
+      survivors[kind]++;
+      grownHome[kind].push(0);
+    }
   }
   // Those who stayed in the Kiln today (past the field's limit) are still there.
   const party = field.level.squad ?? {};
@@ -319,6 +351,16 @@ export function settleDay(
       Math.max(0, state.stock[kind] - (party[kind] ?? 0)) + survivors[kind],
     ]),
   ) as Record<SproutKind, number>;
+  // Everyone who lives through the day grows a day older, those who stayed in the Kiln too.
+  const growth = fitGrowth(
+    stock,
+    Object.fromEntries(
+      SPROUT_KINDS.map((kind) => [
+        kind,
+        [...grownHome[kind], ...state.growth[kind].slice(party[kind] ?? 0)].map((g) => g + 1),
+      ]),
+    ),
+  );
 
   const partsHome = section.parts.filter((id) => parts[id] !== undefined).length;
   const finishedToday = state.finished === null && partsHome === section.parts.length;
@@ -326,6 +368,7 @@ export function settleDay(
     day,
     section: state.section,
     stock,
+    growth,
     done: [...done],
     wear: Object.fromEntries(Object.entries(wear).filter(([key]) => !finished.has(key))),
     parts,
@@ -401,13 +444,27 @@ export function parseCampaign(value: unknown): CampaignState | null {
   if (typeof raw.section !== 'string' || !sectionById(raw.section)) return null;
   const stockRaw = record(raw.stock);
   const totals = record(raw.totals);
+  const stock = Object.fromEntries(
+    SPROUT_KINDS.map((kind) => [kind, count(stockRaw[kind])]),
+  ) as Record<SproutKind, number>;
+  const growthRaw =
+    typeof raw.growth === 'object' && raw.growth !== null
+      ? (raw.growth as Record<string, unknown>)
+      : {};
+  const growth = fitGrowth(
+    stock,
+    Object.fromEntries(
+      SPROUT_KINDS.map((kind) => {
+        const list = growthRaw[kind];
+        return [kind, Array.isArray(list) ? list.map(count) : []];
+      }),
+    ),
+  );
   return {
     day: count(raw.day),
     section: raw.section,
-    stock: Object.fromEntries(SPROUT_KINDS.map((kind) => [kind, count(stockRaw[kind])])) as Record<
-      SproutKind,
-      number
-    >,
+    stock,
+    growth,
     done: Array.isArray(raw.done) ? raw.done.filter((k): k is string => typeof k === 'string') : [],
     wear: record(raw.wear),
     parts: record(raw.parts),

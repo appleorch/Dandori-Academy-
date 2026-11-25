@@ -23,7 +23,8 @@ export function applySeparation(sim: Simulation): void {
   ids.length = 0;
   for (const [entity, worker] of sim.workers.entries()) {
     const { state } = worker;
-    if (state === 'thrown' || state === 'carrying' || state === 'attacking') continue;
+    if (state === 'thrown' || state === 'carrying' || state === 'attacking' || state === 'planted')
+      continue;
     const transform = sim.transforms.require(entity);
     members.push(transform);
     ids.push(entity);

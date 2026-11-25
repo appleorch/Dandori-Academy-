@@ -23,6 +23,12 @@ import { relicFor } from '../story/relics';
 import type { Feedback } from './feedback';
 import { recordSteps } from './perf';
 
+/** Seconds between a carrying crew's chants, and how near the Warden one must be to hear it. */
+const HEAVE_SECONDS = 1.1;
+const HEAVE_RANGE = 16;
+import { PLUCK_INTERVAL, pluckNearest, sproutInReach } from '../workers/growth';
+import type { SproutKind } from '../workers/sprouts';
+
 const HUD_INTERVAL_FRAMES = 6;
 /** A chime sounds when this much of the day is left, and the music picks up. */
 const LAST_CALL_SECONDS = 30;
@@ -100,6 +106,8 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
   );
   const [headmaster] = useState(() => new Headmaster(surface));
   const frame = useRef(0);
+  const pluckWait = useRef(0);
+  const heaveBeat = useRef(-1);
   const walked = useRef(0);
   const lastSpot = useRef({ x: surface.captainTransform.x, z: surface.captainTransform.z });
   const wasFast = useRef(false);
@@ -291,7 +299,16 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
     if (atStair && store.nearDescent === null) audio.play('beaconLit');
     store.setNearDescent(atStair && descent ? descent.to : null);
     store.setNearAscent(atAscent);
-    if (input.takeInteract()) {
+    // In the story, the interact key plucks the sprout nearest the Warden; held, it sweeps
+    // through a whole patch, one sprout at a time.
+    const pressed = input.takeInteract();
+    store.setNearSprout(sim.story && sproutInReach(sim));
+    if (sim.story && !atDoor && !atStair && !atAscent) {
+      pluckWait.current = Math.max(0, pluckWait.current - delta);
+      if ((pressed || input.held('interact')) && pluckWait.current === 0 && pluckNearest(sim)) {
+        pluckWait.current = PLUCK_INTERVAL;
+      }
+    } else if (pressed) {
       if (atDoor) {
         audio.play('knock');
         store.openPoker();
@@ -310,6 +327,25 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
         onSwitch(expedition.active);
         return;
       }
+    }
+
+    // Crews chant as they carry, in time with each other: one "heave-ho" for the nearest haul
+    // on the move, on a shared beat.
+    const beat = Math.floor((sim.tick * SIM_DT) / HEAVE_SECONDS);
+    if (beat !== heaveBeat.current) {
+      heaveBeat.current = beat;
+      let nearest = HEAVE_RANGE;
+      let crew: SproutKind | null = null;
+      for (const [entity, haul] of sim.carryables.entries()) {
+        if (!haul.moving || haul.carriers.length === 0) continue;
+        const at = sim.transforms.require(entity);
+        const dist = Math.hypot(at.x - spot.x, at.z - spot.z);
+        if (dist < nearest) {
+          nearest = dist;
+          crew = sim.workers.require(haul.carriers[0]).kind;
+        }
+      }
+      if (crew) audio.voice(crew, 'heave', { gain: 1 - nearest / HEAVE_RANGE });
     }
 
     frame.current++;

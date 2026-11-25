@@ -45,6 +45,7 @@ export function Hud({
   const hint = useGameStore((state) => state.hint);
   const sprocket = useGameStore((state) => state.sprocket);
   const nearSecret = useGameStore((state) => state.nearSecret);
+  const nearSprout = useGameStore((state) => state.nearSprout);
   const openPoker = useGameStore((state) => state.openPoker);
   const nearDescent = useGameStore((state) => state.nearDescent);
   const nearAscent = useGameStore((state) => state.nearAscent);
@@ -288,6 +289,11 @@ export function Hud({
       {touch && counts}
       {phase === 'playing' && (
         <div className="callouts">
+          {nearSprout && !nearSecret && (
+            <button type="button" className="chip knock" onClick={() => input?.queueInteract()}>
+              Pluck (hold to sweep) {!touch && <ActionPrompt action="interact" />}
+            </button>
+          )}
           {nearSecret && (
             <button type="button" className="chip knock" onClick={openPoker}>
               Knock on the little door {!touch && <ActionPrompt action="interact" />}

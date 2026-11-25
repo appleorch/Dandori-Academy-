@@ -1,3 +1,4 @@
+import type { SproutKind } from '../workers/sprouts';
 import { MusicPlayer, type Intensity, type TrackName } from './music';
 
 /**
@@ -47,6 +48,8 @@ export type SoundName =
   | 'chain'
   | 'rescued'
   | 'burned'
+  | 'pluck'
+  | 'nectar'
   | 'drowned'
   | 'ignite'
   | 'zap'
@@ -124,6 +127,60 @@ const SCENES: Record<AudioScene, SceneSound> = {
 
 const rand = (low: number, high: number): number => low + Math.random() * (high - low);
 
+/** The things a Sproutling says. */
+export type VoiceLine =
+  'throw' | 'land' | 'lift' | 'heave' | 'alarm' | 'death' | 'pluck' | 'relief' | 'cheer' | 'gulp';
+
+/**
+ * Each kind's voice: a pitched buzz through two formant filters (its mouth), so the same line
+ * sounds bright from an Emberling, low from a Stoneling, bubbly from a Dewling (a fast wobble)
+ * and buzzy from a Sparkling (a square wave).
+ */
+const VOICES: Record<
+  SproutKind,
+  { pitch: number; wave: OscillatorType; formants: [number, number]; wobble: number }
+> = {
+  ember: { pitch: 560, wave: 'triangle', formants: [1100, 2700], wobble: 0 },
+  dew: { pitch: 620, wave: 'sine', formants: [800, 2000], wobble: 22 },
+  stone: { pitch: 240, wave: 'sawtooth', formants: [520, 1300], wobble: 0 },
+  spark: { pitch: 720, wave: 'square', formants: [1400, 3200], wobble: 6 },
+};
+
+/** Each line as syllables: [pitch from, pitch to (times the voice's pitch), length, delay]. */
+const LINES: Record<VoiceLine, readonly (readonly [number, number, number, number])[]> = {
+  throw: [[1, 1.5, 0.09, 0]],
+  land: [[1.1, 0.8, 0.07, 0]],
+  lift: [[0.95, 1.15, 0.08, 0]],
+  heave: [
+    [1, 1.1, 0.1, 0],
+    [1.25, 1.05, 0.13, 0.16],
+  ],
+  alarm: [
+    [1.5, 1.7, 0.06, 0],
+    [1.6, 1.8, 0.06, 0.08],
+    [1.7, 1.9, 0.07, 0.16],
+  ],
+  death: [[1.3, 0.5, 0.5, 0]],
+  pluck: [[0.9, 1.6, 0.11, 0]],
+  relief: [
+    [1.2, 0.95, 0.12, 0],
+    [1.05, 1.3, 0.12, 0.15],
+  ],
+  cheer: [
+    [1, 1.2, 0.08, 0],
+    [1.2, 1.4, 0.08, 0.1],
+    [1.4, 1.8, 0.14, 0.2],
+  ],
+  gulp: [
+    [0.9, 0.7, 0.06, 0],
+    [1.2, 1.6, 0.1, 0.1],
+  ],
+};
+
+/** At most this many voice lines start in any VOICE_WINDOW seconds, so a crowd never becomes noise. */
+const VOICE_BUDGET = 5;
+const VOICE_WINDOW = 0.3;
+
 class AudioManager {
   private ctx: AudioContext | null = null;
   private sfx: GainNode | null = null;
@@ -136,6 +193,8 @@ class AudioManager {
   private sfxVolume = 0.7;
   private musicVolume = 0.35;
   private readonly lastPlayed = new Map<SoundName, number>();
+  private readonly lastVoice = new Map<string, number>();
+  private voiceTimes: number[] = [];
   private whistle: { osc: OscillatorNode; lfo: OscillatorNode; gain: GainNode } | null = null;
   private scene: AudioScene = 'menu';
   private ambienceTimer: number | null = null;
@@ -340,6 +399,60 @@ class AudioManager {
     osc.stop(start + length + 0.02);
   }
 
+  /**
+   * A Sproutling says something. Lines from many at once are thinned: the same line from the
+   * same kind no faster than every 0.12 s, and only a handful of lines in any third of a second.
+   */
+  voice(kind: SproutKind, line: VoiceLine, options?: PlayOptions): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.sfx || ctx.state !== 'running') return;
+    const now = ctx.currentTime;
+    const key = `${kind}:${line}`;
+    const last = this.lastVoice.get(key);
+    if (last !== undefined && now - last < 0.12) return;
+    this.voiceTimes = this.voiceTimes.filter((t) => now - t < VOICE_WINDOW);
+    // Deaths always get through: nobody is lost without a sound.
+    if (this.voiceTimes.length >= VOICE_BUDGET && line !== 'death') return;
+    this.voiceTimes.push(now);
+    this.lastVoice.set(key, now);
+    const out = this.channel(options, this.sfx);
+    const voice = VOICES[kind];
+    const pitch = voice.pitch * rand(0.9, 1.12);
+    const volume = line === 'death' ? 0.1 : 0.07;
+    for (const [from, to, length, delay] of LINES[line]) {
+      const start = now + delay;
+      const osc = ctx.createOscillator();
+      osc.type = voice.wave;
+      osc.frequency.setValueAtTime(pitch * from, start);
+      osc.frequency.exponentialRampToValueAtTime(pitch * to, start + length);
+      if (voice.wobble > 0) {
+        const lfo = ctx.createOscillator();
+        const depth = ctx.createGain();
+        lfo.frequency.value = voice.wobble;
+        depth.gain.value = pitch * 0.06;
+        lfo.connect(depth).connect(osc.frequency);
+        lfo.start(start);
+        lfo.stop(start + length + 0.03);
+      }
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + length);
+      for (const formant of voice.formants) {
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = formant;
+        filter.Q.value = 5;
+        osc.connect(filter).connect(gain);
+      }
+      gain.connect(out);
+      osc.start(start);
+      osc.stop(start + length + 0.03);
+    }
+    // A lost Sproutling's spirit leaves with a soft bell.
+    if (line === 'death') this.bell(out, 1319, 1.4, 0.07, 0.3);
+  }
+
   play(name: SoundName, options?: PlayOptions): void {
     const ctx = this.ctx;
     if (!ctx || !this.sfx || ctx.state !== 'running') return;
@@ -377,6 +490,13 @@ class AudioManager {
       case 'spawn':
         this.tone(out, 300 * d, 900 * d, 0.07, 'sine', 0.14);
         this.chirp(out, 800, 1300, 0.09, 0.14, 0.05);
+        break;
+      case 'pluck':
+        this.burst(out, 0.08, 1600, 0.14, 0, 'bandpass', 900);
+        this.tone(out, 260 * d, 520 * d, 0.07, 'sine', 0.14);
+        break;
+      case 'nectar':
+        [988, 1319, 1568].forEach((hz, i) => this.bell(out, hz, 0.3, 0.13, i * 0.05));
         break;
       case 'workerLost':
         this.chirp(out, 900, 320, 0.36, 0.2);

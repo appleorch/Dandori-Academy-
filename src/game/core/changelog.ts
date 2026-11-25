@@ -8,6 +8,18 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.23.0',
+    date: '2026-11-25',
+    changes: [
+      'Story: your Sproutlings now wait in the ground round the Kiln each morning. Pluck them with the interact key, or hold it to sweep up a whole patch.',
+      'Story: Sproutlings grow from leaf to bud to bloom, by living through days or by drinking Dewdrops of nectar from plants and beaten beasts. Buds are 15% faster, blooms 30%, and you can see a bud or a flower on their heads. Your squad keeps its growth from day to day.',
+      'Every kind has its own voice: Emberlings bright, Stonelings low, Dewlings bubbly and Sparklings buzzy. They call out when thrown, landing, lifting, plucked, rescued or in trouble, chant "heave-ho" in time while carrying, and cheer when a haul comes home. A big crowd is kept from turning into noise.',
+      'A lost Sproutling’s spirit rises in its kind’s colour, with a soft bell.',
+      'Idle Sproutlings fidget: they sit down for a rest, hop, wave at the Warden, cheer near the Kiln when something comes home, and cower when a beast is on the hunt nearby.',
+      'Challenges, Time Attack and Battles play exactly as before.',
+    ],
+  },
+  {
     version: '0.22.0',
     date: '2026-11-25',
     changes: [

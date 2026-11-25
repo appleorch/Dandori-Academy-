@@ -196,6 +196,13 @@ export interface LevelDefinition {
   startingWorkers: number;
   /** Which kinds the starting squad is made of; it must add up to `startingWorkers`. All Emberlings if absent. */
   squad?: Squad;
+  /**
+   * Story only: the growth (see `stageOf`) of each starting Sproutling, per kind, in the order
+   * they are spawned. Missing entries are leaves.
+   */
+  squadGrowth?: Partial<Record<SproutKind, readonly number[]>>;
+  /** Story only: Dewdrops of nectar growing on plants, drunk by the first Sproutling to reach one. */
+  dewdrops?: readonly Point[];
   captain: Point;
   kiln: Point;
   obstacles: Wall[];

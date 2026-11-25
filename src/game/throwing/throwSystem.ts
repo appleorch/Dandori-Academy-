@@ -104,5 +104,5 @@ export function updateThrowing(sim: Simulation, input: InputState, dt: number): 
   );
   from.facing = Math.atan2(landing.x - from.x, landing.z - from.z);
   state.throwCooldown = THROW.cooldown;
-  sim.emit('throw', from.x, from.z);
+  sim.emit('throw', from.x, from.z, 0, worker.kind);
 }

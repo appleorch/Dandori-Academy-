@@ -46,7 +46,7 @@ export function joinSquad(sim: Simulation, entity: Entity, worker: Worker): void
   if (worker.peril) {
     const at = sim.transforms.require(entity);
     sim.stats.rescued++;
-    sim.emit('rescued', at.x, at.z);
+    sim.emit('rescued', at.x, at.z, 0, worker.kind);
   }
   worker.peril = null;
   worker.perilTime = 0;
@@ -112,13 +112,13 @@ export function latchOn(
   worker.target = enemyEntity;
   worker.slot = Math.atan2(transform.x - enemyTransform.x, transform.z - enemyTransform.z);
   enemy.latched.push(entity);
-  sim.emit('latch', transform.x, transform.z);
+  sim.emit('latch', transform.x, transform.z, 0, worker.kind);
 }
 
 export function killWorker(sim: Simulation, entity: Entity, worker: Worker): void {
   detachWorker(sim, entity, worker);
   const at = sim.transforms.require(entity);
-  sim.emit('workerLost', at.x, at.z);
+  sim.emit('workerLost', at.x, at.z, 0, worker.kind);
   sim.ecs.destroy(entity);
   sim.stats.workersLost++;
 }

@@ -120,6 +120,14 @@ const WILD_QUAD: LevelSpec = {
     { x: -20, z: -20, weight: 3, at: 200, lifetime: 70 },
     { x: 32, z: -16, weight: 3, at: 320, lifetime: 70 },
   ],
+  // Dewdrops of nectar on the plants: they grow back every morning.
+  dewdrops: [
+    { x: -62, z: 14 },
+    { x: -41, z: 4 },
+    { x: -20, z: -40 },
+    { x: 28, z: 30 },
+    { x: 73, z: -3 },
+  ],
   saps: [
     { x: -44, z: 0 },
     { x: -44, z: -66 },

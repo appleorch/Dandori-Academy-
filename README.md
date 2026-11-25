@@ -256,6 +256,17 @@ camp**, which shows a map of the Quad, the Kiln's stock by kind and the Clock's 
 - **The Kiln's stock** carries over: up to the field's limit of 100 go out each morning, the rest
   wait. You start with ten Emberlings; Dewlings, Stonelings and Sparklings are found as seed pods
   in the Quad. An empty Kiln still coaxes out one Emberling.
+- **Plucking.** Each morning the squad waits in the ground round the Kiln as sprouts, and new
+  Sproutlings come up the same way; the Warden plucks them by hand with the interact key (E, or X
+  on a pad), and holding it sweeps through a whole patch. The whistle calls, it does not pluck.
+- **Growing.** Every Sproutling grows from leaf to bud to bloom: by living through days (bud after
+  two, bloom after four) or a stage at once by drinking a Dewdrop, the nectar that grows on a few
+  plants in the Quad every morning and drops from beaten beasts. Buds walk and carry 15% faster,
+  blooms 30%, and wear a pink bud or a flower on their head-sprout. Growth is kept per Sproutling
+  in the save (`growth` in `CampaignState`, most grown going out first), and saves from before it
+  load with everyone a leaf. Plucking and growing are the story's alone (`SimOptions.story`,
+  `src/game/workers/growth.ts`): everywhere paces are measured, every Sproutling is a leaf and
+  hatches on its feet, so no target or leaderboard moved.
 - The parts are named relics of their own (`CLOCK_PARTS` in `src/game/story/relics.ts`).
 
 **Time Attack.** The Academy's thirty numbered lessons in order (this was the story until

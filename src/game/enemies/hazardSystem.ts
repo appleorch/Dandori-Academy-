@@ -24,7 +24,8 @@ function land(sim: Simulation, hazard: Hazard): void {
   const kills = hazard.kind === 'drip' && sim.hard ? HARD.dripKills : spec.kills;
   let killed = 0;
   for (const [entity, worker] of sim.workers.entries()) {
-    if (worker.state === 'thrown' || worker.state === 'attacking') continue;
+    if (worker.state === 'thrown' || worker.state === 'attacking' || worker.state === 'planted')
+      continue;
     if (spec.spares === worker.kind) continue;
     const at = sim.transforms.require(entity);
     if (Math.hypot(at.x - hazard.toX, at.z - hazard.toZ) > hazard.radius) continue;

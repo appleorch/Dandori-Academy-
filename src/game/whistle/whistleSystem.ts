@@ -16,7 +16,9 @@ export function updateWhistle(sim: Simulation, input: InputState, dt: number): v
       : Math.min(WHISTLE.maxRadius, state.whistleRadius + WHISTLE.growth * dt);
 
   for (const [entity, worker] of sim.workers.entries()) {
-    if (worker.state === 'follow' || worker.state === 'thrown') continue;
+    // The whistle calls; it does not pluck. Sprouts in the ground wait for the Warden's hand.
+    if (worker.state === 'follow' || worker.state === 'thrown' || worker.state === 'planted')
+      continue;
     const at = sim.transforms.require(entity);
     if (Math.hypot(at.x - sim.cursor.x, at.z - sim.cursor.z) <= state.whistleRadius) {
       joinSquad(sim, entity, worker);

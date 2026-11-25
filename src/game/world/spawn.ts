@@ -28,12 +28,14 @@ export function spawnWorker(
   z: number,
   state: WorkerState,
   kind: SproutKind = 'ember',
+  growth = 0,
 ): Entity {
   sim.knownKinds.add(kind);
   const entity = sim.ecs.create();
   sim.transforms.set(entity, { x, y: 0, z, facing: 0 });
   sim.workers.set(entity, {
     kind,
+    growth,
     state,
     target: NO_ENTITY,
     stun: 0,

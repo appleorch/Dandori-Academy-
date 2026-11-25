@@ -1,5 +1,35 @@
-import { audio } from '../audio/audioManager';
+import { audio, type VoiceLine } from '../audio/audioManager';
+import type { SproutKind } from '../workers/sprouts';
 import type { SimEvent, SimEventType } from '../simulation/events';
+
+/** What a Sproutling says when it makes an event. */
+const VOICED: Partial<Record<SimEventType, VoiceLine>> = {
+  throw: 'throw',
+  land: 'land',
+  grab: 'lift',
+  latch: 'throw',
+  rescued: 'relief',
+  workerLost: 'death',
+  burned: 'alarm',
+  drowned: 'alarm',
+  pluck: 'pluck',
+  nectar: 'gulp',
+  deliver: 'cheer',
+};
+
+/** A lost Sproutling's spirit: a few soft lights in its kind's colour, drifting slowly up. */
+const SPIRIT_COLOURS: Record<SproutKind, readonly [number, number, number]> = {
+  ember: [1, 0.55, 0.35],
+  dew: [0.55, 0.8, 1],
+  stone: [0.85, 0.8, 0.72],
+  spark: [1, 0.92, 0.45],
+};
+const SPIRITS = Object.fromEntries(
+  Object.entries(SPIRIT_COLOURS).map(([kind, color]) => [
+    kind,
+    { count: 4, color, speed: 0.15, lift: 1.3, life: 2.6, size: 0.22, gravity: -0.04 },
+  ]),
+) as Record<SproutKind, BurstStyle>;
 import { ParticleSystem, type BurstStyle } from './particles';
 
 export interface Popup {
@@ -153,6 +183,18 @@ export class Feedback {
       gain: Math.max(QUIETEST, 1 - distance / HEARING_RANGE),
       pitch: event.amount,
     });
+    const line = VOICED[event.type];
+    if (line && event.kind) {
+      audio.voice(event.kind, line, {
+        pan: Math.max(-1, Math.min(1, dx / PAN_RANGE)),
+        gain: Math.max(QUIETEST, 1 - distance / HEARING_RANGE),
+      });
+    }
+    if (event.type === 'workerLost' && event.kind) {
+      // Its spirit rises in its kind's colour, slow enough to be seen from the camera.
+      const lift = this.ground(event.x, event.z);
+      this.particles.burst(event.x, 0.6 + lift, event.z, SPIRITS[event.kind]);
+    }
     const weight = this.calm ? undefined : WEIGHT[event.type];
     if (weight) {
       this.hitstop = Math.max(this.hitstop, weight[0]);

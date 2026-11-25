@@ -15,7 +15,8 @@ export function updateKiln(sim: Simulation, dt: number): void {
     sim.hatchAt.x + Math.sin(angle) * KILN.spawnRing,
     sim.hatchAt.z + Math.cos(angle) * KILN.spawnRing,
   );
-  spawnWorker(sim, spot.x, spot.z, 'idle', kiln.queue.shift());
+  // In the story a new Sproutling comes up as a sprout in the ground, to be plucked.
+  spawnWorker(sim, spot.x, spot.z, sim.story ? 'planted' : 'idle', kiln.queue.shift());
   sim.emit('spawn', spot.x, spot.z);
   kiln.spawnTimer = KILN.spawnInterval;
 }

@@ -1,7 +1,7 @@
 import { updateCaptain } from '../captain/captainSystem';
 import { updateCarrying } from '../carry/carrySystem';
 import type { InputState } from '../commands/input';
-import { CAPTAIN, SIM_DT } from '../core/config';
+import { CAPTAIN, KILN, SIM_DT } from '../core/config';
 import { HARD } from '../core/difficulty';
 import { EcsWorld, type Entity, type Store } from '../core/ecs';
 import { Rng } from '../core/rng';
@@ -12,6 +12,7 @@ import { updateHazards } from '../enemies/hazardSystem';
 import { updateBlooms } from '../carry/bloomSystem';
 import { applySeparation } from '../flocking/separation';
 import { updateKiln } from '../kiln/kilnSystem';
+import { updateDewdrops } from '../workers/growth';
 import { NavGrid, type Box, type Point } from '../navigation/NavGrid';
 import { FlowField } from '../pathfinding/flowField';
 import { updateSelection, updateThrowing } from '../throwing/throwSystem';
@@ -83,6 +84,11 @@ export interface SimOptions {
   endsWhen?: EndsWhen;
   /** Whether the Kiln grows new Sproutlings. Off for a fixed-squad trial. */
   growth?: boolean;
+  /**
+   * The story: Sproutlings start as sprouts by the Kiln to be plucked, new ones come up the same
+   * way, and beaten beasts drop Dewdrops that grow them. Off everywhere paces are measured.
+   */
+  story?: boolean;
 }
 
 export interface SimStats {
@@ -214,6 +220,10 @@ export class Simulation {
   readonly growth: boolean;
   /** A day with no clock (see `LevelDefinition.untimed`): only its goal or the player ends it. */
   readonly untimed: boolean;
+  /** The story's growing and plucking (see `SimOptions.story`). */
+  readonly story: boolean;
+  /** Dewdrops lying on the field, waiting to be drunk. */
+  readonly dewdrops: Point[];
 
   constructor(
     readonly level: LevelDefinition,
@@ -223,6 +233,8 @@ export class Simulation {
     this.endsWhen = options.endsWhen ?? 'shards';
     this.growth = options.growth ?? true;
     this.untimed = level.untimed ?? false;
+    this.story = options.story ?? false;
+    this.dewdrops = [];
     this.hard = level.difficulty === 'hard';
     this.captainMaxHp = this.hard ? HARD.captainHp : CAPTAIN.maxHp;
     this.captainState.hp = this.captainMaxHp;
@@ -297,15 +309,34 @@ export class Simulation {
     this.cursor = { ...level.captain };
 
     const kinds = startingKinds(level);
+    const seen: Partial<Record<SproutKind, number>> = {};
     kinds.forEach((kind, i) => {
+      const nth = seen[kind] ?? 0;
+      seen[kind] = nth + 1;
+      const growth = level.squadGrowth?.[kind]?.[nth] ?? 0;
       const angle = (i / kinds.length) * Math.PI * 2;
+      if (this.story) {
+        // The story's squad waits in the ground round the Kiln, in rings, to be plucked.
+        const ring = KILN.spawnRing + 0.6 + Math.floor(i / 12) * 0.9;
+        const turn = ((i % 12) / 12) * Math.PI * 2 + Math.floor(i / 12) * 0.26;
+        const spot = this.nav.nearestWalkable(
+          level.kiln.x + Math.sin(turn) * ring,
+          level.kiln.z + Math.cos(turn) * ring,
+        );
+        spawnWorker(this, spot.x, spot.z, 'planted', kind, growth);
+        return;
+      }
       const spot = this.nav.nearestWalkable(
         level.captain.x + Math.sin(angle) * 1.5,
         level.captain.z + Math.cos(angle) * 1.5,
       );
-      spawnWorker(this, spot.x, spot.z, 'follow', kind);
+      spawnWorker(this, spot.x, spot.z, 'follow', kind, growth);
     });
     this.selected = kinds[0] ?? 'ember';
+    if (this.story) {
+      for (const drop of level.dewdrops ?? [])
+        this.dewdrops.push(this.nav.nearestWalkable(drop.x, drop.z));
+    }
     for (const treasure of level.treasures) spawnTreasure(this, treasure);
     level.pods.forEach((pod, index) => spawnPod(this, pod, index, pod.kind));
     for (const pod of level.pods) if (pod.kind) this.knownKinds.add(pod.kind);
@@ -386,6 +417,7 @@ export class Simulation {
     applySeparation(this);
     updateCarrying(this, dt);
     updateKiln(this, dt);
+    updateDewdrops(this);
 
     if (!this.visit && !this.untimed) this.timeLeft = Math.max(0, this.timeLeft - dt);
     if (this.ended) return;
@@ -442,15 +474,15 @@ export class Simulation {
     return this.bridges.some((site) => !site.built && inside(site.box));
   }
 
-  emit(type: SimEventType, x: number, z: number, amount = 0): void {
-    this.events.push({ type, x, z, amount });
+  emit(type: SimEventType, x: number, z: number, amount = 0, kind?: SproutKind): void {
+    this.events.push(kind ? { type, x, z, amount, kind } : { type, x, z, amount });
   }
 
   countWorkers(): WorkerCounts {
     const counts: WorkerCounts = { total: this.workers.size, squad: 0, idle: 0, working: 0 };
     for (const [, worker] of this.workers.entries()) {
       if (worker.state === 'follow') counts.squad++;
-      else if (worker.state === 'idle') counts.idle++;
+      else if (worker.state === 'idle' || worker.state === 'planted') counts.idle++;
       else counts.working++;
     }
     return counts;

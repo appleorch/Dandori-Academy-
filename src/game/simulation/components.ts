@@ -27,13 +27,24 @@ export interface Captain {
 }
 
 export type WorkerState =
-  'idle' | 'follow' | 'thrown' | 'rush' | 'toCarry' | 'carrying' | 'toAttack' | 'attacking';
+  | 'idle'
+  | 'follow'
+  | 'thrown'
+  | 'rush'
+  | 'toCarry'
+  | 'carrying'
+  | 'toAttack'
+  | 'attacking'
+  /** Story only: a sprout in the ground by the Kiln, waiting for the Warden to pluck it. */
+  | 'planted';
 
 /** A danger a worker can be saved from by a whistle in time: on fire, or out of its depth. */
 export type Peril = 'fire' | 'water';
 
 export interface Worker {
   kind: SproutKind;
+  /** Days of growth (see `stageOf`); always 0 outside the story. */
+  growth: number;
   state: WorkerState;
   /** The haul or enemy this worker is assigned to, or NO_ENTITY. */
   target: Entity;

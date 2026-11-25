@@ -8,12 +8,13 @@ import {
   Vector2,
   type InstancedMesh,
   type MeshBasicMaterial,
+  type MeshStandardMaterial,
 } from 'three';
 import { WORKER } from '../core/config';
 import { useGameStore } from '../core/gameStore';
 import type { Entity } from '../core/ecs';
 import type { Worker, WorkerState } from '../simulation/components';
-import { SPROUT_KINDS, type SproutKind } from '../workers/sprouts';
+import { SPROUT_KINDS, stageOf, type SproutKind } from '../workers/sprouts';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
 import { inDanger } from './danger';
@@ -91,6 +92,14 @@ const CROWN_SHAPE: Record<
 const BULK: Record<SproutKind, number> = { ember: 1, dew: 1, stone: 1.18, spark: 0.95 };
 const FIRE = new Color('#ff7a1a');
 const EYE_WHITE = new Color('#fff8ec');
+/** A grown Sproutling's head: a closed pink bud, then a flower in a shade of its kind. */
+const BUD = new Color('#e98fae');
+const BLOOM_PETAL: Record<SproutKind, Color> = {
+  ember: new Color('#ffd8c8'),
+  dew: new Color('#dcecff'),
+  stone: new Color('#f4ecdc'),
+  spark: new Color('#fff4c0'),
+};
 const DANGER = new Color('#ffffff');
 const dummy = new Object3D();
 const part = new Matrix4();
@@ -136,6 +145,9 @@ interface Anim {
   glanceTimer: number;
   hop: number;
   chatWith: number;
+  /** Idle fidgets: seconds left sitting down, and of a cheer when a haul came home. */
+  sit: number;
+  cheer: number;
   trail: { x: number; y: number; z: number }[];
 }
 
@@ -176,6 +188,8 @@ function newAnim(x: number, z: number, facing: number, state: WorkerState): Anim
     glanceTimer: Math.random() * 3,
     hop: 0,
     chatWith: -1,
+    sit: 0,
+    cheer: 0,
     trail: [],
   };
 }
@@ -215,7 +229,9 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
     star: useRef<InstancedMesh>(null),
     ribbon: useRef<InstancedMesh>(null),
     sweat: useRef<InstancedMesh>(null),
+    flower: useRef<InstancedMesh>(null),
   };
+  const lastHome = useRef(0);
   const anims = useRef(new Map<Entity, Anim>());
   const drops = useRef<Drop[]>([]);
   const geometries = useMemo(
@@ -257,9 +273,15 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       star: refs.star.current,
       ribbon: refs.ribbon.current,
       sweat: refs.sweat.current,
+      flower: refs.flower.current,
     };
     if (Object.values(m).some((mesh) => !mesh)) return;
     const mesh = m as { [K in keyof typeof m]: InstancedMesh };
+    // Its colours must exist before the first flower is drawn, or the shader is built without them.
+    if (!mesh.flower.instanceColor) {
+      mesh.flower.setColorAt(0, BUD);
+      (mesh.flower.material as MeshStandardMaterial).needsUpdate = true;
+    }
     const dt = Math.min(0.05, Math.max(0.001, frameDelta));
     const time = clock.elapsedTime;
     const seen = new Set<Entity>();
@@ -269,6 +291,16 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
     // Each kind's crown is its own instanced mesh, filled in its own order.
     const crowns: Record<SproutKind, number> = { ember: 0, dew: 0, stone: 0, spark: 0 };
     let blazes = 0;
+    let flowers = 0;
+    // A haul just came home: everyone idle near the Kiln cheers.
+    const homeValue = sim.stats.treasureValue + sim.stats.bloomsCollected;
+    const cheering = homeValue !== lastHome.current;
+    lastHome.current = homeValue;
+    // Beasts on the hunt make idle Sproutlings near them cower.
+    const hunters: { x: number; z: number }[] = [];
+    for (const [foe, enemy] of sim.enemies.entries()) {
+      if (enemy.alert && enemy.hp > 0 && !enemy.shape) hunters.push(sim.transforms.require(foe));
+    }
 
     // Idle Emberlings near each other strike up a conversation; found once per frame.
     const idle: { entity: Entity; x: number; z: number }[] = [];
@@ -306,13 +338,29 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
 
       // Heading eases round instead of snapping, and how fast it turns tilts the body.
       let target = at.facing;
+      if (
+        state === 'idle' &&
+        cheering &&
+        Math.hypot(at.x - sim.level.kiln.x, at.z - sim.level.kiln.z) < 9
+      )
+        anim.cheer = 1.2;
+      anim.cheer = Math.max(0, anim.cheer - dt);
+      anim.sit = state === 'idle' ? Math.max(0, anim.sit - dt) : 0;
       if (state === 'idle' && !dazed) {
         anim.glanceTimer -= dt;
         if (anim.glanceTimer <= 0) {
           anim.glanceTimer = 1.5 + Math.random() * 3;
           anim.glance = (Math.random() - 0.5) * 1.8;
-          // Now and then, a little hop for no reason at all.
-          if (Math.random() < 0.3) anim.hop = 0.35;
+          const roll = Math.random();
+          // Now and then, a little hop for no reason at all, or a sit down for a rest.
+          if (roll < 0.3) anim.hop = 0.35;
+          else if (roll < 0.42) anim.sit = 2 + Math.random() * 3;
+          // A wave (a hop, facing the Warden) when the Warden is close.
+          const warden = sim.captainTransform;
+          if (roll > 0.8 && Math.hypot(warden.x - at.x, warden.z - at.z) < 5) {
+            anim.glance = angleDelta(at.facing, Math.atan2(warden.x - at.x, warden.z - at.z));
+            anim.hop = 0.35;
+          }
           // Find someone to talk to.
           anim.chatWith = -1;
           for (const other of idle) {
@@ -341,8 +389,13 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       anim.sx = Math.max(-0.7, Math.min(0.7, anim.sx + anim.svx * dt));
       anim.sz = Math.max(-0.7, Math.min(0.7, anim.sz + anim.svz * dt));
 
-      // Landing: the frame a throw ends, a squash begins.
-      if (anim.state === 'thrown' && state !== 'thrown') anim.land = LAND_SECONDS;
+      // Landing: the frame a throw ends, a squash begins. Plucked from the ground: the same pop.
+      if (
+        (anim.state === 'thrown' || anim.state === 'planted') &&
+        state !== anim.state &&
+        state !== 'thrown'
+      )
+        anim.land = LAND_SECONDS;
       if (state === 'thrown' && anim.state !== 'thrown') anim.trail.length = 0;
       anim.state = state;
       anim.land = Math.max(0, anim.land - dt);
@@ -373,6 +426,10 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       } else if (dazed) {
         pitch = 1.45;
         lift = 0.2;
+      } else if (state === 'planted') {
+        // In the ground up to its head-sprout, swaying a little, waiting to be plucked.
+        lift = -0.5;
+        pitch = Math.sin(time * 1.6 + entity) * 0.06;
       } else {
         if (moving) {
           lift = Math.abs(Math.sin(anim.phase)) * 0.07 * gait;
@@ -392,6 +449,18 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
           lift = anim.hop > 0 ? Math.sin((anim.hop / 0.35) * Math.PI) * 0.22 : 0;
           if (chatting) squashY = 1 + Math.sin(time * 9 + entity) * 0.05;
           else lift += Math.abs(Math.sin(time * 2.5 + entity)) * 0.02;
+          if (anim.sit > 0) {
+            squashY *= 0.8;
+            squashXZ *= 1.08;
+            pitch = -0.18;
+          }
+          if (anim.cheer > 0) lift += Math.abs(Math.sin(anim.cheer * 9)) * 0.25;
+          if (hunters.some((foe) => Math.hypot(foe.x - at.x, foe.z - at.z) < 6)) {
+            // Cowering: low, small, leaning away.
+            squashY *= 0.78;
+            squashXZ *= 1.1;
+            pitch = -0.35;
+          }
         }
       }
       if (anim.land > 0) {
@@ -515,6 +584,27 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
           1,
           stalk,
         );
+      }
+      // A bud or a bloom on top of the head-sprout, for a Sproutling that has grown.
+      const stage = stageOf(worker.growth);
+      if (stage !== 'leaf') {
+        const open = stage === 'bloom';
+        place(
+          mesh.flower,
+          flowers,
+          0,
+          0.42,
+          0,
+          0,
+          time * 0.4,
+          0,
+          open ? 2 : 0.85,
+          open ? 0.5 : 1.3,
+          open ? 2 : 0.85,
+          stalk,
+        );
+        mesh.flower.setColorAt(flowers, open ? BLOOM_PETAL[worker.kind] : BUD);
+        flowers++;
       }
       const lit = state !== 'idle';
       const kind = worker.kind;
@@ -711,6 +801,7 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
     mesh.star.count = stars;
     mesh.ribbon.count = ribbons;
     mesh.sweat.count = sweatCount;
+    mesh.flower.count = flowers;
     (mesh.ribbon.material as MeshBasicMaterial).opacity = 0.55;
     for (const one of Object.values(mesh)) {
       one.instanceMatrix.needsUpdate = true;
@@ -731,6 +822,10 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       <instancedMesh ref={refs.stalk} args={[undefined, undefined, MAX]} frustumCulled={false}>
         <cylinderGeometry args={[0.02, 0.035, 0.32, 5]} />
         <meshStandardMaterial color="#5a3a2a" roughness={0.9} />
+      </instancedMesh>
+      <instancedMesh ref={refs.flower} args={[undefined, undefined, MAX]} frustumCulled={false}>
+        <sphereGeometry args={[0.09, 10, 6]} />
+        <meshStandardMaterial roughness={0.5} />
       </instancedMesh>
       <instancedMesh ref={refs.leaf} args={[undefined, undefined, MAX * 2]} frustumCulled={false}>
         <sphereGeometry args={[0.1, 8, 4]} />

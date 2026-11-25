@@ -36,6 +36,7 @@ import { Scenery } from './Scenery';
 import { SkyLight } from './SkyLight';
 import { Terrain } from './Terrain';
 import { WaterAndBridges } from './WaterAndBridges';
+import { Dewdrops } from './Dewdrops';
 import { WorkerInstances } from './WorkerInstances';
 import { PerfProbe, ShadowBudget } from './perf';
 import { QualityTuner } from './QualityTuner';
@@ -111,7 +112,11 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
     const { playMode, rival } = useGameStore.getState();
     const rules = MODES[playMode];
     const created = new Expedition(
-      new Simulation(level, { endsWhen: rules.endsWhen, growth: rules.growth }),
+      new Simulation(level, {
+        endsWhen: rules.endsWhen,
+        growth: rules.growth,
+        story: playMode === 'campaign',
+      }),
     );
     const race = isBattle(playMode) ? new Battle(playMode, level, rival) : null;
     setExpedition(created);
@@ -257,6 +262,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
             <Weather sim={sim} />
             <CaptainMesh sim={sim} />
             <WorkerInstances sim={sim} />
+            <Dewdrops sim={sim} />
             <CarryableMeshes sim={sim} />
             <EnemyMeshes sim={sim} />
             <WaterAndBridges sim={sim} />

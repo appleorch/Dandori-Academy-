@@ -6,7 +6,15 @@ import type { FlowField } from '../pathfinding/flowField';
 import type { Carryable, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { setIdle } from '../workers/squad';
-import { mostCommon, SPROUT_KINDS, SPROUTS, type Squad, type SproutKind } from '../workers/sprouts';
+import {
+  mostCommon,
+  SPROUT_KINDS,
+  SPROUTS,
+  STAGE_SPEED,
+  stageOf,
+  type Squad,
+  type SproutKind,
+} from '../workers/sprouts';
 
 /** How many carriers a crew counts as: a Stoneling lifts like two. */
 export function crewStrength(sim: Simulation, crew: readonly Entity[]): number {
@@ -33,7 +41,16 @@ export function carrySpeed(sim: Simulation, carryable: Carryable): number {
   const spare = carryable.maxCarriers - carryable.weight;
   const extra = spare > 0 ? Math.min(1, (count - carryable.weight) / spare) : 0;
   const sap = sim.sapTimer > 0 ? SAP.speedUp : 1;
-  return (carryable.baseSpeed + carryable.bonusSpeed * extra) * sap;
+  return (carryable.baseSpeed + carryable.bonusSpeed * extra) * sap * crewStage(sim, carryable);
+}
+
+/** How much faster a crew of grown Sproutlings carries: the average of their stages' speeds (1 for leaves). */
+function crewStage(sim: Simulation, carryable: Carryable): number {
+  if (carryable.carriers.length === 0) return 1;
+  let sum = 0;
+  for (const entity of carryable.carriers)
+    sum += STAGE_SPEED[stageOf(sim.workers.require(entity).growth)];
+  return sum / carryable.carriers.length;
 }
 
 interface Destination extends Point {
@@ -178,7 +195,7 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
       sim.stats.bonus.dewglassPoints += carryable.weight * DEWGLASS_BONUS_PER_WEIGHT;
     }
     extendChain(sim, to);
-    sim.emit('deliver', to.x, to.z, carryable.value);
+    sim.emit('deliver', to.x, to.z, carryable.value, mostCommon(crew));
     settleTwin(sim, carryable, to);
   } else if (carryable.kind === 'bloom') {
     // Bonus score: it counts towards the total but not towards clearing the lesson.
@@ -187,7 +204,7 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
     sim.stats.bonus.glowcaps++;
     sim.stats.bonus.glowcapPoints += carryable.value;
     extendChain(sim, to);
-    sim.emit('deliver', to.x, to.z, carryable.value);
+    sim.emit('deliver', to.x, to.z, carryable.value, mostCommon(crew));
   } else if (carryable.kind === 'sap') {
     sim.sapTimer = SAP.seconds;
     sim.emit('sap', to.x, to.z, SAP.seconds);

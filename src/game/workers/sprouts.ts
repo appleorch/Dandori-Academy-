@@ -92,6 +92,31 @@ export const SPROUTS: Record<SproutKind, SproutSpec> = {
   },
 };
 
+/**
+ * Growth stages, story only: a Sproutling sprouts as a leaf, buds after two days alive and
+ * blooms after four, or a stage sooner for every Dewdrop it drinks. Growth is counted in days
+ * (a Dewdrop counts as reaching the next stage at once). Everywhere outside the story every
+ * Sproutling is a leaf, so measured paces and leaderboards never see a stage.
+ */
+export const STAGES = ['leaf', 'bud', 'bloom'] as const;
+export type Stage = (typeof STAGES)[number];
+export const BUD_DAYS = 2;
+export const BLOOM_DAYS = 4;
+/** Walking and carrying speed for each stage. */
+export const STAGE_SPEED: Record<Stage, number> = { leaf: 1, bud: 1.15, bloom: 1.3 };
+
+export function stageOf(growth: number): Stage {
+  if (growth >= BLOOM_DAYS) return 'bloom';
+  if (growth >= BUD_DAYS) return 'bud';
+  return 'leaf';
+}
+
+/** Growth after drinking a Dewdrop: straight to the next stage. */
+export function drinkDewdrop(growth: number): number {
+  if (growth >= BLOOM_DAYS) return growth;
+  return growth >= BUD_DAYS ? BLOOM_DAYS : BUD_DAYS;
+}
+
 /** A squad's make-up: how many of each kind. Missing kinds count as none. */
 export type Squad = Partial<Record<SproutKind, number>>;
 

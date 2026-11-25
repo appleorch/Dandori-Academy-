@@ -7,7 +7,7 @@ import type { Simulation } from '../simulation/Simulation';
 import { approachPoint, damageEnemy, enemyReach } from '../enemies/combat';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import { assignTask, findTask, killWorker, latchOn, setIdle } from './squad';
-import { SPROUTS } from './sprouts';
+import { SPROUTS, STAGE_SPEED, stageOf } from './sprouts';
 import type { NavGrid } from '../navigation/NavGrid';
 
 const LANDING_SCAN_RANGE = 2.5;
@@ -25,7 +25,7 @@ export function navFor(sim: Simulation, worker: Worker, at: Transform): NavGrid 
 }
 
 function speedOf(worker: Worker): number {
-  return WORKER.speed * SPROUTS[worker.kind].speed;
+  return WORKER.speed * SPROUTS[worker.kind].speed * STAGE_SPEED[stageOf(worker.growth)];
 }
 
 function walkToward(
@@ -87,7 +87,7 @@ function land(sim: Simulation, entity: Entity, worker: Worker, transform: Transf
       return;
     }
   }
-  sim.emit('land', transform.x, transform.z);
+  sim.emit('land', transform.x, transform.z, 0, worker.kind);
   worker.state = 'idle';
   worker.scan = WORKER.scanInterval;
   // Thrown into water: a Dewling just gets on with it; anyone else flounders.
@@ -177,7 +177,13 @@ function sufferPeril(
   worker.perilTime -= dt;
   if (worker.perilTime <= 0) {
     sim.stats.perilLosses++;
-    sim.emit(worker.peril === 'fire' ? 'burned' : 'drowned', transform.x, transform.z);
+    sim.emit(
+      worker.peril === 'fire' ? 'burned' : 'drowned',
+      transform.x,
+      transform.z,
+      0,
+      worker.kind,
+    );
     killWorker(sim, entity, worker);
     return;
   }
@@ -252,7 +258,7 @@ export function updateWorkers(sim: Simulation, dt: number): void {
         if (Math.hypot(at.x - transform.x, at.z - transform.z) <= carryable.radius + 0.35) {
           worker.state = 'carrying';
           carryable.carriers.push(entity);
-          sim.emit('grab', at.x, at.z);
+          sim.emit('grab', at.x, at.z, 0, worker.kind);
         } else {
           walkToward(sim, worker, transform, at.x, at.z, dt);
         }
@@ -284,6 +290,9 @@ export function updateWorkers(sim: Simulation, dt: number): void {
         break;
       case 'carrying':
         // Position is driven by the carry system.
+        break;
+      case 'planted':
+        // Waits in the ground to be plucked.
         break;
     }
   }
