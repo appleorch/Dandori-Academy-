@@ -153,6 +153,15 @@ export interface Enemy {
   /** Workers clinging to the enemy and damaging it. */
   latched: Entity[];
   mover: Mover;
+  /**
+   * State of a beast with a rule of its own (see enemies/beasts.ts): a moth carrying someone, a
+   * grub surfaced, a beetle flipped, a slug awake, a mimic revealed. 0 for the plain state.
+   */
+  special: number;
+  specialTimer: number;
+  /** A Pollen Moth's catch, or NO_ENTITY; and its health when it caught it. */
+  prey: Entity;
+  grabHp: number;
 }
 
 /**

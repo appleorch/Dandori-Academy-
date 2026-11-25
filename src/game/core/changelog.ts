@@ -8,6 +8,15 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.24.0',
+    date: '2026-11-25',
+    changes: [
+      'Eight new beasts, each with a trick of its own: the Pollen Moth (flies out of reach of anyone on foot and carries Sproutlings off), the Burrow Grub (hides underground and erupts under hauls), the Shellback Beetle (flip it with Stonelings), the Sleeper Slug (beat it before it wakes), the Pike Newt (hunts in and beside water), the Thornback Hedgehog (spines, unless it is curled up), the Mimic Cap (a Glowcap that bites) and the Spark Wasp Nest (its wasps cannot sting Sparklings).',
+      'All eight roam the Wild Quad in the story, and seven of them now appear in two challenge fields each. Those fields have new Platinum and Diamond targets, and their leaderboards start afresh.',
+      'The Field Guide has a new Beasts section with a note on how to deal with each one.',
+    ],
+  },
+  {
     version: '0.23.1',
     date: '2026-11-25',
     changes: [

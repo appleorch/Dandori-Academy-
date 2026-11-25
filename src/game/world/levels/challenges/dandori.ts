@@ -134,7 +134,7 @@ const FIELDS: FieldSpec[] = [
     width: 100,
     depth: 56,
     dayLength: 360,
-    pace: 173,
+    pace: 209,
     seed: 404,
     startingWorkers: 18,
     squad: { ember: 14, dew: 4 },
@@ -169,6 +169,7 @@ const FIELDS: FieldSpec[] = [
     ],
     pods: [{ x: -40, z: 8, kind: 'dew' }],
     enemies: [
+      { x: 14, z: 3, kind: 'newt' },
       { x: -2, z: 22, kind: 'mossback' },
       { x: 32, z: 2, kind: 'mossback' },
     ],
@@ -303,7 +304,7 @@ const FIELDS: FieldSpec[] = [
     width: 80,
     depth: 48,
     dayLength: 220,
-    pace: 118,
+    pace: 136,
     seed: 408,
     startingWorkers: 20,
     squad: { ember: 12, stone: 8 },
@@ -322,6 +323,7 @@ const FIELDS: FieldSpec[] = [
     ],
     pods: [{ x: -24, z: 0, kind: 'stone' }],
     enemies: [
+      { x: -11, z: 14, kind: 'grub' },
       { x: 14, z: 0, kind: 'ramhorn' },
       { x: 30, z: 2, kind: 'mossback' },
     ],

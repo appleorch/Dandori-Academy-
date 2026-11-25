@@ -212,6 +212,17 @@ On a phone or tablet the game shows touch controls instead:
   one-way edge: anything can step down off it, nothing climbs back. Heights only change how the
   world looks; the rules are worked out on the flat nav grid, where a ledge is a cell that can
   only be entered in its drop direction.
+- **Beasts with a rule of their own** (`src/game/enemies/beasts.ts`), each asking a new question:
+  the **Pollen Moth** flies out of walking reach (only throws hit it) and carries Sproutlings
+  off unless hit hard enough to let go; the **Burrow Grub** moves unseen under a ripple and
+  erupts under moving hauls, surfacing after a strike or for air; the **Shellback Beetle** is
+  armoured until two Stoneling hits (or four from anyone) flip it; the **Sleeper Slug** is
+  harmless until noise wakes it, a moment later, so one volley can finish it asleep; the **Pike
+  Newt** hunts only in and beside water; the **Thornback Hedgehog**'s spines kill whoever clings
+  on unless it is curled (winded after a charge, or knocked by a Stoneling); the **Mimic Cap**
+  passes for a Glowcap but twitches and bites whoever comes close; the **Spark Wasp Nest** sends
+  wasps whose stings spare Sparklings. Each is in two challenge fields (the Shellback only in the
+  story for now) and all eight are in the Wild Quad; the Field Guide has a note on every beast.
 - **Relics of Harmony**: every Sunshard is set into a named relic with its own model and a line of
   description (`src/game/story/relics.ts`). Recovered relics fill the **Field Guide**.
 - **Headmaster Sprocket** comments on the day in a banner: openings, chains, rare relics,

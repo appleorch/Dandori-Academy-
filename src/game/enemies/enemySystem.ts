@@ -14,6 +14,7 @@ import {
   spawnTreasure,
 } from '../world/spawn';
 import { dropDewdrop } from '../workers/growth';
+import { beastBrain, flightHeight, nearWater, onBeastDefeated } from './beasts';
 import { ENEMY, ENEMY_SPECS, HAZARDS, type EnemySpec } from './enemyKinds';
 
 const dir = { x: 0, z: 0 };
@@ -38,8 +39,10 @@ function walk(
   speed: number,
   dt: number,
 ): void {
-  steerTo(sim.nav, enemy.mover, at, x, z, dt, dir);
-  moveAgent(sim.nav, at, dir.x * speed * dt, dir.z * speed * dt);
+  // A Pike Newt swims: it moves on the ground that includes the water.
+  const nav = enemy.kind === 'newt' ? sim.wadeNav : sim.nav;
+  steerTo(nav, enemy.mover, at, x, z, dt, dir);
+  moveAgent(nav, at, dir.x * speed * dt, dir.z * speed * dt);
   if (dir.x !== 0 || dir.z !== 0) at.facing = Math.atan2(dir.x, dir.z);
 }
 
@@ -54,11 +57,15 @@ function pickPrey(sim: Simulation, enemy: Enemy, spec: EnemySpec, at: Transform)
     const dist = Math.hypot(prey.x - at.x, prey.z - at.z);
     if (dist >= bestDist) return;
     if (Math.hypot(prey.x - enemy.homeX, prey.z - enemy.homeZ) > spec.territory) return;
+    // A Pike Newt hunts only in the water or on its banks.
+    if (enemy.kind === 'newt' && !nearWater(sim, prey.x, prey.z)) return;
     best = prey;
     bestDist = dist;
   };
   consider(sim.captainTransform);
   for (const [entity, worker] of sim.workers.entries()) {
+    // A Spark Wasp does not bother with a Sparkling it cannot sting.
+    if (enemy.kind === 'sparkwasp' && worker.kind === 'spark') continue;
     if (worker.state === 'thrown' || worker.state === 'attacking' || worker.state === 'planted')
       continue;
     consider(sim.transforms.require(entity));
@@ -94,7 +101,7 @@ function wander(sim: Simulation, enemy: Enemy, at: Transform, dt: number): void 
   enemy.wanderTimer -= dt;
   if (enemy.wanderTimer <= 0) {
     enemy.wanderTimer = sim.rng.range(2, 5);
-    const spot = sim.nav.nearestWalkable(
+    const spot = (enemy.kind === 'newt' ? sim.wadeNav : sim.nav).nearestWalkable(
       enemy.homeX + sim.rng.range(-ENEMY.wanderRange, ENEMY.wanderRange),
       enemy.homeZ + sim.rng.range(-ENEMY.wanderRange, ENEMY.wanderRange),
     );
@@ -125,6 +132,8 @@ function bite(sim: Simulation, enemy: Enemy, at: Transform): void {
   let eaten = 0;
   for (const [entity, worker] of sim.workers.entries()) {
     if (eaten >= ENEMY_SPECS[enemy.kind].biteVictims) break;
+    // A Spark Wasp's sting cannot hurt a Sparkling.
+    if (enemy.kind === 'sparkwasp' && worker.kind === 'spark') continue;
     if (worker.state === 'thrown' || worker.state === 'attacking' || worker.state === 'planted')
       continue;
     const prey = sim.transforms.require(entity);
@@ -277,6 +286,7 @@ function defeat(sim: Simulation, entity: Entity, enemy: Enemy, at: Transform): v
       spawnPod(sim, sim.nav.nearestWalkable(ground.x - 1.5, ground.z + (i * 2 - 1) * 1.5), 100 + i);
     }
   }
+  onBeastDefeated(sim, enemy, at);
   sim.ecs.destroy(entity);
   sim.entityVersion++;
 }
@@ -435,8 +445,10 @@ export function updateEnemies(sim: Simulation, dt: number): void {
       defeat(sim, entity, enemy, at);
       continue;
     }
-    if (spec.attack === 'none') continue;
+    if (spec.attack === 'none' && enemy.kind !== 'waspnest') continue;
     updatePhase(sim, enemy, spec, at);
+    // Beasts with a rule of their own may decide this step themselves (see beasts.ts).
+    const own = beastBrain(sim, entity, enemy, spec, at, dt);
 
     if (enemy.latched.length > 0) {
       enemy.shake += dt;
@@ -446,7 +458,9 @@ export function updateEnemies(sim: Simulation, dt: number): void {
       enemy.shake = Math.max(0, enemy.shake - dt * 2);
     }
 
-    if (enemy.state === 'roam') {
+    if (own) {
+      // Decided above.
+    } else if (enemy.state === 'roam') {
       roam(sim, enemy, spec, at, dt);
     } else if (enemy.state === 'charge') {
       const ended = charge(sim, enemy, spec, at, dt);
@@ -472,7 +486,7 @@ export function updateEnemies(sim: Simulation, dt: number): void {
       const transform = sim.transforms.require(latched);
       transform.x = at.x + Math.sin(worker.slot) * enemy.radius * 0.7;
       transform.z = at.z + Math.cos(worker.slot) * enemy.radius * 0.7;
-      transform.y = 0.55;
+      transform.y = 0.55 + flightHeight(enemy);
     }
   }
 }

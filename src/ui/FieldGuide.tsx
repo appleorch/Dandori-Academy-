@@ -6,6 +6,8 @@ import { RelicModel } from '../game/rendering/models/RelicModel';
 import { recoveredRelics, relicLocations, RELICS, type Relic } from '../game/story/relics';
 import { MenuNav } from './MenuNav';
 import { SproutlingGuide } from './SquadRoster';
+import { ENEMY_SPECS } from '../game/enemies/enemyKinds';
+import { BESTIARY } from '../game/story/bestiary';
 
 const MATERIAL_NAMES: Record<Relic['material'], string> = {
   brass: 'Brass',
@@ -70,6 +72,17 @@ export function FieldGuide() {
           {` ${found.size} of ${RELICS.length} recovered.`}
         </p>
         <SproutlingGuide />
+        <section className="sprout-guide">
+          <h2>Beasts</h2>
+          <ul className="roster">
+            {BESTIARY.map(({ kind, note }) => (
+              <li key={kind}>
+                <strong>{ENEMY_SPECS[kind].name}</strong>
+                <small>{note}</small>
+              </li>
+            ))}
+          </ul>
+        </section>
         <div className="guide">
           <figure className="guide-stage">
             <div className="guide-canvas">

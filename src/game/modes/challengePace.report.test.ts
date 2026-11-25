@@ -21,7 +21,8 @@ describe.skipIf(!enabled)('challenge paces', () => {
     const only = (import.meta.env.VITE_PACES_ONLY as string | undefined) ?? '';
     const rows: Record<string, unknown>[] = [];
     for (const level of CHALLENGE_LEVELS) {
-      if (only && !level.id.startsWith(only)) continue;
+      // A field id prefix, or several separated by commas.
+      if (only && !only.split(',').some((prefix) => level.id.startsWith(prefix))) continue;
       const mode = level.challenge?.mode ?? 'lessons';
       const sim = new Simulation(level, {
         endsWhen: MODES[mode].endsWhen,

@@ -201,6 +201,10 @@ export function spawnEnemy(
     wanderTimer: 0,
     latched: [],
     mover: createMover(),
+    special: 0,
+    specialTimer: 0,
+    prey: NO_ENTITY,
+    grabHp: hp,
   });
   sim.entityVersion++;
   return entity;

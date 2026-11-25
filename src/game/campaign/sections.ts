@@ -215,6 +215,15 @@ const WILD_QUAD: LevelSpec = {
     { x: 80, z: 32, kind: 'skitter' },
     { x: 82, z: 35, kind: 'skitter' },
     { x: 86, z: 4, kind: 'spitter' },
+    // Added in 0.24.0, at the end so that saved stories keep their places in this list.
+    { x: -42, z: 30, kind: 'moth' },
+    { x: -30, z: -20, kind: 'grub' },
+    { x: 50, z: -40, kind: 'shellback' },
+    { x: -10, z: 40, kind: 'slug' },
+    { x: 11, z: -50, kind: 'newt' },
+    { x: 20, z: 20, kind: 'hedgehog' },
+    { x: 59, z: 30, kind: 'mimic' },
+    { x: 70, z: -50, kind: 'waspnest' },
   ],
 };
 

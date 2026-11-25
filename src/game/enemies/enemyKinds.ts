@@ -11,7 +11,16 @@ export type EnemyKind =
   | 'rootknot'
   | 'bellwether'
   | 'skitter'
-  | 'snuffer';
+  | 'snuffer'
+  | 'moth'
+  | 'grub'
+  | 'shellback'
+  | 'slug'
+  | 'newt'
+  | 'hedgehog'
+  | 'mimic'
+  | 'waspnest'
+  | 'sparkwasp';
 
 /**
  * How an enemy attacks. `slam` rears up over a ring on the ground; `none` is for
@@ -235,6 +244,158 @@ export const ENEMY_SPECS: Record<EnemyKind, EnemySpec> = {
     armour: 0.3,
     phases: [0.66, 0.33],
     boss: true,
+  },
+  // The eight beasts with a rule of their own (see beasts.ts), and the wasps a nest sends.
+  /** Flies out of walking reach: only a thrown Sproutling can hit it. Swoops and carries one off. */
+  moth: {
+    ...BASE,
+    name: 'Pollen Moth',
+    attack: 'bite',
+    hp: 50,
+    radius: 0.9,
+    speed: 2.4,
+    aggroRange: 8,
+    territory: 14,
+    windup: 1,
+    recover: 1.5,
+    shakeInterval: 3,
+    carcassWeight: 2,
+    carcassYield: 3,
+  },
+  /** Moves unseen under the ground, a ripple the only sign, and erupts under a moving haul. */
+  grub: {
+    ...BASE,
+    name: 'Burrow Grub',
+    attack: 'bite',
+    hp: 90,
+    radius: 1,
+    speed: 2.2,
+    aggroRange: 12,
+    territory: 18,
+    windup: 1.2,
+    recover: 5,
+    shakeInterval: 4,
+    carcassWeight: 3,
+    carcassYield: 4,
+    biteVictims: 3,
+  },
+  /** Armoured on top; two Stoneling hits in quick succession flip it, open from below. */
+  shellback: {
+    ...BASE,
+    name: 'Shellback Beetle',
+    attack: 'bite',
+    hp: 120,
+    radius: 1.1,
+    speed: 2.6,
+    aggroRange: 7,
+    territory: 12,
+    windup: 0.9,
+    recover: 0.8,
+    shakeInterval: 3.5,
+    carcassWeight: 4,
+    carcassYield: 5,
+    armour: 0.3,
+    biteVictims: 2,
+  },
+  /** Asleep and harmless until noise wakes it; then a hungry biter. Beaten asleep, it never wakes. */
+  slug: {
+    ...BASE,
+    name: 'Sleeper Slug',
+    attack: 'bite',
+    hp: 110,
+    radius: 1.2,
+    speed: 3,
+    aggroRange: 8,
+    territory: 14,
+    windup: 0.7,
+    recover: 1.4,
+    shakeInterval: 3,
+    carcassWeight: 3,
+    carcassYield: 5,
+    armour: 0.6,
+    biteVictims: 4,
+  },
+  /** Lives in the water and hunts only in it or on its banks, where Dewlings can fight it. */
+  newt: {
+    ...BASE,
+    name: 'Pike Newt',
+    attack: 'bite',
+    hp: 80,
+    radius: 1,
+    speed: 4,
+    aggroRange: 9,
+    territory: 16,
+    windup: 0.6,
+    recover: 1.5,
+    shakeInterval: 3,
+    carcassWeight: 3,
+    carcassYield: 4,
+    biteVictims: 2,
+  },
+  /** Spines hurt whoever clings on, unless it is curled up: after a charge, or knocked by a Stoneling. */
+  hedgehog: {
+    ...BASE,
+    name: 'Thornback Hedgehog',
+    attack: 'charge',
+    hp: 90,
+    radius: 0.9,
+    speed: 2.4,
+    aggroRange: 8,
+    territory: 12,
+    windup: 0.8,
+    recover: 3,
+    missRecover: 3,
+    shakeInterval: 6,
+    carcassWeight: 2,
+    carcassYield: 3,
+    chargeSpeed: 10,
+    chargeTime: 0.9,
+    trampleKills: 2,
+  },
+  /** Looks just like a Glowcap, but it twitches. Whoever comes close is bitten. */
+  mimic: {
+    ...BASE,
+    name: 'Mimic Cap',
+    attack: 'bite',
+    hp: 45,
+    radius: 0.7,
+    speed: 3,
+    aggroRange: 6,
+    territory: 8,
+    // Its later bites; the first is an ambush whose only warning is the twitch of its cap.
+    windup: 0.6,
+    recover: 1.6,
+    shakeInterval: 3,
+    carcassWeight: 1,
+    carcassYield: 2,
+    biteVictims: 2,
+  },
+  /** A papery nest that sends out Spark Wasps until it is broken. Sparklings are safe from them. */
+  waspnest: {
+    ...NO_ATTACK,
+    name: 'Spark Wasp Nest',
+    hp: 120,
+    radius: 1.1,
+    aggroRange: 10,
+    carcassWeight: 2,
+    carcassYield: 3,
+  },
+  /** Small and quick; its sting takes anyone but a Sparkling. */
+  sparkwasp: {
+    ...BASE,
+    name: 'Spark Wasp',
+    attack: 'bite',
+    hp: 16,
+    radius: 0.45,
+    speed: 5,
+    aggroRange: 9,
+    territory: 14,
+    windup: 0.45,
+    recover: 1.2,
+    shakeInterval: 2.5,
+    carcassWeight: 0,
+    carcassYield: 0,
+    biteVictims: 1,
   },
 };
 

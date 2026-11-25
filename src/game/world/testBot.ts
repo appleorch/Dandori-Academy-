@@ -105,6 +105,11 @@ function throwKind(sim: Simulation, job: Entity): SproutKind | null {
     squadOf(sim, 'stone') > 0
   )
     return 'stone';
+  // Stonelings flip a Shellback and curl a Thornback; Sparklings are safe from Spark Wasps.
+  if ((foe?.kind === 'shellback' || foe?.kind === 'hedgehog') && squadOf(sim, 'stone') > 0)
+    return 'stone';
+  if ((foe?.kind === 'sparkwasp' || foe?.kind === 'waspnest') && squadOf(sim, 'spark') > 0)
+    return 'spark';
   let best: SproutKind | null = null;
   let bestCount = 0;
   for (const kind of SPROUT_KINDS) {
@@ -117,11 +122,24 @@ function throwKind(sim: Simulation, job: Entity): SproutKind | null {
   return best;
 }
 
+/**
+ * Whether the test player goes after a foe: anything the squad can hurt, and besides that a
+ * Pollen Moth (only throws reach it) and a Mimic Cap it has seen through (a throw unmasks it
+ * without a bite).
+ */
+function worthFighting(sim: Simulation, entity: Entity, enemy: Enemy): boolean {
+  if (enemy.hp <= 0) return false;
+  if (enemy.kind === 'moth' || enemy.kind === 'mimic') return true;
+  return isTargetable(sim, entity, enemy);
+}
+
 /** True while a live enemy's home is close enough that it would hunt workers at this spot. */
 function guarded(sim: Simulation, x: number, z: number): boolean {
   for (const [, enemy] of sim.enemies.entries()) {
     const spec = ENEMY_SPECS[enemy.kind];
     if (spec.attack === 'none') continue;
+    // A Burrow Grub cannot be fought until it surfaces: carry on and take the risk.
+    if (enemy.kind === 'grub') continue;
     // A boss hunts across its whole territory, and its hauls' paths cross it too.
     const reach = spec.boss
       ? spec.territory + spec.aggroRange
@@ -133,7 +151,8 @@ function guarded(sim: Simulation, x: number, z: number): boolean {
 
 function unfinished(sim: Simulation, job: Entity): boolean {
   const enemy = sim.enemies.get(job);
-  if (enemy) return enemy.hp > 0 && (isTargetable(sim, job, enemy) || ENEMY_SPECS[enemy.kind].boss);
+  if (enemy)
+    return enemy.hp > 0 && (worthFighting(sim, job, enemy) || ENEMY_SPECS[enemy.kind].boss);
   if (!sim.carryables.has(job)) return false;
   const needed = shortfall(sim, job);
   if (needed <= 0) return false;
@@ -298,7 +317,7 @@ function chooseJob(
   // standing in a hazard waits for the one kind that can go in after it.
   const foes = [...sim.enemies.entries()]
     .filter(([entity, enemy]) => {
-      if (!isTargetable(sim, entity, enemy)) return false;
+      if (!worthFighting(sim, entity, enemy)) return false;
       // Crystal is left for Stonelings while there are any to call on.
       if ((enemy.shape as GateSpawn | null)?.style === 'crystal' && fieldOf(sim, 'stone') > 0) {
         if (squadOf(sim, 'stone') === 0) return false;

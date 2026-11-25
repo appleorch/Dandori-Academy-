@@ -82,7 +82,7 @@ const FIELDS: FieldSpec[] = [
     width: 64,
     depth: 40,
     dayLength: 0,
-    pace: 3,
+    pace: 1,
     seed: 503,
     startingWorkers: 12,
     captain: { x: -25, z: 1 },
@@ -96,6 +96,7 @@ const FIELDS: FieldSpec[] = [
     ],
     pods: [],
     enemies: [
+      { x: 2, z: 0, kind: 'slug' },
       { x: -4, z: -9, kind: 'mossback' },
       { x: 10, z: 7, kind: 'mossback' },
       { x: 24, z: -3, kind: 'mossback' },

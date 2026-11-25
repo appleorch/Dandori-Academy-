@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import {
+  DoubleSide,
   RingGeometry,
   type Color,
   type Group,
@@ -14,6 +15,7 @@ import { useGameStore } from '../core/gameStore';
 import { PALETTE_SETS } from './palette';
 import { HARD } from '../core/difficulty';
 import { isShielded } from '../enemies/combat';
+import { flightHeight, isDormant, isOpen } from '../enemies/beasts';
 import { useOverlayLayer } from './overlay';
 import { TextSprite } from './TextSprite';
 import { gameTextures } from './textures';
@@ -732,6 +734,268 @@ function SnufferBody({
   );
 }
 
+// ---- The eight beasts with rules of their own (see enemies/beasts.ts) ----
+
+function MothBody({ r, wings }: { r: number; wings: React.Ref<Group> }) {
+  return (
+    <>
+      <mesh position={[0, 0, 0]} scale={[0.5, 0.5, 1.3]} castShadow>
+        <sphereGeometry args={[r * 0.5, 14, 10]} />
+        <meshStandardMaterial color="#d8c08a" roughness={0.9} />
+      </mesh>
+      <group ref={wings}>
+        {[-1, 1].map((side) => (
+          <mesh
+            key={side}
+            name={side < 0 ? 'left' : 'right'}
+            position={[side * r * 0.75, 0, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+          >
+            <circleGeometry args={[r * 0.75, 12]} />
+            <meshStandardMaterial color="#cdb47e" roughness={0.95} side={DoubleSide} />
+          </mesh>
+        ))}
+      </group>
+      <Eye x={-r * 0.14} y={r * 0.12} z={r * 0.6} size={r * 0.12} glow="#ff7a3a" />
+      <Eye x={r * 0.14} y={r * 0.12} z={r * 0.6} size={r * 0.12} glow="#ff7a3a" />
+    </>
+  );
+}
+
+function GrubBody({ r }: { r: number }) {
+  return (
+    <>
+      {[0, 1, 2].map((i) => (
+        <mesh key={i} position={[0, r * (0.45 - i * 0.05), -i * r * 0.55]} castShadow>
+          <sphereGeometry args={[r * (0.6 - i * 0.1), 14, 10]} />
+          <meshStandardMaterial color={i === 0 ? '#e8c9a8' : '#d9b48e'} roughness={0.7} />
+        </mesh>
+      ))}
+      <mesh position={[0, r * 0.45, r * 0.5]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[r * 0.22, r * 0.07, 6, 12]} />
+        <meshStandardMaterial color="#5a2a2a" roughness={0.6} />
+      </mesh>
+    </>
+  );
+}
+
+function ShellbackBody({ r, gait }: { r: number; gait: Gait }) {
+  return (
+    <>
+      {[-0.5, 0, 0.5].flatMap((along, i) =>
+        [-1, 1].map((side) => (
+          <Leg
+            key={`${along}:${side}`}
+            gait={gait}
+            x={side * r * 0.7}
+            z={along * r}
+            length={r * 0.45}
+            radius={r * 0.08}
+            color="#1e2a20"
+            offset={(i + (side > 0 ? 1 : 0)) * Math.PI}
+          />
+        )),
+      )}
+      {/* The underside, soft and pale: what a flip lays open. */}
+      <mesh position={[0, r * 0.32, 0]} scale={[1, 0.3, 1.25]}>
+        <sphereGeometry args={[r * 0.8, 16, 10]} />
+        <meshStandardMaterial color="#e6c86a" roughness={0.6} />
+      </mesh>
+      <mesh position={[0, r * 0.5, 0]} scale={[1, 0.55, 1.3]} castShadow>
+        <sphereGeometry args={[r * 0.85, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#2e5a3a" roughness={0.25} metalness={0.45} />
+      </mesh>
+      <Eye x={-r * 0.22} y={r * 0.45} z={r * 1.0} size={r * 0.11} glow="#ffd04a" />
+      <Eye x={r * 0.22} y={r * 0.45} z={r * 1.0} size={r * 0.11} glow="#ffd04a" />
+    </>
+  );
+}
+
+function SlugBody({ r, jaw }: { r: number; jaw: React.Ref<Group> }) {
+  return (
+    <>
+      <mesh position={[0, r * 0.35, 0]} scale={[0.8, 0.45, 1.5]} castShadow>
+        <sphereGeometry args={[r * 0.8, 18, 12]} />
+        <meshStandardMaterial color="#9a7ab8" roughness={0.3} />
+      </mesh>
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          position={[side * r * 0.2, r * 0.75, r * 0.9]}
+          rotation={[0.5, 0, side * 0.3]}
+        >
+          <cylinderGeometry args={[r * 0.04, r * 0.06, r * 0.5, 6]} />
+          <meshStandardMaterial color="#7a5a98" roughness={0.4} />
+        </mesh>
+      ))}
+      <group ref={jaw} position={[0, r * 0.25, r * 1.1]}>
+        <mesh scale={[1, 0.4, 0.6]}>
+          <sphereGeometry args={[r * 0.3, 12, 8]} />
+          <meshStandardMaterial color="#4a2a5a" roughness={0.5} />
+        </mesh>
+      </group>
+    </>
+  );
+}
+
+function NewtBody({ r, gait, jaw }: { r: number; gait: Gait; jaw: React.Ref<Group> }) {
+  return (
+    <>
+      {[-0.4, 0.4].flatMap((along, i) =>
+        [-1, 1].map((side) => (
+          <Leg
+            key={`${along}:${side}`}
+            gait={gait}
+            x={side * r * 0.55}
+            z={along * r}
+            length={r * 0.3}
+            radius={r * 0.08}
+            color="#2a5a52"
+            offset={(i + (side > 0 ? 1 : 0)) * Math.PI}
+          />
+        )),
+      )}
+      <mesh position={[0, r * 0.3, 0]} scale={[0.6, 0.4, 1.6]} castShadow>
+        <sphereGeometry args={[r * 0.75, 16, 10]} />
+        <meshStandardMaterial color="#3a8a78" roughness={0.3} />
+      </mesh>
+      <mesh position={[0, r * 0.25, -r * 1.3]} rotation={[Math.PI / 2, 0, 0]}>
+        <coneGeometry args={[r * 0.22, r * 1, 8]} />
+        <meshStandardMaterial color="#2f7466" roughness={0.3} />
+      </mesh>
+      <mesh position={[0, r * 0.52, 0]} scale={[0.1, 0.5, 1.3]}>
+        <sphereGeometry args={[r * 0.6, 8, 6]} />
+        <meshStandardMaterial color="#e86a3a" roughness={0.5} />
+      </mesh>
+      <group ref={jaw} position={[0, r * 0.32, r * 1.1]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[r * 0.25, r * 0.6, 8]} />
+          <meshStandardMaterial color="#357e6e" roughness={0.3} />
+        </mesh>
+      </group>
+      <Eye x={-r * 0.2} y={r * 0.5} z={r * 0.95} size={r * 0.1} glow="#fff07a" />
+      <Eye x={r * 0.2} y={r * 0.5} z={r * 0.95} size={r * 0.1} glow="#fff07a" />
+    </>
+  );
+}
+
+function HedgehogBody({ r, gait }: { r: number; gait: Gait }) {
+  const spines = useMemo(
+    () =>
+      Array.from({ length: 22 }, (_, i) => {
+        const a = (i / 22) * Math.PI * 2;
+        const up = 0.35 + (i % 3) * 0.25;
+        return { a, up };
+      }),
+    [],
+  );
+  return (
+    <>
+      {[-0.4, 0.4].flatMap((along, i) =>
+        [-1, 1].map((side) => (
+          <Leg
+            key={`${along}:${side}`}
+            gait={gait}
+            x={side * r * 0.5}
+            z={along * r}
+            length={r * 0.3}
+            radius={r * 0.08}
+            color="#5a4030"
+            offset={(i + (side > 0 ? 1 : 0)) * Math.PI}
+          />
+        )),
+      )}
+      <mesh position={[0, r * 0.55, 0]} castShadow>
+        <sphereGeometry args={[r * 0.7, 16, 12]} />
+        <meshStandardMaterial color="#7a5a40" roughness={0.8} />
+      </mesh>
+      {spines.map(({ a, up }, i) => (
+        <mesh
+          key={i}
+          position={[
+            Math.sin(a) * r * 0.55,
+            r * (0.55 + up * 0.5),
+            Math.cos(a) * r * 0.55 - r * 0.1,
+          ]}
+          rotation={[Math.cos(a) * (1.4 - up), 0, -Math.sin(a) * (1.4 - up)]}
+        >
+          <coneGeometry args={[r * 0.06, r * 0.55, 5]} />
+          <meshStandardMaterial color="#e8d8b0" roughness={0.6} />
+        </mesh>
+      ))}
+      <mesh position={[0, r * 0.45, r * 0.7]} rotation={[Math.PI / 2, 0, 0]}>
+        <coneGeometry args={[r * 0.22, r * 0.45, 8]} />
+        <meshStandardMaterial color="#c8a888" roughness={0.6} />
+      </mesh>
+      <Eye x={-r * 0.16} y={r * 0.6} z={r * 0.68} size={r * 0.08} glow="#2a1d14" />
+      <Eye x={r * 0.16} y={r * 0.6} z={r * 0.68} size={r * 0.08} glow="#2a1d14" />
+    </>
+  );
+}
+
+function MimicBody({ r, jaw }: { r: number; jaw: React.Ref<Group> }) {
+  return (
+    <>
+      <mesh position={[0, r * 0.4, 0]}>
+        <cylinderGeometry args={[r * 0.2, r * 0.28, r * 0.8, 10]} />
+        <meshStandardMaterial color="#efe4c8" roughness={0.7} />
+      </mesh>
+      <group ref={jaw} position={[0, r * 0.8, 0]}>
+        {/* The tell: the cap glows a touch redder than a real Glowcap's. */}
+        <mesh scale={[1, 0.55, 1]} castShadow>
+          <sphereGeometry args={[r * 0.7, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial
+            color="#9adf6a"
+            emissive="#c8a040"
+            emissiveIntensity={0.7}
+            roughness={0.4}
+          />
+        </mesh>
+      </group>
+    </>
+  );
+}
+
+function WaspNestBody({ r }: { r: number }) {
+  return (
+    <>
+      {[0, 1, 2, 3].map((i) => (
+        <mesh key={i} position={[0, r * (0.4 + i * 0.4), 0]} castShadow>
+          <sphereGeometry args={[r * (0.75 - Math.abs(i - 1.2) * 0.15), 14, 8]} />
+          <meshStandardMaterial color={i % 2 ? '#cbb89a' : '#b8a482'} roughness={1} />
+        </mesh>
+      ))}
+      <mesh position={[0, r * 0.7, r * 0.62]}>
+        <circleGeometry args={[r * 0.2, 10]} />
+        <meshBasicMaterial color="#2a1d14" />
+      </mesh>
+    </>
+  );
+}
+
+function SparkWaspBody({ r, wings }: { r: number; wings: React.Ref<Group> }) {
+  return (
+    <>
+      <mesh scale={[0.6, 0.6, 1.4]} castShadow>
+        <sphereGeometry args={[r * 0.5, 10, 8]} />
+        <meshStandardMaterial color="#f0c83a" emissive="#ffb000" emissiveIntensity={0.4} />
+      </mesh>
+      <mesh position={[0, 0, -r * 0.35]} scale={[0.62, 0.62, 0.3]}>
+        <sphereGeometry args={[r * 0.5, 10, 8]} />
+        <meshStandardMaterial color="#2a1d14" />
+      </mesh>
+      <group ref={wings}>
+        {[-1, 1].map((side) => (
+          <mesh key={side} position={[side * r * 0.4, r * 0.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[r * 0.38, 8]} />
+            <meshBasicMaterial color="#e8f4ff" transparent opacity={0.6} side={DoubleSide} />
+          </mesh>
+        ))}
+      </group>
+    </>
+  );
+}
+
 interface EnemyMeshProps {
   sim: Simulation;
   entity: Entity;
@@ -750,6 +1014,15 @@ const BAR_HEIGHT: Record<EnemyKind, number> = {
   bellwether: 2.6,
   skitter: 1.3,
   snuffer: 2.4,
+  moth: 2.6,
+  grub: 1.6,
+  shellback: 1.8,
+  slug: 1.6,
+  newt: 1.4,
+  hedgehog: 1.6,
+  mimic: 1.4,
+  waspnest: 2.6,
+  sparkwasp: 1.6,
 };
 
 /**
@@ -775,6 +1048,8 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
   const danger = useGameStore((state) => PALETTE_SETS[state.settings.palette].hazards.danger);
   const gait = useMemo<Gait>(() => ({ phase: 0, stride: 0 }), []);
   const jaw = useRef<Group>(null);
+  const wings = useRef<Group>(null);
+  const ripple = useRef<Mesh>(null);
   const biteZone = useRef<Mesh>(null);
   const aggroRing = useRef<Mesh>(null);
   const alertIcon = useRef<Group>(null);
@@ -845,6 +1120,40 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
       const withered = enemy.hp <= 0;
       model.scale.setScalar(withered ? 0.45 : 1);
       model.rotation.z = withered ? 0.6 : 0;
+    }
+    // Beasts with rules of their own show their state.
+    const lift = flightHeight(enemy);
+    if (lift > 0) {
+      model.position.y += lift + Math.sin(time * 3 + entity) * 0.12;
+      if (wings.current) {
+        const flap = Math.sin(time * (enemy.kind === 'sparkwasp' ? 60 : 14)) * 0.7;
+        wings.current.children.forEach((wing, i) => (wing.rotation.y = (i === 0 ? 1 : -1) * flap));
+      }
+    }
+    if (enemy.kind === 'grub') {
+      // Underground: only a ripple of earth shows, quickening as it winds up to erupt.
+      const under = !isOpen(enemy);
+      model.visible = !under;
+      if (ripple.current) {
+        ripple.current.visible = under;
+        const pulse = windingUp
+          ? 1 + Math.abs(Math.sin(time * 14)) * 0.5
+          : 1 + Math.sin(time * 4) * 0.1;
+        ripple.current.scale.setScalar(pulse);
+      }
+    }
+    if (enemy.kind === 'shellback' && isOpen(enemy)) {
+      // On its back, legs waving.
+      model.rotation.z = Math.PI;
+      model.position.y = r * 1.1 + Math.sin(time * 6) * 0.04;
+    }
+    if (enemy.kind === 'hedgehog' && isOpen(enemy)) model.scale.set(1.05, 0.8, 0.8);
+    if (isDormant(enemy)) {
+      // Asleep, or keeping still in disguise: slow breathing, and for a mimic now and then a twitch.
+      model.rotation.x = 0;
+      model.scale.y *= 1 + Math.sin(time * 1.2) * 0.04;
+      if (enemy.kind === 'mimic' && Math.sin(time * 0.9 + entity) > 0.97)
+        model.rotation.z = Math.sin(time * 40) * 0.12;
     }
     if (belly.current) belly.current.emissiveIntensity = winded ? 1 + Math.sin(time * 8) * 0.5 : 0;
     if (shield.current) {
@@ -953,6 +1262,15 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
         {enemy.kind === 'bellwether' && <BellwetherBody r={r} bell={bell} gait={gait} />}
         {enemy.kind === 'skitter' && <SkitterBody r={r} gait={gait} jaw={jaw} />}
         {enemy.kind === 'snuffer' && <SnufferBody r={r} gait={gait} belly={belly} />}
+        {enemy.kind === 'moth' && <MothBody r={r} wings={wings} />}
+        {enemy.kind === 'grub' && <GrubBody r={r} />}
+        {enemy.kind === 'shellback' && <ShellbackBody r={r} gait={gait} />}
+        {enemy.kind === 'slug' && <SlugBody r={r} jaw={jaw} />}
+        {enemy.kind === 'newt' && <NewtBody r={r} gait={gait} jaw={jaw} />}
+        {enemy.kind === 'hedgehog' && <HedgehogBody r={r} gait={gait} />}
+        {enemy.kind === 'mimic' && <MimicBody r={r} jaw={jaw} />}
+        {enemy.kind === 'waspnest' && <WaspNestBody r={r} />}
+        {enemy.kind === 'sparkwasp' && <SparkWaspBody r={r} wings={wings} />}
         {enemy.shape &&
           ((enemy.shape as GateSpawn).style === 'crystal' ? (
             <CrystalGateBody box={enemy.shape} />
@@ -968,6 +1286,12 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
           />
         )}
       </group>
+      {enemy.kind === 'grub' && (
+        <mesh ref={ripple} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
+          <ringGeometry args={[r * 0.5, r * 1.1, 20]} />
+          <meshStandardMaterial color="#6a4a2a" roughness={1} transparent opacity={0.8} />
+        </mesh>
+      )}
       {enemy.kind === 'lanternroot' && (
         <mesh ref={shield} position={[0, r * 1.2, 0]}>
           <icosahedronGeometry args={[r * 1.35, 2]} />

@@ -8,6 +8,7 @@ import { approachPoint, damageEnemy, enemyReach } from '../enemies/combat';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import { assignTask, findTask, killWorker, latchOn, setIdle } from './squad';
 import { SPROUTS, STAGE_SPEED, stageOf } from './sprouts';
+import { canBeHit, onImpact } from '../enemies/beasts';
 import type { NavGrid } from '../navigation/NavGrid';
 
 const LANDING_SCAN_RANGE = 2.5;
@@ -75,7 +76,7 @@ function land(sim: Simulation, entity: Entity, worker: Worker, transform: Transf
   transform.y = 0;
   for (const [enemyEntity, enemy] of sim.enemies.entries()) {
     const at = sim.transforms.require(enemyEntity);
-    if (enemy.hp > 0 && enemyReach(enemy, at, transform.x, transform.z) <= 1) {
+    if (enemy.hp > 0 && canBeHit(enemy) && enemyReach(enemy, at, transform.x, transform.z) <= 1) {
       damageEnemy(
         sim,
         enemyEntity,
@@ -83,6 +84,7 @@ function land(sim: Simulation, entity: Entity, worker: Worker, transform: Transf
         WORKER.impactDamage * SPROUTS[worker.kind].impact,
         worker.kind,
       );
+      onImpact(sim, enemy, at, worker.kind);
       latchOn(sim, entity, worker, enemyEntity, enemy);
       return;
     }

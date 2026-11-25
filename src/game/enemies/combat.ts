@@ -2,6 +2,7 @@ import type { Entity } from '../core/ecs';
 import type { Enemy, Transform } from '../simulation/components';
 import type { Simulation } from '../simulation/Simulation';
 import { BEACON } from '../core/config';
+import { beastDamage, walkersCanReach } from './beasts';
 import { ENEMY_SPECS } from './enemyKinds';
 import type { GateSpawn } from '../world/levelTypes';
 import { SPROUTS, type SproutKind } from '../workers/sprouts';
@@ -32,6 +33,8 @@ export function isShielded(sim: Simulation, entity: Entity, enemy: Enemy): boole
 /** Fraction of damage that gets through right now: armour outside recovery, nothing while shielded. */
 export function damageTaken(sim: Simulation, entity: Entity, enemy: Enemy): number {
   if (isShielded(sim, entity, enemy)) return 0;
+  const own = beastDamage(enemy);
+  if (own !== undefined) return own;
   return enemy.state === 'recover' ? 1 : ENEMY_SPECS[enemy.kind].armour;
 }
 
@@ -44,7 +47,7 @@ export function inBeaconLight(sim: Simulation, x: number, z: number): boolean {
 
 /** Whether workers should bother attacking it: alive, and not fully shielded. */
 export function isTargetable(sim: Simulation, entity: Entity, enemy: Enemy): boolean {
-  return enemy.hp > 0 && damageTaken(sim, entity, enemy) > 0;
+  return enemy.hp > 0 && walkersCanReach(enemy) && damageTaken(sim, entity, enemy) > 0;
 }
 
 /**
