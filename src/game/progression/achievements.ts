@@ -10,6 +10,7 @@ import {
   type SaveData,
 } from '../save/saveManager';
 import { recoveredRelics, RELICS } from '../story/relics';
+import { RELIC_SETS, setProgress } from '../story/relicSets';
 import { CHALLENGE_LEVELS, LEVELS, MAIN_LEVELS } from '../world/level';
 
 export interface Achievement {
@@ -92,6 +93,216 @@ function feat(
   test: (day: DayRecord) => boolean,
 ): Achievement {
   return { id, name, description, earned: (_save, day) => day !== null && test(day) };
+}
+
+/** Days of the daily challenge played, told by the treasure brought home on them. */
+function dailies(save: SaveData): number {
+  const days = new Set<string>();
+  for (const key of save.treasuresCollected) {
+    const match = /^hunt-daily-(\d{4}-\d{2}-\d{2}):/.exec(key);
+    if (match) days.add(match[1]);
+  }
+  return days.size;
+}
+
+const isDailyDay = (day: DayRecord) => day.levelId.startsWith('hunt-daily-');
+const storyDay = (day: DayRecord) => day.mode === 'campaign';
+const partsHome = (save: SaveData) => Object.keys(save.campaign.parts).length;
+
+/** The achievements added in 0.40.0 (built late, as they use the helpers above). */
+function MORE_ACHIEVEMENTS(): Achievement[] {
+  const found = (save: SaveData) => recoveredRelics(save.treasuresCollected);
+  const setDone = (id: string) => (save: SaveData) => {
+    const relicSet = RELIC_SETS.find((candidate) => candidate.id === id);
+    return relicSet ? setProgress(relicSet, found(save)) : 0;
+  };
+  return [
+    // The daily challenge.
+    counter('daily-1', 'Morning Round', 'Play the daily challenge.', 1, dailies),
+    counter('daily-7', 'A Week of Mornings', 'Play the daily challenge on seven days.', 7, dailies),
+    counter('daily-30', 'Groundskeeper', 'Play the daily challenge on thirty days.', 30, dailies),
+    feat(
+      'daily-gold',
+      'Golden Morning',
+      'Earn Gold or better on a daily challenge.',
+      (d) => isDailyDay(d) && d.rank !== null && rankValue(d.rank) >= rankValue('Gold'),
+    ),
+    feat(
+      'daily-platinum',
+      'Before Breakfast',
+      'Earn Platinum or better on a daily challenge.',
+      (d) => isDailyDay(d) && d.rank !== null && rankValue(d.rank) >= rankValue('Platinum'),
+    ),
+    feat(
+      'daily-perfect',
+      'Spotless',
+      'Finish a daily challenge without losing anyone.',
+      (d) => isDailyDay(d) && cleared(d) && d.workersLost === 0,
+    ),
+    // Escort.
+    counter('escort-1', 'Heavy Lifting', 'Earn a medal on an Escort field.', 1, (save) =>
+      medalsIn(save, 'escort', 'Bronze'),
+    ),
+    counter('escort-6', 'Porter’s Guild', 'Earn a medal on six Escort fields.', 6, (save) =>
+      medalsIn(save, 'escort', 'Bronze'),
+    ),
+    counter(
+      'escort-12',
+      'Every Stone Home',
+      'Earn a medal on all twelve Escort fields.',
+      12,
+      (save) => medalsIn(save, 'escort', 'Bronze'),
+    ),
+    counter(
+      'escort-gold',
+      'Lodestone Bearer',
+      'Earn Gold or better on six Escort fields.',
+      6,
+      (save) => medalsIn(save, 'escort', 'Gold'),
+    ),
+    counter('escort-diamond', 'Unshakeable', 'Earn Diamond on an Escort field.', 1, (save) =>
+      medalsIn(save, 'escort', 'Diamond'),
+    ),
+    feat(
+      'escort-clean',
+      'Not a Scratch',
+      'Bring an Escort relic home without losing anyone.',
+      (d) => d.mode === 'escort' && cleared(d) && d.workersLost === 0,
+    ),
+    // Relics and their sets.
+    counter(
+      'relics-50',
+      'Cabinet of Curiosities',
+      'Recover fifty relics.',
+      50,
+      (s) => found(s).size,
+    ),
+    counter('relics-100', 'Museum Piece', 'Recover a hundred relics.', 100, (s) => found(s).size),
+    counter(
+      'relics-150',
+      'The Whole Collection',
+      'Recover all 150 relics.',
+      150,
+      (s) => found(s).size,
+    ),
+    ...RELIC_SETS.map((relicSet) =>
+      counter(
+        `set-${relicSet.id}`,
+        relicSet.name,
+        `Complete the ${relicSet.name} relic set.`,
+        8,
+        setDone(relicSet.id),
+      ),
+    ),
+    // The story's newer ways.
+    counter('parts-10', 'Ten Cogs', 'Bring ten Great Clock parts home.', 10, partsHome),
+    counter('parts-25', 'Half a Clock', 'Bring twenty-five Great Clock parts home.', 25, partsHome),
+    feat(
+      'story-hard',
+      'Iron Will',
+      'Bring a Clock part home in a story on Hard.',
+      (d) =>
+        storyDay(d) &&
+        d.campaign?.difficulty === 'hard' &&
+        Object.keys(d.campaign.parts).length > 0,
+    ),
+    feat(
+      'story-relaxed',
+      'Taking It Easy',
+      'Play a day of a Relaxed story.',
+      (d) => storyDay(d) && d.campaign?.difficulty === 'relaxed',
+    ),
+    feat(
+      'lawn-open',
+      'Out of the Lawn',
+      'Finish the guided morning.',
+      (d) => storyDay(d) && d.campaign?.tutorial === 'done',
+    ),
+    counter(
+      'secrets',
+      'Behind the Cracks',
+      'Find every section’s secret glade relic.',
+      4,
+      (save) =>
+        ['quad', 'orchard', 'foundry', 'observatory'].filter((id) =>
+          found(save).has(`secret-${id}`),
+        ).length,
+    ),
+    feat(
+      'no-night-losses',
+      'Safe and Sound',
+      'End a story day after the first with nobody left out at sunset.',
+      (d) =>
+        storyDay(d) &&
+        (d.campaign?.day ?? 0) > 1 &&
+        d.campaign?.totals.leftBehind === 0 &&
+        d.workersAlive > 0,
+    ),
+    // Battles.
+    counter('battles-25', 'Seasoned Rival', 'Win twenty-five battles.', 25, (save) =>
+      battlesWon(save),
+    ),
+    feat(
+      'battle-flawless',
+      'Flawless Victory',
+      'Win a battle without losing a Sproutling.',
+      (d) => d.battle === 'won' && d.workersLost === 0,
+    ),
+    // Challenges, all of them.
+    counter(
+      'every-challenge',
+      'Jack of All Trades',
+      'Earn a medal in every challenge.',
+      CHALLENGE_IDS.length,
+      (save) => CHALLENGE_IDS.filter((mode) => medalsIn(save, mode, 'Bronze') > 0).length,
+    ),
+    counter(
+      'gold-50',
+      'Fifty Golds',
+      'Earn Gold or better on fifty challenge fields.',
+      50,
+      (save) => lessonsAtLeast(save, 'Gold'),
+    ),
+    feat(
+      'long-chain',
+      'Conveyor Belt',
+      'Bring twenty treasures home in one day.',
+      (d) => d.treasureIds.length >= 20,
+    ),
+    feat(
+      'no-hits',
+      'Untouchable Escort',
+      'Bring an Escort relic home with the Warden never hit.',
+      (d) => d.mode === 'escort' && cleared(d) && d.captainHits === 0,
+    ),
+    feat(
+      'buzzer-beater',
+      'Buzzer Beater',
+      'Finish a challenge with less than three seconds left.',
+      (d) => d.rank !== null && cleared(d) && d.timeLeft > 0 && d.timeLeft < 3,
+    ),
+    // A few kept quiet until earned.
+    {
+      ...feat(
+        'lonely',
+        'Party of One',
+        'Finish a challenge with exactly one Sproutling left.',
+        (d) => d.rank !== null && d.workersAlive === 1,
+      ),
+      secret: true,
+    },
+    {
+      ...feat(
+        'hoarder',
+        'Hoarder',
+        'Bring home thirty treasures in a single day.',
+        (d) => d.treasureIds.length >= 30,
+      ),
+      secret: true,
+    },
+    secret('photographer', 'Say Cheese', 'Save a photo in photo mode.'),
+    secret('replay-fan', 'Instant Replay', 'Watch a replay to the end.'),
+  ];
 }
 
 /** Earned by something other than a finished day; see `grantAchievement`. */
@@ -577,6 +788,9 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   secret('back-room', 'Five Knocks', 'Find where the Sproutlings go on Thursdays.'),
   secret('card-shark', 'Card Shark', 'Win every chip at the table in the back room.'),
   secret('royal-flush', 'Lucky Ember', 'Win a hand with a straight flush.'),
+  // 0.40.0: forty more, over the daily challenge, Escort, relic sets, the story's new ways and
+  // playing together.
+  ...MORE_ACHIEVEMENTS(),
 ];
 
 export interface UnlockResult {

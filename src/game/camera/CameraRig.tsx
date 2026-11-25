@@ -49,6 +49,8 @@ export function CameraRig({ sim, input, fx }: CameraRigProps): null {
 
   useFrame(({ camera, clock }, delta) => {
     const { level } = sim;
+    // Photo mode has a camera of its own (PhotoCamera).
+    if (useGameStore.getState().photo) return;
     if (useGameStore.getState().briefing) {
       const span = Math.max(level.width, level.depth);
       const angle = clock.elapsedTime * 0.08;

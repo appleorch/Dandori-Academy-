@@ -24,13 +24,14 @@ export const MODE_IDS = [
   'mission',
   'dandori',
   'trial',
+  'escort',
   'marble',
   'bingo',
   'duel',
 ] as const;
 export type ModeId = (typeof MODE_IDS)[number];
 
-export const CHALLENGE_IDS = ['growing', 'hunt', 'mission', 'dandori', 'trial'] as const;
+export const CHALLENGE_IDS = ['growing', 'hunt', 'mission', 'dandori', 'trial', 'escort'] as const;
 export type ChallengeId = (typeof CHALLENGE_IDS)[number];
 
 export const BATTLE_IDS = ['marble', 'bingo', 'duel'] as const;
@@ -161,6 +162,19 @@ export const MODES: Record<ModeId, ModeSpec> = {
     kind: 'challenge',
     endsWhen: 'shards',
     growth: false,
+  },
+  escort: {
+    id: 'escort',
+    name: 'Escort',
+    summary: 'Bring one slow Lodestone relic home through ambush after ambush.',
+    rules: [
+      'One relic, a crawling Lodestone, lies at the far end. It creeps away from anyone too few to lift it.',
+      'Beasts wait along the way, and more arrive as the day goes on, nearer home each time.',
+      'Score: the relic’s treasure, plus 10 for every Sproutling alive at the end, plus 1 for every 2 seconds left on the clock. The day ends when the relic is home.',
+    ],
+    kind: 'challenge',
+    endsWhen: 'shards',
+    growth: true,
   },
   marble: {
     id: 'marble',
@@ -297,7 +311,8 @@ export function challengePar(mode: ChallengeId, level: LevelDefinition): Par {
       }
       return { parScore: Math.ceil(possible * GROWING_PLATINUM_SHARE), diamondScore: possible };
     }
-    case 'hunt': {
+    case 'hunt':
+    case 'escort': {
       const base = treasure + sproutlingsPossible(level) * HUNT_POINTS_PER_SPROUTLING;
       return {
         parScore: base + Math.floor((day - platinum) / HUNT_SECONDS_PER_POINT),
@@ -402,6 +417,7 @@ export function scoreChallenge(
       ];
       break;
     case 'hunt':
+    case 'escort':
       rows = [
         { label: 'Treasure', value: facts.treasureValue - glowValue },
         ...glowcapRow(glowValue),
@@ -546,6 +562,7 @@ export function medalGate(mode: ChallengeId, level?: LevelDefinition): string | 
     case 'trial':
       return 'Platinum and Diamond need everything collected: every Sunshard, every beast and its carcass.';
     case 'hunt':
+    case 'escort':
     case 'growing':
       return null;
   }

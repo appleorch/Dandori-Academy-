@@ -3,16 +3,11 @@ import { useMemo, useRef, useState } from 'react';
 import { ACESFilmicToneMapping, type Group } from 'three';
 import { useGameStore } from '../game/core/gameStore';
 import { RelicModel } from '../game/rendering/models/RelicModel';
-import {
-  BOSS_RELICS,
-  recoveredRelics,
-  relicLocations,
-  RELICS as ORDINARY_RELICS,
-  type Relic,
-} from '../game/story/relics';
+import { allRelics, recoveredRelics, relicLocations, type Relic } from '../game/story/relics';
+import { RELIC_SETS, setProgress } from '../game/story/relicSets';
 
-/** Every relic in the cabinet: the ordinary ones, then each boss's own. */
-const RELICS: readonly Relic[] = [...ORDINARY_RELICS, ...Object.values(BOSS_RELICS)];
+/** Every relic in the cabinet: ordinary finds, bosses', the Clock's parts, secrets, the sets. */
+const RELICS: readonly Relic[] = allRelics();
 import { MenuNav } from './MenuNav';
 import { SproutlingGuide } from './SquadRoster';
 import { ENEMY_SPECS } from '../game/enemies/enemyKinds';
@@ -82,6 +77,28 @@ export function FieldGuide() {
           The Relics of Harmony: lost things of the founders, each with a Sunshard set into it.
           {` ${found.size} of ${RELICS.length} recovered.`}
         </p>
+        <section className="sprout-guide relic-sets">
+          <h2>Relic sets</h2>
+          <ul className="roster">
+            {RELIC_SETS.map((relicSet) => {
+              const got = setProgress(relicSet, found);
+              return (
+                <li
+                  key={relicSet.id}
+                  className={got === relicSet.relics.length ? 'home' : undefined}
+                >
+                  <strong>
+                    {relicSet.name} · {got} of {relicSet.relics.length}
+                  </strong>
+                  <small>
+                    {got === relicSet.relics.length ? 'Complete! ' : 'Complete it for '}
+                    {relicSet.bonus}
+                  </small>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
         <SproutlingGuide />
         <section className="sprout-guide">
           <h2>Beasts</h2>
@@ -122,7 +139,11 @@ export function FieldGuide() {
               <p>
                 {isFound
                   ? chosen.description
-                  : `Somewhere in ${places.length > 0 ? places[0] : 'a lesson boss or mound'}.`}
+                  : chosen.id.startsWith('set-')
+                    ? 'Turns up in the Escort fields and the daily challenge’s fields.'
+                    : chosen.id.startsWith('part-') || chosen.id.startsWith('secret-')
+                      ? 'Somewhere in the story’s grounds.'
+                      : `Somewhere in ${places.length > 0 ? places[0] : 'a lesson boss or mound'}.`}
               </p>
               {isFound && places.length > 0 && <small>Found in: {places.join(', ')}</small>}
             </figcaption>

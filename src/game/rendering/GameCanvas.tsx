@@ -29,6 +29,7 @@ import { GameLoop } from './GameLoop';
 import { HazardMeshes } from './HazardMeshes';
 import { Minimap } from './Minimap';
 import { SafeRings } from './SafeRings';
+import { PhotoCamera, PhotoShot } from './PhotoMode';
 import { ParticleField } from './ParticleField';
 import { OverlayInMainPass } from './OverlayInMainPass';
 import { PostFx } from './PostFx';
@@ -123,6 +124,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
   const fastToggle = useGameStore((state) => state.settings.fastToggle);
   const aimAssist = useGameStore((state) => state.settings.aimAssist);
   const reducedMotion = useGameStore((state) => state.settings.reducedMotion);
+  const photo = useGameStore((state) => state.photo !== null);
 
   useEffect(() => {
     if (!ready) return;
@@ -206,6 +208,11 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         return;
       }
       const pauseKey = event.code === RESERVED_KEY || keys.pause.includes(event.code);
+      // Photo mode: the pause key goes back to the pause menu.
+      if (pauseKey && store.photo) {
+        store.setPhoto(null);
+        return;
+      }
       if (!pauseKey || store.briefing) return;
       if (store.paused) store.resume();
       else store.pause();
@@ -290,6 +297,8 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
         {sim && (
           <group key={`day-${sim.level.id}`}>
             <CameraRig sim={sim} input={input} fx={fx} />
+            {photo && <PhotoCamera sim={sim} />}
+            <PhotoShot />
             <SkyLight sim={sim} shadowMapSize={quality.shadowMapSize} />
             <Atmosphere sim={sim} />
             <Weather sim={sim} />

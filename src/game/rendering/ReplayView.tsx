@@ -70,6 +70,7 @@ function ReplayDriver({
     }
     if (run.expedition.active !== was) onSim(run.expedition.active);
     onTick(run.step);
+    if (run.done) useGameStore.getState().grant('replay-fan');
   }, -1);
   return null;
 }

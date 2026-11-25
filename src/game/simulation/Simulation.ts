@@ -278,6 +278,8 @@ export class Simulation {
   /** Story only: sprays in hand today, and seconds left of an Emberbrew. */
   readonly items = { emberbrew: 0, stillwater: 0 };
   brewTimer = 0;
+  /** Escort: how many of the level's ambushes have arrived. */
+  private ambushed = 0;
   /** Local co-op: whether both Wardens are played at once, and the one not being stepped. */
   readonly coop: boolean;
   private partner: WardenSide | null = null;
@@ -590,6 +592,18 @@ export class Simulation {
         dt,
       );
       this.swapSides();
+    }
+    // Escort: the day's ambushes arrive on time.
+    const ambushes = this.level.ambushes;
+    while (
+      ambushes &&
+      this.ambushed < ambushes.length &&
+      this.elapsed >= ambushes[this.ambushed].at
+    ) {
+      const ambush = ambushes[this.ambushed++];
+      const at = this.nav.nearestWalkable(ambush.x, ambush.z);
+      spawnEnemy(this, at.x, at.z, ambush.kind, { drop: 0 });
+      this.emit('spawn', at.x, at.z);
     }
     updateEnemies(this, dt);
     updateDrips(this);

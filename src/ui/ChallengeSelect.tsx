@@ -13,6 +13,8 @@ import { formatPoints, formatTime } from './format';
 import { challengeFieldsOf, challengeLock, hasMedal } from './lessonAccess';
 import { MenuNav } from './MenuNav';
 import { CoopSwitch } from './CoopSwitch';
+import { dailyId, dailyKey, ensureDaily } from '../game/world/daily';
+import { bestRank } from '../game/save/saveManager';
 import { t } from '../i18n/i18n';
 import { levelBrief, levelName, modeName, modeRules, modeSummary } from '../i18n/gameText';
 
@@ -36,6 +38,47 @@ function paceLine(mode: ChallengeId, level: ReturnType<typeof challengeFieldsOf>
  * challenge's own rule. The first few are open from the start; each one after opens with a
  * medal on the one before.
  */
+/**
+ * The daily challenge: a Treasure Hunt field laid out fresh each day (by the UTC date), the
+ * same for everyone, with a board of its own. It is made and played through by the test player
+ * on first opening, which takes a moment.
+ */
+function DailyCard() {
+  const startDay = useGameStore((state) => state.startDay);
+  const save = useGameStore((state) => state.save);
+  const [state, setState] = useState<'idle' | 'making' | 'failed'>('idle');
+  const key = dailyKey(new Date());
+  const best = bestRank(save, dailyId(key));
+  return (
+    <section className="daily-card">
+      <div>
+        <p className="eyebrow">{t('challenges.daily.eyebrow', { date: key })}</p>
+        <strong>{t('challenges.daily.title')}</strong>
+        <p className="note">
+          {best ? t('challenges.daily.best', { rank: best }) : t('challenges.daily.blurb')}
+        </p>
+      </div>
+      <button
+        type="button"
+        disabled={state === 'making'}
+        onClick={() => {
+          setState('making');
+          void ensureDaily(key).then((level) => {
+            if (level) startDay(level.id, 'hunt');
+            else setState('failed');
+          });
+        }}
+      >
+        {state === 'making'
+          ? t('challenges.daily.making')
+          : state === 'failed'
+            ? t('challenges.daily.failed')
+            : t('challenges.daily.play')}
+      </button>
+    </section>
+  );
+}
+
 export function ChallengeSelect() {
   const save = useGameStore((state) => state.save);
   const startDay = useGameStore((state) => state.startDay);
@@ -62,6 +105,7 @@ export function ChallengeSelect() {
             </button>
           ))}
         </nav>
+        <DailyCard />
         <CoopSwitch />
         <section className="mode-rules">
           <p className="mode-summary">{modeSummary(mode)}</p>

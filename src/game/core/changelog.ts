@@ -8,6 +8,18 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.40.0',
+    date: '2026-11-25',
+    changes: [
+      'The daily challenge: a new Treasure Hunt field every day, the same for every Warden, with its own board.',
+      'A new challenge, Escort: bring one slow, crawling Lodestone home through ambush after ambush. Twelve fields.',
+      'The Field Guide now holds 150 relics, with eight themed sets to complete in the Escort fields and the daily challenge. Each completed set earns an outfit.',
+      'Twenty new outfits, with new hats and capes for the Warden.',
+      'Photo mode, from the pause menu: a free camera, filters, depth of field, and cheering Sproutlings. Save the picture.',
+      'Forty-one new achievements, a few of them secret.',
+    ],
+  },
+  {
     version: '0.39.0',
     date: '2026-11-25',
     changes: [

@@ -114,6 +114,8 @@ export function sproutlingsPossible(level: LevelDefinition): number {
   }
   for (let i = 0; i < (level.roots ?? []).length; i++)
     total += ENEMY_SPECS.lanternroot.carcassYield;
+  // Escort's ambushes are beasts too, carried home like any other.
+  for (const ambush of level.ambushes ?? []) total += ENEMY_SPECS[ambush.kind].carcassYield;
   return total;
 }
 
@@ -183,7 +185,15 @@ const BY_ID = new Map<string, LevelDefinition>(
 
 /** A lesson or challenge field by id, or undefined. */
 export function levelById(id: string): LevelDefinition | undefined {
-  return BY_ID.get(id);
+  return BY_ID.get(id) ?? MADE.get(id);
+}
+
+/** Fields made while the game runs (the daily challenge), once made and checked. */
+const MADE = new Map<string, LevelDefinition>();
+
+/** Makes a generated field findable by its id, like any other (see world/daily.ts). */
+export function registerLevel(level: LevelDefinition): void {
+  if (!BY_ID.has(level.id)) MADE.set(level.id, level);
 }
 
 /** A lesson as played on the given difficulty: Hard has a shorter day and its own par. */

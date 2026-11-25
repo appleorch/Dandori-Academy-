@@ -106,6 +106,26 @@ export function screenFor(mode: ModeId): MenuScreen {
 }
 export type GamePhase = MenuScreen | 'story' | 'playing' | 'results' | 'replay';
 
+export type PhotoFilter = 'none' | 'warm' | 'cool' | 'mono' | 'sepia' | 'vivid';
+
+export interface PhotoSettings {
+  filter: PhotoFilter;
+  /** A shallow depth of field: the top and bottom of the picture blurred, as a tilt-shift. */
+  depth: boolean;
+  /** Sproutlings hop and cheer for the camera. */
+  cheer: boolean;
+}
+
+/** The CSS filter for each photo filter: used on screen and baked into the saved picture. */
+export const PHOTO_FILTERS: Record<PhotoFilter, string> = {
+  none: 'none',
+  warm: 'sepia(0.25) saturate(1.25) hue-rotate(-8deg)',
+  cool: 'saturate(1.1) hue-rotate(18deg) brightness(1.04)',
+  mono: 'grayscale(1) contrast(1.1)',
+  sepia: 'sepia(0.85) contrast(1.05)',
+  vivid: 'saturate(1.6) contrast(1.08)',
+};
+
 /** Low-frequency copy of simulation state for the HUD. */
 export interface HudSnapshot {
   timeLeft: number;
@@ -259,6 +279,12 @@ interface GameStore {
   startOnline: (transport: Transport, host: boolean, levelId: string, mode: BattleId) => void;
   endOnline: () => void;
   setNetStatus: (status: string | null) => void;
+  /** Photo mode, opened from pause: the camera is free, the HUD hidden, the day stopped. */
+  photo: PhotoSettings | null;
+  setPhoto: (photo: PhotoSettings | null) => void;
+  /** Bumped to take a picture: the scene's PhotoShot watches it. */
+  photoShot: number;
+  takePhoto: () => void;
   /** Local co-op: a second player on a gamepad, in the story and challenges. */
   coop: boolean;
   setCoop: (coop: boolean) => void;
@@ -509,6 +535,10 @@ export const useGameStore = create<GameStore>((set, get) => {
     titleDone: false,
     replay: null,
     coop: false,
+    photo: null,
+    setPhoto: (photo) => set({ photo }),
+    photoShot: 0,
+    takePhoto: () => set((state) => ({ photoShot: state.photoShot + 1 })),
     online: null,
     startOnline: (transport, host, levelId, mode) => {
       get().online?.lockstep.close();

@@ -285,6 +285,7 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
     }
     const dt = Math.min(0.05, Math.max(0.001, frameDelta));
     const time = clock.elapsedTime;
+    const posing = useGameStore.getState().photo?.cheer === true;
     const seen = new Set<Entity>();
     let index = 0;
     let stars = 0;
@@ -411,6 +412,8 @@ export function WorkerInstances({ sim }: { sim: Simulation }) {
       anim.state = state;
       anim.land = Math.max(0, anim.land - dt);
       anim.hop = Math.max(0, anim.hop - dt);
+      // Photo mode: everyone hops and cheers for the camera, if asked.
+      if (posing && anim.hop === 0) anim.hop = 0.35;
 
       // A worker standing where an attack is about to land panics: wide eyes and a leap back.
       const threatened = state !== 'thrown' && state !== 'attacking' && inDanger(sim, at.x, at.z);

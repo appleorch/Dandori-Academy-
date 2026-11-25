@@ -2,6 +2,8 @@ import { rankValue, type Rank } from '../dandori/scoring';
 import { bestRank, type SaveData } from '../save/saveManager';
 import { CHALLENGE_LEVELS, LEVELS } from '../world/level';
 import { sectionCompletion } from '../campaign/campaign';
+import { RELIC_SETS, setProgress } from '../story/relicSets';
+import { recoveredRelics } from '../story/relics';
 
 /** One look for the Warden. Purely cosmetic; earned, never bought. */
 export interface Outfit {
@@ -14,8 +16,13 @@ export interface Outfit {
   hat: string;
   /** Colour of the hand lantern and the lamp on the pack. */
   lamp: string;
+  /** The hat's shape (the wide brim with a cone if not said), and a cape, if any, in a colour. */
+  hatStyle?: HatStyle;
+  cape?: string;
   unlocked: (save: SaveData) => boolean;
 }
+
+export type HatStyle = 'brim' | 'top' | 'cap' | 'crown' | 'beret' | 'hood';
 
 /** Fields with a challenge medal (or a lesson with an old story rank) of at least `rank`. */
 function lessonsAtLeast(save: SaveData, rank: Rank): number {
@@ -26,6 +33,210 @@ function lessonsAtLeast(save: SaveData, rank: Rank): number {
 }
 
 const has = (save: SaveData, id: string): boolean => id in save.achievements;
+
+/** Days of the daily challenge played: told by the treasure brought home on them. */
+export function dailiesPlayed(save: SaveData): number {
+  const days = new Set<string>();
+  for (const key of save.treasuresCollected) {
+    const match = /^hunt-daily-(\d{4}-\d{2}-\d{2}):/.exec(key);
+    if (match) days.add(match[1]);
+  }
+  return days.size;
+}
+
+/** Medals of at least `rank` earned on one challenge's fields. */
+export function medalsIn(save: SaveData, mode: string, rank: Rank): number {
+  return CHALLENGE_LEVELS.filter((level) => {
+    if (level.challenge?.mode !== mode) return false;
+    const earned = bestRank(save, level.id);
+    return earned !== null && rankValue(earned) >= rankValue(rank);
+  }).length;
+}
+
+const battlesWon = (save: SaveData): number =>
+  Object.values(save.battles).reduce((sum, record) => sum + record.won, 0);
+
+/** The relic sets' outfits: colours and a shape each. */
+const SET_LOOKS: readonly Pick<Outfit, 'suit' | 'trim' | 'hat' | 'lamp' | 'hatStyle' | 'cape'>[] = [
+  { suit: '#f4efe6', trim: '#4a7ab0', hat: '#f4efe6', lamp: '#ffe8c0', hatStyle: 'top' },
+  { suit: '#5a3a22', trim: '#c9a24a', hat: '#3a2414', lamp: '#ffd890', hatStyle: 'cap' },
+  {
+    suit: '#2a2a4a',
+    trim: '#e8c15a',
+    hat: '#1a1a3a',
+    lamp: '#fff2a0',
+    hatStyle: 'crown',
+    cape: '#1a1a3a',
+  },
+  { suit: '#4a6a2a', trim: '#a07a4a', hat: '#c8a060', lamp: '#d8ffa0', hatStyle: 'brim' },
+  { suit: '#3a2a4a', trim: '#d8d8e8', hat: '#2a1a3a', lamp: '#e8d8ff', hatStyle: 'beret' },
+  {
+    suit: '#2a3a2a',
+    trim: '#7aff9a',
+    hat: '#1a2a1a',
+    lamp: '#9affb0',
+    hatStyle: 'hood',
+    cape: '#1a2a1a',
+  },
+  {
+    suit: '#2a4a6a',
+    trim: '#e8c15a',
+    hat: '#1a2a3a',
+    lamp: '#ffe8a0',
+    hatStyle: 'cap',
+    cape: '#8a2a1a',
+  },
+  {
+    suit: '#d8f0ff',
+    trim: '#b48cff',
+    hat: '#e8f8ff',
+    lamp: '#e0f0ff',
+    hatStyle: 'crown',
+    cape: '#b48cff',
+  },
+];
+
+/** Twelve more, earned across every way to play. */
+const MORE: readonly Outfit[] = [
+  {
+    id: 'early-riser',
+    name: 'Early Riser',
+    requirement: 'Play the daily challenge on three days.',
+    suit: '#f0a35e',
+    trim: '#fff2c8',
+    hat: '#ffd27a',
+    lamp: '#fff2c8',
+    hatStyle: 'cap',
+    unlocked: (save) => dailiesPlayed(save) >= 3,
+  },
+  {
+    id: 'regular',
+    name: 'Regular',
+    requirement: 'Play the daily challenge on fourteen days.',
+    suit: '#8a5a2a',
+    trim: '#ffd27a',
+    hat: '#5a3a1a',
+    lamp: '#ffd27a',
+    hatStyle: 'top',
+    unlocked: (save) => dailiesPlayed(save) >= 14,
+  },
+  {
+    id: 'escort-bronze',
+    name: 'Porter',
+    requirement: 'Earn a medal on four Escort fields.',
+    suit: '#6a5a4a',
+    trim: '#c8b090',
+    hat: '#8a7a6a',
+    lamp: '#ffe0b0',
+    hatStyle: 'beret',
+    unlocked: (save) => medalsIn(save, 'escort', 'Bronze') >= 4,
+  },
+  {
+    id: 'escort-gold',
+    name: 'Lodestone Bearer',
+    requirement: 'Earn Gold or better on every Escort field.',
+    suit: '#3a3a44',
+    trim: '#e8c15a',
+    hat: '#5a5a66',
+    lamp: '#fff2a0',
+    hatStyle: 'crown',
+    cape: '#5a5a66',
+    unlocked: (save) => medalsIn(save, 'escort', 'Gold') >= 12,
+  },
+  {
+    id: 'hunter',
+    name: 'Hunter',
+    requirement: 'Earn Gold or better on six Treasure Hunt fields.',
+    suit: '#3a5a3a',
+    trim: '#d8b060',
+    hat: '#2a4a2a',
+    lamp: '#e0ffa0',
+    hatStyle: 'hood',
+    unlocked: (save) => medalsIn(save, 'hunt', 'Gold') >= 6,
+  },
+  {
+    id: 'grower',
+    name: 'Green Thumb',
+    requirement: 'Earn Gold or better on six Growing Season fields.',
+    suit: '#4a7a3a',
+    trim: '#f0d070',
+    hat: '#6aa04a',
+    lamp: '#d8ff9a',
+    hatStyle: 'brim',
+    unlocked: (save) => medalsIn(save, 'growing', 'Gold') >= 6,
+  },
+  {
+    id: 'missioner',
+    name: 'Field Agent',
+    requirement: 'Earn Gold or better on six Mission fields.',
+    suit: '#2a2a2a',
+    trim: '#c8281e',
+    hat: '#1a1a1a',
+    lamp: '#ff9a7a',
+    hatStyle: 'beret',
+    unlocked: (save) => medalsIn(save, 'mission', 'Gold') >= 6,
+  },
+  {
+    id: 'lean',
+    name: 'Ascetic',
+    requirement: 'Earn Gold or better on six Lean Squad Trial fields.',
+    suit: '#d8d0c0',
+    trim: '#8a7a6a',
+    hat: '#c0b8a8',
+    lamp: '#ffffff',
+    hatStyle: 'hood',
+    cape: '#a89880',
+    unlocked: (save) => medalsIn(save, 'trial', 'Gold') >= 6,
+  },
+  {
+    id: 'duelist',
+    name: 'Duelist',
+    requirement: 'Win ten battles.',
+    suit: '#6a1a2a',
+    trim: '#f0c0a0',
+    hat: '#4a0a1a',
+    lamp: '#ffb0a0',
+    hatStyle: 'top',
+    cape: '#4a0a1a',
+    unlocked: (save) => battlesWon(save) >= 10,
+  },
+  {
+    id: 'clockmaker',
+    name: 'Clockmaker',
+    requirement: 'Bring every part of the Great Clock home.',
+    suit: '#5a4636',
+    trim: '#e8cf98',
+    hat: '#3a2a20',
+    lamp: '#fff6dc',
+    hatStyle: 'top',
+    cape: '#e8cf98',
+    unlocked: (save) => save.campaign.ending === 'golden' || save.campaign.ending === 'late',
+  },
+  {
+    id: 'hard-story',
+    name: 'Iron Warden',
+    requirement: 'Bring ten Clock parts home in a story on Hard.',
+    suit: '#3a3e48',
+    trim: '#ff7a3d',
+    hat: '#2a2e38',
+    lamp: '#ffb07a',
+    hatStyle: 'crown',
+    unlocked: (save) =>
+      save.campaign.difficulty === 'hard' && Object.keys(save.campaign.parts).length >= 10,
+  },
+  {
+    id: 'collector',
+    name: 'Curator',
+    requirement: 'Recover a hundred relics.',
+    suit: '#2a2440',
+    trim: '#c8a0ff',
+    hat: '#3a3058',
+    lamp: '#e8d8ff',
+    hatStyle: 'brim',
+    cape: '#c8a0ff',
+    unlocked: (save) => recoveredRelics(save.treasuresCollected).size >= 100,
+  },
+];
 
 export const OUTFITS: readonly Outfit[] = [
   {
@@ -137,6 +348,15 @@ export const OUTFITS: readonly Outfit[] = [
     lamp: trim,
     unlocked: (save) => sectionCompletion(save.campaign, section) >= 1,
   })),
+  // One for each relic set completed (see story/relicSets.ts).
+  ...RELIC_SETS.map((relicSet, i): Outfit => ({
+    id: `set-${relicSet.id}`,
+    name: relicSet.name,
+    requirement: `Complete the ${relicSet.name} relic set.`,
+    ...SET_LOOKS[i],
+    unlocked: (save) => setProgress(relicSet, recoveredRelics(save.treasuresCollected)) >= 8,
+  })),
+  ...MORE,
 ];
 
 /** The outfit to wear: the chosen one if it is unlocked, otherwise the cadet's. */

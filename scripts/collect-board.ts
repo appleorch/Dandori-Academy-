@@ -20,6 +20,8 @@ import {
 import { logHash } from '../src/game/replay/replayStore';
 import { verifyRun } from '../src/game/replay/verify';
 import { initPhysics } from '../src/game/simulation/physics';
+import { decodePost } from '../src/game/leaderboard/runCode';
+import { ensureDaily } from '../src/game/world/daily';
 
 const BANNED_FILE = 'leaderboard/banned.json';
 
@@ -37,6 +39,14 @@ async function main(): Promise<void> {
     ? parseBoardFileFull(readFileSync(BOARD_FILE, 'utf8'))
     : { v: 1 as const, updated: '', posts: [], verified: [], logs: [] };
   const incoming = await readRelayPosts();
+  // Daily fields are made from their dates: make each one a run was posted on, first.
+  const keys = new Set<string>();
+  for (const code of [...previous.posts, ...incoming.map((post) => post.code)]) {
+    const post = await decodePost(code);
+    const key = post?.run.level.match(/^hunt-daily-(\d{4}-\d{2}-\d{2})$/)?.[1];
+    if (key) keys.add(key);
+  }
+  for (const key of keys) await ensureDaily(key);
   let replayed = 0;
   const next = await collectBoard(
     previous,

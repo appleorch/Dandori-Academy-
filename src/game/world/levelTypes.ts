@@ -238,6 +238,8 @@ export interface LevelDefinition {
   /** Spark coils: a pair of pylons that arc across the gap between them now and then. Only Sparklings are safe. */
   coils?: CoilSpawn[];
   enemies: EnemySpawn[];
+  /** Escort: beasts that arrive during the day, each `at` seconds in (see Simulation.step). */
+  ambushes?: (EnemySpawn & { at: number })[];
   gates?: GateSpawn[];
   drips?: DripSpawn[];
   blooms?: BloomSpawn[];

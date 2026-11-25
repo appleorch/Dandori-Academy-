@@ -499,6 +499,32 @@ the seconds left to bring the other half for the bonus.
 
 Before and after: `docs-design/art/ui-*-before.jpg` and `ui-*-after.jpg`.
 
+## Long-term play
+
+- **The daily challenge** (top of the Challenges screen). A Treasure Hunt field made fresh each
+  day from the UTC date by the field kit's generator (`world/generator.ts`: a seeded layout of
+  wall pieces, rocks, a pond, shards, pods and beasts from templates). Before it is offered the
+  test player plays it through in the browser (about a second); a field it cannot finish is
+  thrown away and the next seed tried, and its time becomes the field's pace, medals and day
+  (`world/daily.ts`). Every player gets the same field, registered by id at run time, so it has
+  its own board; the board's collection makes each posted day's field the same way. The slow
+  suite checks two months of dailies.
+- **Escort**, a sixth challenge: one crawling Lodestone relic at the far end of a long field,
+  beasts waiting on the way and ambush waves arriving during the day (`ambushes`, spawned by the
+  simulation on time), scored like a Treasure Hunt. Its twelve fields are made by the same
+  generator from fixed seeds, with paces measured by the test player.
+- **Relics**: 150 in all, with eight themed sets of eight (`story/relicSets.ts`) found in the
+  Escort fields and the daily fields. The Field Guide shows each set's progress; a completed set
+  earns its outfit.
+- **Wardrobe**: twenty more outfits (one per relic set and twelve across every way to play), with
+  new hat shapes (top hat, cap, crown, beret, hood) and capes on the Warden.
+- **Photo mode** (from pause): a free camera (WASD or drag, Q/E to turn, the wheel to zoom), no
+  HUD, filters, a tilt-shift depth of field and Sproutlings cheering for the camera; _Save
+  picture_ bakes the filter and blur into a PNG.
+- **Achievements**: forty-one more over the new content, four of them secret.
+- Not done: the Expedition rule (a multi-floor cave dive): the test player cannot yet go down
+  stairs, so its fields could not be paced.
+
 ## Playing together
 
 - **Local co-op** (the story and the challenges; the switch is on the base camp and the

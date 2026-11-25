@@ -16,6 +16,7 @@ import { BattleSelect } from './ui/BattleSelect';
 import { ChallengeSelect } from './ui/ChallengeSelect';
 import { MainMenu } from './ui/MainMenu';
 import { TitleScreen } from './ui/TitleScreen';
+import { PhotoPanel } from './ui/PhotoPanel';
 import { tipFor } from './ui/manual';
 import { StoryMap } from './ui/StoryMap';
 import { useBoardPoster } from './ui/useBoardPoster';
@@ -77,6 +78,7 @@ export function App() {
   const pokerOpen = useGameStore((state) => state.pokerOpen);
   const titleDone = useGameStore((state) => state.titleDone);
   const replay = useGameStore((state) => state.replay);
+  const photo = useGameStore((state) => state.photo !== null);
   const runId = useGameStore((state) => state.runId);
   const levelId = useGameStore((state) => state.levelId);
   const playDifficulty = useGameStore((state) => state.playDifficulty);
@@ -209,17 +211,18 @@ export function App() {
       )}
       {phase === 'story' && <StoryScreen />}
       {inGame && (
-        <div className="game">
+        <div className={photo ? 'game photo' : 'game'}>
           <CanvasErrorBoundary onLeave={() => useGameStore.getState().leaveDay()}>
             <Suspense fallback={<ScreenLoading />}>
               <GameCanvas key={runId} level={level} input={input} />
             </Suspense>
           </CanvasErrorBoundary>
-          <Hud level={level} touch={touch} input={input} />
+          {!photo && <Hud level={level} touch={touch} input={input} />}
+          {photo && <PhotoPanel />}
           <ScenePanel />
           {touch && phase === 'playing' && !paused && !briefing && <TouchControls input={input} />}
           {phase === 'playing' && briefing && <Briefing level={level} />}
-          {phase === 'playing' && paused && !pokerOpen && <PauseMenu level={level} />}
+          {phase === 'playing' && paused && !pokerOpen && !photo && <PauseMenu level={level} />}
           {phase === 'results' && <ResultsScreen level={level} />}
         </div>
       )}

@@ -25,6 +25,7 @@ import { runStatus } from './runStatus';
 import { runsKey } from '../game/save/saveManager';
 import { LEVELS, levelById } from '../game/world/level';
 import { MenuNav } from './MenuNav';
+import { dailyId, dailyKey, ensureDaily } from '../game/world/daily';
 import type { DayLog } from '../game/replay/replay';
 import { bestKey, getReplay } from '../game/replay/replayStore';
 
@@ -195,7 +196,11 @@ export function LeaderboardScreen() {
   const lastMode = useGameStore((state) => state.playMode);
   const [mode, setMode] = useState<BoardMode>(() => (isChallenge(lastMode) ? lastMode : 'hunt'));
   // A challenge's board is per field; its runs on the lessons from 0.18.0 are kept as well.
-  const fields = mode === 'classic' ? [] : challengeFieldsOf(mode);
+  const daily = levelById(dailyId(dailyKey(new Date())));
+  const fields =
+    mode === 'classic'
+      ? []
+      : [...(mode === 'hunt' && daily ? [daily] : []), ...challengeFieldsOf(mode)];
   const choices = mode === 'classic' ? lessons : [...fields, ...lessons];
   const [picked, setLevelId] = useState(
     () => (choices.find((level) => level.id === lastPlayed) ?? choices[0]).id,
@@ -214,7 +219,10 @@ export function LeaderboardScreen() {
       return;
     }
     setLoad({ state: 'loading' });
-    fetchBoard()
+    // Today's daily field is made (and checked) first, so its runs can be read.
+    void ensureDaily(dailyKey(new Date()))
+      .catch(() => null)
+      .then(() => fetchBoard())
       .then((board) => {
         cached = {
           entries: board.entries,

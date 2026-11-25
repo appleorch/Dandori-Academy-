@@ -16,6 +16,7 @@ export function PauseMenu({ level }: { level: LevelDefinition }) {
   const leaveDay = useGameStore((state) => state.leaveDay);
   const endDay = useGameStore((state) => state.endDay);
   const mode = useGameStore((state) => state.playMode);
+  const setPhoto = useGameStore((state) => state.setPhoto);
   const [view, setView] = useState<'main' | 'settings' | 'manual'>('main');
 
   return (
@@ -53,6 +54,13 @@ export function PauseMenu({ level }: { level: LevelDefinition }) {
                 {t('pause.restart')} <ActionPrompt action="restart" />
               </button>
             )}
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setPhoto({ filter: 'none', depth: false, cheer: false })}
+            >
+              {t('pause.photo')}
+            </button>
             <button type="button" className="secondary" onClick={() => setView('manual')}>
               {t('pause.manual')}
             </button>

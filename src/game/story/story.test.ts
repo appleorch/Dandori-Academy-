@@ -113,11 +113,17 @@ describe('secret achievements', () => {
 
   it('are never earned by simply finishing a day', () => {
     const secrets = ACHIEVEMENTS.filter((achievement) => achievement.secret);
-    expect(secrets.map((achievement) => achievement.id)).toEqual([
-      'back-room',
-      'card-shark',
-      'royal-flush',
-    ]);
+    expect(secrets.map((achievement) => achievement.id).sort()).toEqual(
+      [
+        'back-room',
+        'card-shark',
+        'royal-flush',
+        'lonely',
+        'hoarder',
+        'photographer',
+        'replay-fan',
+      ].sort(),
+    );
     for (const achievement of secrets) expect(achievement.earned(emptySave(), null)).toBe(false);
   });
 });

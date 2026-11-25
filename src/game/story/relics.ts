@@ -1,5 +1,6 @@
 import type { ShardVariant } from '../simulation/components';
 import { LEVELS } from '../world/level';
+import { SET_RELICS, setsField } from './relicSets';
 
 /**
  * The Relics of Harmony. Every Sunshard in the valley turned up set into some small lost
@@ -721,10 +722,21 @@ export function relicFor(levelId: string, treasureId: string, variant?: ShardVar
   if (boss) return boss;
   const known = ASSIGNED.get(`${levelId}:${treasureId}`);
   if (known) return known;
-  const pool = poolFor(variant);
+  const pool = setsField(levelId) ? SET_RELICS : poolFor(variant);
   let hash = 0;
   for (const char of `${levelId}:${treasureId}`) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   return pool[hash % pool.length];
+}
+
+/** Every relic there is: ordinary finds, bosses', the Clock's parts, the secrets, and the sets. */
+export function allRelics(): Relic[] {
+  return [
+    ...RELICS,
+    ...Object.values(BOSS_RELICS),
+    ...Object.values(CLOCK_PARTS),
+    ...Object.values(SECRET_RELICS),
+    ...SET_RELICS,
+  ];
 }
 
 /** Where each relic can be found: the lessons that hold it. */

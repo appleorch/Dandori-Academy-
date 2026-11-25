@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import type { Group } from 'three';
 import { useGameStore } from '../core/gameStore';
-import { wornOutfit } from '../progression/outfits';
+import { wornOutfit, type HatStyle } from '../progression/outfits';
 import type { Simulation } from '../simulation/Simulation';
 import { heightAt } from '../world/heightMap';
 
@@ -185,6 +185,12 @@ export function CaptainMesh({ sim }: { sim: Simulation }) {
               )}
             </group>
           ))}
+          {look.cape && (
+            <mesh position={[0, 0.3, -0.3]} rotation={[0.18, 0, 0]} castShadow>
+              <boxGeometry args={[0.5, 0.62, 0.03]} />
+              <meshStandardMaterial color={look.cape} roughness={0.8} />
+            </mesh>
+          )}
           {/* Pack with a lamp on a sprung pole. */}
           <mesh position={[0, 0.38, -0.32]} castShadow>
             <boxGeometry args={[0.42, 0.46, 0.22]} />
@@ -233,27 +239,114 @@ export function CaptainMesh({ sim }: { sim: Simulation }) {
               />
             </mesh>
             <group ref={hat} position={[0, 0.36, 0]}>
-              <mesh castShadow>
-                <cylinderGeometry args={[0.62, 0.62, 0.04, 28]} />
-                <meshStandardMaterial color={look.hat} roughness={0.7} />
-              </mesh>
-              <mesh position={[0, 0.14, 0]} castShadow>
-                <coneGeometry args={[0.32, 0.36, 24]} />
-                <meshStandardMaterial color={look.hat} roughness={0.7} />
-              </mesh>
-              <mesh position={[0, 0.05, 0]}>
-                <cylinderGeometry args={[0.3, 0.32, 0.07, 24]} />
-                <meshStandardMaterial color={look.trim} roughness={0.5} />
-              </mesh>
-              {/* A sprig in the hatband: this is a botanical academy. */}
-              <mesh position={[0.26, 0.12, 0.12]} rotation={[0, 0, -0.6]} scale={[1, 0.25, 0.5]}>
-                <sphereGeometry args={[0.1, 8, 6]} />
-                <meshStandardMaterial color="#6ab04a" roughness={0.6} />
-              </mesh>
+              <Hat style={look.hatStyle ?? 'brim'} hat={look.hat} trim={look.trim} />
             </group>
           </group>
         </group>
       </group>
     </group>
+  );
+}
+
+/** The Warden's hat, in the outfit's shape: a wide brim and cone, a top hat, a cap, a crown,
+ * a beret or a hood. Each keeps the botanical sprig. */
+function Hat({ style, hat, trim }: { style: HatStyle; hat: string; trim: string }) {
+  const material = <meshStandardMaterial color={hat} roughness={0.7} />;
+  const band = <meshStandardMaterial color={trim} roughness={0.5} />;
+  return (
+    <>
+      {style === 'brim' && (
+        <>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.62, 0.62, 0.04, 28]} />
+            {material}
+          </mesh>
+          <mesh position={[0, 0.14, 0]} castShadow>
+            <coneGeometry args={[0.32, 0.36, 24]} />
+            {material}
+          </mesh>
+          <mesh position={[0, 0.05, 0]}>
+            <cylinderGeometry args={[0.3, 0.32, 0.07, 24]} />
+            {band}
+          </mesh>
+        </>
+      )}
+      {style === 'top' && (
+        <>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.42, 0.42, 0.04, 24]} />
+            {material}
+          </mesh>
+          <mesh position={[0, 0.22, 0]} castShadow>
+            <cylinderGeometry args={[0.26, 0.28, 0.42, 24]} />
+            {material}
+          </mesh>
+          <mesh position={[0, 0.06, 0]}>
+            <cylinderGeometry args={[0.285, 0.29, 0.07, 24]} />
+            {band}
+          </mesh>
+        </>
+      )}
+      {style === 'cap' && (
+        <>
+          <mesh position={[0, 0.02, 0]} scale={[1, 0.55, 1]} castShadow>
+            <sphereGeometry args={[0.3, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            {material}
+          </mesh>
+          <mesh position={[0, 0.0, 0.3]} rotation={[0.15, 0, 0]}>
+            <boxGeometry args={[0.36, 0.03, 0.26]} />
+            {band}
+          </mesh>
+        </>
+      )}
+      {style === 'crown' && (
+        <>
+          <mesh position={[0, 0.08, 0]} castShadow>
+            <cylinderGeometry args={[0.3, 0.3, 0.16, 20, 1, true]} />
+            <meshStandardMaterial color={trim} metalness={0.6} roughness={0.3} side={2} />
+          </mesh>
+          {Array.from({ length: 6 }, (_, i) => (
+            <mesh
+              key={i}
+              position={[
+                Math.sin((i / 6) * Math.PI * 2) * 0.3,
+                0.2,
+                Math.cos((i / 6) * Math.PI * 2) * 0.3,
+              ]}
+            >
+              <coneGeometry args={[0.05, 0.12, 6]} />
+              <meshStandardMaterial color={trim} metalness={0.6} roughness={0.3} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.03, 0]}>
+            <cylinderGeometry args={[0.28, 0.28, 0.05, 20]} />
+            {material}
+          </mesh>
+        </>
+      )}
+      {style === 'beret' && (
+        <>
+          <mesh position={[0.06, 0.05, 0]} rotation={[0, 0, -0.25]} scale={[1, 0.35, 1]} castShadow>
+            <sphereGeometry args={[0.38, 20, 12]} />
+            {material}
+          </mesh>
+          <mesh position={[0.08, 0.17, 0]}>
+            <sphereGeometry args={[0.04, 8, 6]} />
+            {band}
+          </mesh>
+        </>
+      )}
+      {style === 'hood' && (
+        <mesh position={[0, -0.12, -0.04]} scale={[1, 1.1, 1.05]} castShadow>
+          <sphereGeometry args={[0.4, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.62]} />
+          {material}
+        </mesh>
+      )}
+      {/* A sprig in the hatband: this is a botanical academy. */}
+      <mesh position={[0.26, 0.12, 0.12]} rotation={[0, 0, -0.6]} scale={[1, 0.25, 0.5]}>
+        <sphereGeometry args={[0.1, 8, 6]} />
+        <meshStandardMaterial color="#6ab04a" roughness={0.6} />
+      </mesh>
+    </>
   );
 }
