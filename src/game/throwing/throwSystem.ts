@@ -61,6 +61,7 @@ export function updateThrowing(sim: Simulation, input: InputState, dt: number): 
   let chosenDist: number = THROW.pickupRange;
   for (const [entity, worker] of sim.workers.entries()) {
     if (worker.state !== 'follow' || worker.stun > 0 || worker.kind !== sim.selected) continue;
+    if (worker.party !== sim.activeWarden) continue;
     const at = sim.transforms.require(entity);
     const dist = Math.hypot(at.x - from.x, at.z - from.z);
     if (dist < chosenDist) {

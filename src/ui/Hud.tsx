@@ -323,6 +323,28 @@ export function Hud({
       {touch && counts}
       {phase === 'playing' && (
         <div className="callouts">
+          {(hud.items.emberbrew > 0 || hud.items.stillwater > 0 || hud.warden !== null) && (
+            <p className="chip story-kit" role="status">
+              {hud.warden !== null && (
+                <span>
+                  Warden {hud.warden + 1} of 2 <ActionPrompt action="switchWarden" />
+                </span>
+              )}
+              {hud.items.emberbrew > 0 && (
+                <span>
+                  {' '}
+                  Emberbrew ×{hud.items.emberbrew} <ActionPrompt action="emberbrew" />
+                </span>
+              )}
+              {hud.items.stillwater > 0 && (
+                <span>
+                  {' '}
+                  Stillwater ×{hud.items.stillwater} <ActionPrompt action="stillwater" />
+                </span>
+              )}
+              {hud.brew > 0 && <span> · brewed up {Math.ceil(hud.brew)}s</span>}
+            </p>
+          )}
           {nearTelescope && (
             <button type="button" className="chip knock" onClick={() => input?.queueInteract()}>
               Look through the telescope {!touch && <ActionPrompt action="interact" />}

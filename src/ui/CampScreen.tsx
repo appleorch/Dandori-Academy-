@@ -35,6 +35,24 @@ import { EndingScreen } from './EndingScreen';
 const giftName = (ability: Ability) => t(`gift.${ability}.name` as MessageKey);
 const giftText = (ability: Ability) => t(`gift.${ability}.text` as MessageKey);
 
+/** The Kiln's stock after each day, as a small line graph. */
+function KilnHistory({ history }: { history: readonly number[] }) {
+  const w = 220;
+  const h = 48;
+  const top = Math.max(1, ...history);
+  const points = history
+    .map((count, i) => `${(i / (history.length - 1)) * w},${h - (count / top) * (h - 4) - 2}`)
+    .join(' ');
+  return (
+    <figure className="kiln-history">
+      <figcaption className="eyebrow">{t('camp.history')}</figcaption>
+      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={t('camp.history')}>
+        <polyline points={points} fill="none" stroke="#ffb347" strokeWidth={2} />
+      </svg>
+    </figure>
+  );
+}
+
 /** Map scale: pixels per world unit. */
 const SCALE = 4;
 
@@ -157,12 +175,13 @@ export function CampScreen() {
   const chooseSection = useGameStore((store) => store.chooseSection);
   const dismissEnding = useGameStore((store) => store.dismissEnding);
   const relaxed = useGameStore((store) => store.settings.relaxedStory);
+  const setPlan = useGameStore((store) => store.setPlan);
   const restartCampaign = useGameStore((store) => store.restartCampaign);
   const [confirming, setConfirming] = useState(false);
   const section = currentSection(state);
   const progress = sectionProgress(state);
   const total = stockTotal(state.stock);
-  const party = dayParty(state.stock);
+  const party = dayParty(state.stock, state.plan);
   const going = SPROUT_KINDS.reduce((sum, kind) => sum + (party[kind] ?? 0), 0);
   const home = allPartsHome(state);
   const left = daysLeft(state.day, relaxed);
@@ -222,6 +241,38 @@ export function CampScreen() {
                 ))}
               </ul>
               {total === 0 && <p className="note warn">{t('camp.kilnEmpty')}</p>}
+              <details className="camp-plan">
+                <summary>{t('camp.plan')}</summary>
+                <p className="note">{t('camp.planNote')}</p>
+                {SPROUT_KINDS.filter((kind) => state.stock[kind] > 0).map((kind) => (
+                  <label key={kind}>
+                    <KindGlyph kind={kind} /> {kindPlural(kind)}
+                    <input
+                      type="number"
+                      min={0}
+                      max={state.stock[kind]}
+                      value={state.plan?.[kind] ?? state.stock[kind]}
+                      onChange={(event) => {
+                        const value = Math.max(
+                          0,
+                          Math.min(state.stock[kind], Number(event.target.value) || 0),
+                        );
+                        const base = state.plan ?? { ...state.stock };
+                        setPlan({ ...base, [kind]: value });
+                      }}
+                    />
+                  </label>
+                ))}
+                <button type="button" className="secondary small" onClick={() => setPlan(null)}>
+                  {t('camp.planEveryone')}
+                </button>
+              </details>
+              {(state.items.emberbrew > 0 || state.items.stillwater > 0) && (
+                <p className="note">
+                  {t('camp.items', { ember: state.items.emberbrew, still: state.items.stillwater })}
+                </p>
+              )}
+              {state.history.length > 1 && <KilnHistory history={state.history} />}
               {going < total && (
                 <p className="note">{t('camp.overflow', { going, waiting: total - going })}</p>
               )}

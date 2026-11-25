@@ -8,6 +8,16 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.34.0',
+    date: '2026-11-25',
+    changes: [
+      'Story: a second Warden, the Great Clock’s eighth gift. Switch between them with H, send half your squad to the other with G, and walk them together to merge.',
+      'Story: berry bushes. Carry a berry home and it is brewed into a spray: Emberbrew makes your squad faster and fiercer for 20 seconds, Stillwater freezes nearby beasts for 8.',
+      'Story: at the base camp, choose how many of each kind go out each morning, and watch the Kiln’s numbers on a graph.',
+      'Everything outside the story plays exactly as before.',
+    ],
+  },
+  {
     version: '0.33.0',
     date: '2026-11-25',
     changes: [

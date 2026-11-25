@@ -32,6 +32,10 @@ export const ACTIONS = [
   'zoomOut',
   'pause',
   'restart',
+  'switchWarden',
+  'splitSquad',
+  'emberbrew',
+  'stillwater',
 ] as const;
 export type Action = (typeof ACTIONS)[number];
 
@@ -59,6 +63,10 @@ export const ACTION_INFO: Record<Action, { label: string; group: 'move' | 'squad
   zoomOut: { label: 'Zoom out', group: 'view' },
   pause: { label: 'Pause', group: 'view' },
   restart: { label: 'Restart (from pause or results)', group: 'view' },
+  switchWarden: { label: 'Story: switch to the other Warden', group: 'squad' },
+  splitSquad: { label: 'Story: send half the squad to the other Warden', group: 'squad' },
+  emberbrew: { label: 'Story: spray Emberbrew (a faster, fiercer squad)', group: 'squad' },
+  stillwater: { label: 'Story: spray Stillwater (freezes nearby beasts)', group: 'squad' },
 };
 
 /** Two keyboard or mouse slots per action; null is an empty slot. */
@@ -135,6 +143,10 @@ export const DEFAULT_BINDINGS: Bindings = {
     zoomOut: ['Minus', 'NumpadSubtract'],
     pause: ['Escape', 'KeyP'],
     restart: ['KeyR', null],
+    switchWarden: ['KeyH', null],
+    splitSquad: ['KeyG', null],
+    emberbrew: ['KeyB', null],
+    stillwater: ['KeyN', null],
   },
   pad: {
     moveUp: null,
@@ -159,6 +171,10 @@ export const DEFAULT_BINDINGS: Bindings = {
     zoomOut: PAD.down,
     pause: PAD.menu,
     restart: null,
+    switchWarden: null,
+    splitSquad: null,
+    emberbrew: null,
+    stillwater: null,
   },
 };
 

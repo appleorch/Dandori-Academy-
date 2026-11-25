@@ -41,6 +41,7 @@ export function setIdle(sim: Simulation, entity: Entity, worker: Worker, scanDel
 export function joinSquad(sim: Simulation, entity: Entity, worker: Worker): void {
   detachWorker(sim, entity, worker);
   worker.state = 'follow';
+  worker.party = sim.activeWarden;
   worker.stun = Math.min(worker.stun, 0.2);
   // The whistle is what saves a burning or floundering Sproutling.
   if (worker.peril) {
@@ -61,7 +62,8 @@ export function removeWorker(sim: Simulation, entity: Entity, worker: Worker): v
 /** Sends every squad member off duty; they pick up nearby work on their own. */
 export function dismissSquad(sim: Simulation): void {
   for (const [entity, worker] of sim.workers.entries()) {
-    if (worker.state === 'follow') setIdle(sim, entity, worker);
+    if (worker.state === 'follow' && worker.party === sim.activeWarden)
+      setIdle(sim, entity, worker);
   }
   sim.emit('dismiss', sim.captainTransform.x, sim.captainTransform.z);
 }
@@ -70,7 +72,7 @@ export function dismissSquad(sim: Simulation): void {
 export function rushSquad(sim: Simulation): void {
   let sent = false;
   for (const [, worker] of sim.workers.entries()) {
-    if (worker.state !== 'follow' || worker.stun > 0) continue;
+    if (worker.state !== 'follow' || worker.stun > 0 || worker.party !== sim.activeWarden) continue;
     const spot = sim.nav.nearestWalkable(
       sim.cursor.x + sim.rng.range(-0.8, 0.8),
       sim.cursor.z + sim.rng.range(-0.8, 0.8),

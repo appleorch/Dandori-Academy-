@@ -67,6 +67,12 @@ export interface CampaignState {
   endingShown: boolean;
   /** The Warden's log: an entry for each day, newest last (see story/wardenLog.ts). */
   log: { day: number; text: string }[];
+  /** Sprays in hand, brewed from berries carried home. */
+  items: { emberbrew: number; stillwater: number };
+  /** How many of each kind to send out each morning (the rest wait); null sends everyone. */
+  plan: Record<SproutKind, number> | null;
+  /** Sproutlings in the Kiln after each day, oldest first: the base camp's graph. */
+  history: number[];
 }
 
 /** A section's own progress, kept while another section is being explored. */
@@ -94,6 +100,9 @@ export function newCampaign(): CampaignState {
     ending: null,
     endingShown: false,
     log: [],
+    items: { emberbrew: 0, stillwater: 0 },
+    plan: null,
+    history: [],
   };
 }
 
@@ -200,7 +209,17 @@ export function stockTotal(stock: Record<SproutKind, number>): number {
  * Who goes out today: everyone in the Kiln, up to the field's limit, taking the kinds in turn
  * so that each is represented. An empty Kiln still coaxes out a single Emberling.
  */
-export function dayParty(stock: Record<SproutKind, number>): Squad {
+export function dayParty(
+  stock: Record<SproutKind, number>,
+  plan: Record<SproutKind, number> | null = null,
+): Squad {
+  // A plan from the base camp: no more of each kind than asked for, or than there are.
+  if (plan) {
+    const wanted = Object.fromEntries(
+      SPROUT_KINDS.map((kind) => [kind, Math.max(0, Math.min(stock[kind], plan[kind] ?? 0))]),
+    ) as Record<SproutKind, number>;
+    if (stockTotal(wanted) > 0) return dayParty(wanted);
+  }
   const total = stockTotal(stock);
   if (total === 0) return { ember: 1 };
   if (total <= WORKER.maxOnField) {
@@ -261,7 +280,7 @@ export function dayField(state: CampaignState): DayField {
   const pods = remaining(base.pods, 'pod', done);
   const logs = remaining(base.logs, 'log', done);
   const saps = remaining(base.saps, 'sap', done);
-  const party = dayParty(state.stock);
+  const party = dayParty(state.stock, state.plan);
   const outOfReach = partsOutOfReach(state);
   const spec: LevelSpec = {
     ...base,
@@ -522,6 +541,9 @@ export function settleDay(
     others: state.others,
     ending: state.ending,
     endingShown: state.endingShown,
+    items: { emberbrew: sim.items.emberbrew, stillwater: sim.items.stillwater },
+    plan: state.plan,
+    history: [...state.history, stockTotal(stock)].slice(-LOG_KEPT),
     log: [
       ...state.log,
       {
@@ -667,6 +689,17 @@ export function parseCampaign(value: unknown): CampaignState | null {
     others: records(raw.others),
     ending: endings.find((e) => e === raw.ending) ?? null,
     endingShown: raw.endingShown === true,
+    items: {
+      emberbrew: count(record(raw.items).emberbrew),
+      stillwater: count(record(raw.items).stillwater),
+    },
+    plan:
+      typeof raw.plan === 'object' && raw.plan !== null
+        ? (Object.fromEntries(
+            SPROUT_KINDS.map((kind) => [kind, count(record(raw.plan)[kind])]),
+          ) as Record<SproutKind, number>)
+        : null,
+    history: Array.isArray(raw.history) ? raw.history.map(count) : [],
     log: Array.isArray(raw.log)
       ? raw.log
           .filter(

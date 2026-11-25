@@ -121,6 +121,10 @@ export interface HudSnapshot {
   glowcapsGot: number;
   glowcapsOf: number;
   captainHp: number;
+  /** Story only: sprays in hand, seconds of Emberbrew left, and which Warden is played (or null). */
+  items: { emberbrew: number; stillwater: number };
+  brew: number;
+  warden: number | null;
   boss: BossSnapshot | null;
   /** Seconds ahead (negative) or behind (positive) the best clear at the last delivery, or null. */
   split: number | null;
@@ -287,6 +291,8 @@ interface GameStore {
   dismissSaveBackup: () => void;
   /** Gives up the story's expedition and starts it again from the first day. */
   restartCampaign: () => void;
+  /** Story: sets how many of each kind go out each morning (null: everyone). */
+  setPlan: (plan: Record<SproutKind, number> | null) => void;
   /** Story: explores another (open) section from tomorrow. */
   chooseSection: (id: string) => void;
   /** Story: the ending's screen has been read. */
@@ -337,6 +343,9 @@ function pendingTwins(sim: Simulation): HudSnapshot['twins'] {
 function snapshot(sim: Simulation): HudSnapshot {
   const counts = sim.countWorkers();
   return {
+    items: { ...sim.items },
+    brew: sim.brewTimer,
+    warden: sim.otherWarden ? sim.activeWarden : null,
     twins: pendingTwins(sim),
     timeLeft: sim.timeLeft,
     elapsed: sim.elapsed,
@@ -607,6 +616,11 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     restartCampaign: () => {
       const save = { ...get().save, campaign: newCampaign() };
+      persist(save);
+      set({ save });
+    },
+    setPlan: (plan) => {
+      const save = { ...get().save, campaign: { ...get().save.campaign, plan } };
       persist(save);
       set({ save });
     },

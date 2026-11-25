@@ -101,7 +101,7 @@ export class Expedition {
     if (!spec) return false;
     const squad: Traveller[] = [];
     for (const [entity, worker] of [...upper.workers.entries()]) {
-      if (worker.state !== 'follow') continue;
+      if (worker.state !== 'follow' || worker.party !== upper.activeWarden) continue;
       squad.push({ kind: worker.kind, growth: worker.growth });
       removeWorker(upper, entity, worker);
     }

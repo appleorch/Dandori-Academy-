@@ -451,6 +451,18 @@ export function GameLoop({ expedition, battle, input, fx, onSwitch }: GameLoopPr
     store.setNearAscent(atAscent);
     // In the story, the interact key plucks the sprout nearest the Warden; held, it sweeps
     // through a whole patch, one sprout at a time.
+    // The story's own actions: switch Warden, split the squad, spray.
+    if (sim.story) {
+      if (input.take('switchWarden') && sim.switchWarden()) audio.play('select');
+      if (input.take('splitSquad')) {
+        const sent = sim.splitSquad();
+        if (sent > 0) fx.popup(`${sent} sent to the other Warden`, spot.x, spot.z, '#bfe6ff');
+      }
+      if (input.take('emberbrew') && sim.sprayEmberbrew())
+        fx.popup('Emberbrew!', spot.x, spot.z, '#ff9a5a');
+      if (input.take('stillwater') && sim.sprayStillwater())
+        fx.popup('Stillwater!', spot.x, spot.z, '#9ad0ff');
+    }
     const pressed = input.takeInteract();
     store.setNearSprout(sim.story && sproutInReach(sim));
     // The Observatory's telescope: look through it and hidden treasure appears.

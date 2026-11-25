@@ -52,6 +52,7 @@ function checkSpawns(level: LevelDefinition) {
     ...(level.saps ?? []),
     ...(level.beacons ?? []),
     ...(level.dewdrops ?? []),
+    ...(level.berries ?? []),
     ...(level.bridges ?? []).map((bridge) => bridge.bank),
     ...(level.descent ? [level.descent] : []),
   ];

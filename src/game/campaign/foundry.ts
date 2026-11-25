@@ -104,6 +104,13 @@ export const CLOCKWORK_FOUNDRY: LevelSpec = {
     { x: 40, z: -20, weight: 3, at: 230, lifetime: 70 },
     { x: 90, z: 80, weight: 3, at: 340, lifetime: 70 },
   ],
+  // Berry bushes: Emberberries brew Emberbrew, Stillberries Stillwater.
+  berries: [
+    { x: -77, z: 66, kind: 'ember' },
+    { x: -17, z: 10, kind: 'still' },
+    { x: 63, z: -30, kind: 'ember' },
+    { x: 83, z: 70, kind: 'still' },
+  ],
   dewdrops: [
     { x: -74, z: 66 },
     { x: -20, z: 10 },

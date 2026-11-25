@@ -213,6 +213,16 @@ function deliver(sim: Simulation, entity: Entity, carryable: Carryable, to: Dest
   } else if (carryable.kind === 'sap') {
     sim.sapTimer = SAP.seconds;
     sim.emit('sap', to.x, to.z, SAP.seconds);
+  } else if (carryable.kind === 'berry') {
+    // Brewed at once: the spray is in hand for the rest of today, and kept for tomorrow.
+    if (carryable.id.startsWith('berry-ember')) {
+      sim.stats.berries.ember++;
+      sim.items.emberbrew++;
+    } else {
+      sim.stats.berries.still++;
+      sim.items.stillwater++;
+    }
+    sim.emit('sap', to.x, to.z, 0);
   }
   if (carryable.kind === 'treasure' || carryable.kind === 'carcass' || carryable.kind === 'bloom') {
     sim.stats.weightDelivered += carryable.weight;

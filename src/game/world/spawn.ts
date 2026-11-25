@@ -36,6 +36,7 @@ export function spawnWorker(
   sim.workers.set(entity, {
     kind,
     growth,
+    party: sim.activeWarden,
     state,
     target: NO_ENTITY,
     stun: 0,
@@ -124,6 +125,17 @@ export function spawnSap(sim: Simulation, at: Point, index: number): Entity {
     weight: SAP.weight,
     maxCarriers: SAP.maxCarriers,
     radius: SAP.radius,
+  });
+}
+
+/** A berry, story only: carried home, it is brewed into a spray. */
+export function spawnBerry(sim: Simulation, at: Point, index: number, kind: 'ember' | 'still') {
+  return addCarryable(sim, at, {
+    id: `berry-${kind}-${index}`,
+    kind: 'berry',
+    weight: 1,
+    maxCarriers: 2,
+    radius: 0.45,
   });
 }
 

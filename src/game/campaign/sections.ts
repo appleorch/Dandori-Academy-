@@ -132,6 +132,13 @@ const WILD_QUAD: LevelSpec = {
     { x: 32, z: -16, weight: 3, at: 320, lifetime: 70 },
   ],
   // Dewdrops of nectar on the plants: they grow back every morning.
+  // Berry bushes: Emberberries brew Emberbrew, Stillberries Stillwater.
+  berries: [
+    { x: -65, z: 14, kind: 'ember' },
+    { x: -23, z: -40, kind: 'still' },
+    { x: 31, z: 30, kind: 'ember' },
+    { x: 76, z: -3, kind: 'still' },
+  ],
   dewdrops: [
     { x: -62, z: 14 },
     { x: -41, z: 4 },

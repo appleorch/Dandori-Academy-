@@ -207,6 +207,11 @@ export interface LevelDefinition {
    * they are spawned. Missing entries are leaves.
    */
   squadGrowth?: Partial<Record<SproutKind, readonly number[]>>;
+  /**
+   * Story only: berry bushes. A berry carried home is brewed into a spray: an Emberberry into
+   * Emberbrew, a Stillberry into Stillwater.
+   */
+  berries?: readonly (Point & { kind: 'ember' | 'still' })[];
   /** Story only: Dewdrops of nectar growing on plants, drunk by the first Sproutling to reach one. */
   dewdrops?: readonly Point[];
   captain: Point;

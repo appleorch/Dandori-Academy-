@@ -42,6 +42,7 @@ import { Fallen } from './Fallen';
 import { Conveyors } from './Conveyors';
 import { Telescope } from './Telescope';
 import { GhostWarden } from './GhostWarden';
+import { OtherWarden } from './OtherWarden';
 import { WorkerInstances } from './WorkerInstances';
 import { PerfProbe, ShadowBudget } from './perf';
 import { QualityTuner } from './QualityTuner';
@@ -51,7 +52,11 @@ import { decodeFog } from '../campaign/fog';
 
 /** The story's day: the Clock's gifts so far, and what has been seen of the section already. */
 function storyOptions(state: CampaignState, level: LevelDefinition) {
-  return { abilities: campaignAbilities(state), explored: decodeFog(state.seen, level) };
+  return {
+    abilities: campaignAbilities(state),
+    explored: decodeFog(state.seen, level),
+    items: state.items,
+  };
 }
 import { PerfOverlay } from '../../ui/PerfOverlay';
 
@@ -289,6 +294,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
             <Conveyors sim={sim} />
             <Telescope sim={sim} />
             <GhostWarden sim={sim} />
+            <OtherWarden sim={sim} />
             <Butterflies sim={sim} />
             <CarryableMeshes sim={sim} />
             <EnemyMeshes sim={sim} />

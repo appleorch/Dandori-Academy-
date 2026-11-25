@@ -106,6 +106,32 @@ function HaulBody({ carryable, relic }: { carryable: Carryable; relic: Relic }) 
       </group>
     );
   }
+  if (kind === 'berry') {
+    const ember = carryable.id.startsWith('berry-ember');
+    return (
+      <>
+        {[0, 1, 2].map((i) => (
+          <mesh
+            key={i}
+            position={[
+              Math.sin(i * 2.1) * radius * 0.4,
+              (i % 2) * radius * 0.3,
+              Math.cos(i * 2.1) * radius * 0.4,
+            ]}
+            castShadow
+          >
+            <sphereGeometry args={[radius * 0.6, 12, 10]} />
+            <meshStandardMaterial
+              color={ember ? '#e2402a' : '#3a7ae0'}
+              emissive={ember ? '#801a10' : '#10306a'}
+              emissiveIntensity={0.4}
+              roughness={0.25}
+            />
+          </mesh>
+        ))}
+      </>
+    );
+  }
   if (kind === 'sap') {
     return (
       <>

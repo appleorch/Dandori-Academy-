@@ -9,6 +9,7 @@ import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import { assignTask, findTask, killWorker, latchOn, setIdle } from './squad';
 import { SPROUTS, STAGE_SPEED, stageOf } from './sprouts';
 import { canBeHit, onImpact } from '../enemies/beasts';
+import { BREW } from '../simulation/Simulation';
 import type { NavGrid } from '../navigation/NavGrid';
 
 const LANDING_SCAN_RANGE = 2.5;
@@ -25,8 +26,9 @@ export function navFor(sim: Simulation, worker: Worker, at: Transform): NavGrid 
   return SPROUTS[worker.kind].wades || sim.inWater(at.x, at.z) ? sim.wadeNav : sim.nav;
 }
 
-function speedOf(worker: Worker): number {
-  return WORKER.speed * SPROUTS[worker.kind].speed * STAGE_SPEED[stageOf(worker.growth)];
+function speedOf(sim: Simulation, worker: Worker): number {
+  const brew = sim.brewTimer > 0 ? BREW.speed : 1;
+  return WORKER.speed * SPROUTS[worker.kind].speed * STAGE_SPEED[stageOf(worker.growth)] * brew;
 }
 
 function walkToward(
@@ -38,7 +40,7 @@ function walkToward(
   dt: number,
 ): void {
   const nav = navFor(sim, worker, transform);
-  const speed = speedOf(worker);
+  const speed = speedOf(sim, worker);
   steerTo(nav, worker.mover, transform, x, z, dt, dir);
   moveAgent(nav, transform, dir.x * speed * dt, dir.z * speed * dt);
   if (dir.x !== 0 || dir.z !== 0) transform.facing = Math.atan2(dir.x, dir.z);
@@ -46,7 +48,15 @@ function walkToward(
 
 /** Squad members gather in a loose crowd around the captain; the crowd grows with the squad. */
 function follow(sim: Simulation, worker: Worker, transform: Transform, dt: number): void {
-  const { anchor, nav } = sim;
+  const { nav } = sim;
+  // The other Warden's squad waits round them, where they stand.
+  const other = sim.otherWarden;
+  if (other && worker.party !== sim.activeWarden) {
+    if (Math.hypot(other.x - transform.x, other.z - transform.z) > 2.5)
+      walkToward(sim, worker, transform, other.x, other.z, dt);
+    return;
+  }
+  const { anchor } = sim;
   const dx = anchor.x - transform.x;
   const dz = anchor.z - transform.z;
   const dist = Math.hypot(dx, dz);
@@ -64,7 +74,7 @@ function follow(sim: Simulation, worker: Worker, transform: Transform, dt: numbe
     dir.x = sim.squadField.dirX[cell];
     dir.z = sim.squadField.dirZ[cell];
   }
-  moveAgent(nav, transform, dir.x * speedOf(worker) * dt, dir.z * speedOf(worker) * dt);
+  moveAgent(nav, transform, dir.x * speedOf(sim, worker) * dt, dir.z * speedOf(sim, worker) * dt);
   worker.mover.path.length = 0;
   if (dir.x !== 0 || dir.z !== 0) transform.facing = Math.atan2(dir.x, dir.z);
 }
@@ -197,7 +207,7 @@ function sufferPeril(
       worker.slot = sim.rng.range(0, Math.PI * 2);
     }
     const nav = navFor(sim, worker, transform);
-    const step = speedOf(worker) * 0.8 * dt;
+    const step = speedOf(sim, worker) * 0.8 * dt;
     moveAgent(nav, transform, Math.sin(worker.slot) * step, Math.cos(worker.slot) * step);
     transform.facing = worker.slot;
   }
@@ -206,7 +216,8 @@ function sufferPeril(
 /** Runs every worker's state machine for one step. */
 export function updateWorkers(sim: Simulation, dt: number): void {
   let squadSize = 0;
-  for (const [, worker] of sim.workers.entries()) if (worker.state === 'follow') squadSize++;
+  for (const [, worker] of sim.workers.entries())
+    if (worker.state === 'follow' && worker.party === sim.activeWarden) squadSize++;
   sim.squadSize = squadSize;
 
   for (const [entity, worker] of sim.workers.entries()) {
@@ -286,7 +297,10 @@ export function updateWorkers(sim: Simulation, dt: number): void {
           sim,
           worker.target,
           sim.enemies.require(worker.target),
-          WORKER.attackDps * SPROUTS[worker.kind].attack * dt,
+          WORKER.attackDps *
+            SPROUTS[worker.kind].attack *
+            (sim.brewTimer > 0 ? BREW.attack : 1) *
+            dt,
           worker.kind,
         );
         break;

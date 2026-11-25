@@ -121,6 +121,13 @@ export const SUNKEN_ORCHARD: LevelSpec = {
     { x: 14, z: 14, weight: 3, at: 220, lifetime: 70 },
     { x: 90, z: -10, weight: 3, at: 330, lifetime: 70 },
   ],
+  // Berry bushes: Emberberries brew Emberbrew, Stillberries Stillwater.
+  berries: [
+    { x: -87, z: -14, kind: 'ember' },
+    { x: -1, z: 8, kind: 'still' },
+    { x: 73, z: 0, kind: 'ember' },
+    { x: 43, z: 52, kind: 'still' },
+  ],
   dewdrops: [
     { x: -84, z: -14 },
     { x: -44, z: -46 },

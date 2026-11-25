@@ -1,11 +1,12 @@
 /**
  * The Great Clock's gifts. Every part brought home puts a little of the Clock's old power back
- * into the grounds: the first seven parts home each grant a lasting ability, in this order,
+ * into the grounds: the first eight parts home each grant a lasting ability, in this order,
  * whichever parts they are and wherever they were found. They are shown at the base camp and
  * announced as each part comes home.
  */
 
-export type Ability = 'radar' | 'whistle' | 'kiln' | 'carry' | 'sunset' | 'bridgekit' | 'lantern';
+export type Ability =
+  'radar' | 'whistle' | 'kiln' | 'carry' | 'sunset' | 'bridgekit' | 'lantern' | 'secondWarden';
 
 /** The order the gifts come in; their names and descriptions are `gift.<ability>.*` in the text. */
 export const CLOCK_UPGRADES: readonly Ability[] = [
@@ -16,6 +17,7 @@ export const CLOCK_UPGRADES: readonly Ability[] = [
   'sunset',
   'bridgekit',
   'lantern',
+  'secondWarden',
 ];
 
 /** The abilities granted by this many parts home. */

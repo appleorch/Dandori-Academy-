@@ -94,6 +94,13 @@ export const FROSTGLASS_OBSERVATORY: LevelSpec = {
     { x: -10, z: 40, weight: 3, at: 230, lifetime: 70 },
     { x: 96, z: -30, weight: 3, at: 340, lifetime: 70 },
   ],
+  // Berry bushes: Emberberries brew Emberbrew, Stillberries Stillwater.
+  berries: [
+    { x: -99, z: -20, kind: 'ember' },
+    { x: -37, z: 0, kind: 'still' },
+    { x: 43, z: 30, kind: 'ember' },
+    { x: 93, z: 20, kind: 'still' },
+  ],
   dewdrops: [
     { x: -96, z: -20 },
     { x: -40, z: 0 },

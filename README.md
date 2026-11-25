@@ -365,6 +365,17 @@ camp**, which shows a map of the Quad, the Kiln's stock by kind and the Clock's 
   carrying, a wider safe ring at sunset, logs that count twice at bridges, and a lantern for
   caves. Some parts cannot be reached without a gift (`needs`); the map marks them, and they are
   left out of the field until then: two in the Quad need the lantern and the bridge kit.
+- **The second Warden** is the Clock's eighth gift. They start by the Kiln; H switches between
+  the two (the camera and the controls go to the other, who stands where they were left with
+  their own squad), G sends half the squad over, and walking up to the other Warden merges both
+  squads. Each Sproutling knows its Warden (`party`); with one Warden, which is every day outside
+  the story, nothing about it changes anything.
+- **Sprays.** Berry bushes grow in every section; a berry carried home is brewed at once into a
+  spray, kept from day to day: Emberbrew (B: for 20 seconds the squad walks a third faster and
+  strikes half as hard again) and Stillwater (N: every beast near the Warden freezes for 8
+  seconds). The HUD shows them in hand.
+- **The Kiln's plan.** At the base camp, choose how many of each kind go out tomorrow; the rest
+  wait. A graph shows the Kiln's stock day by day.
 - **Stakes** (`endings.ts`). The Clock should strike for the first day of term, 30 days in; the
   base camp counts down. Every part home in time is the golden ending; every part home late is
   another; the limit passing with parts still out is a third, after which the story goes on.

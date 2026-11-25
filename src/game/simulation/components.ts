@@ -45,6 +45,8 @@ export interface Worker {
   kind: SproutKind;
   /** Days of growth (see `stageOf`); always 0 outside the story. */
   growth: number;
+  /** Which Warden's squad it is in, with two Wardens (story only): 0 or 1. */
+  party: number;
   state: WorkerState;
   /** The haul or enemy this worker is assigned to, or NO_ENTITY. */
   target: Entity;
@@ -68,7 +70,7 @@ export interface Worker {
   mover: Mover;
 }
 
-export type CarryKind = 'treasure' | 'carcass' | 'pod' | 'bloom' | 'sap' | 'log';
+export type CarryKind = 'treasure' | 'carcass' | 'pod' | 'bloom' | 'sap' | 'log' | 'berry';
 
 /** What a treasure is made of: plain Sunshard, fragile Dewglass, or a crawling Lodestone. */
 export type ShardVariant = 'shard' | 'dewglass' | 'lodestone';

@@ -34,6 +34,7 @@ import {
   spawnSap,
   spawnTreasure,
   spawnWorker,
+  spawnBerry,
 } from '../world/spawn';
 import type {
   Captain,
@@ -48,6 +49,11 @@ import type {
 import type { EnemyKind } from '../enemies/enemyKinds';
 import { SPROUT_KINDS, type SproutKind } from '../workers/sprouts';
 import type { SimEvent, SimEventType } from './events';
+
+/** The sprays and the second Warden: how long, how far, and when two Wardens merge. */
+const ITEM = { brewSeconds: 20, stillSeconds: 8, stillRange: 12, mergeRange: 3 } as const;
+/** Emberbrew's boost to walking and to striking. */
+export const BREW = { speed: 4 / 3, attack: 1.5 } as const;
 import { PhysicsWorld } from './physics';
 
 /** The starting squad as a list of kinds: the lesson's make-up, or all Emberlings. */
@@ -98,6 +104,8 @@ export interface SimOptions {
   abilities?: ReadonlySet<Ability>;
   /** Story only: what the Warden had already seen of this section; marked further as they go. */
   explored?: Uint8Array;
+  /** Story only: sprays brought along. */
+  items?: { emberbrew: number; stillwater: number };
 }
 
 export interface SimStats {
@@ -105,6 +113,8 @@ export interface SimStats {
   treasuresCollected: string[];
   treasuresTotal: number;
   workersLost: number;
+  /** Story only: berries carried home today, by kind. */
+  berries: { ember: number; still: number };
   enemiesDefeated: number;
   /** Kinds of beast beaten today. */
   beatenKinds: string[];
@@ -237,6 +247,16 @@ export class Simulation {
   readonly abilities: ReadonlySet<Ability>;
   /** Story only: the fog-of-war map of what the Warden has seen (see campaign/fog.ts). */
   readonly explored: Uint8Array | null;
+  /**
+   * Story only, once the Clock grants it: the second Warden. One is played (`activeWarden`);
+   * the other stands at `otherWarden` with their own squad. Null for a day with one Warden,
+   * which is every day outside the story: nothing below changes anything then.
+   */
+  otherWarden: { x: number; z: number } | null = null;
+  activeWarden = 0;
+  /** Story only: sprays in hand today, and seconds left of an Emberbrew. */
+  readonly items = { emberbrew: 0, stillwater: 0 };
+  brewTimer = 0;
   /** The Warden's path through the day, (x, z) every TRACK_EVERY steps: a best run's ghost. */
   readonly track: number[] = [];
   /** Treasure the telescope has yet to show, and whether it has been looked through today. */
@@ -257,6 +277,8 @@ export class Simulation {
     this.growth = options.growth ?? true;
     this.untimed = level.untimed ?? false;
     this.story = options.story ?? false;
+    this.items.emberbrew = this.story ? (options.items?.emberbrew ?? 0) : 0;
+    this.items.stillwater = this.story ? (options.items?.stillwater ?? 0) : 0;
     this.abilities = this.story ? (options.abilities ?? new Set()) : new Set();
     this.explored = this.story ? (options.explored ?? emptyFog(level)) : null;
     this.dewdrops = [];
@@ -304,6 +326,7 @@ export class Simulation {
       treasuresTotal: shardCount(level),
       workersLost: 0,
       enemiesDefeated: 0,
+      berries: { ember: 0, still: 0 },
       beatenKinds: [],
       bossesDefeated: [],
       bloomsCollected: 0,
@@ -333,6 +356,10 @@ export class Simulation {
     });
     this.anchor = { ...level.captain };
     if (this.explored) reveal(this.explored, level, level.captain.x, level.captain.z);
+    if (this.abilities.has('secondWarden')) {
+      // The second Warden starts beside the Kiln, ready to be switched to.
+      this.otherWarden = this.nav.nearestWalkable(level.kiln.x + 4, level.kiln.z + 4);
+    }
     this.cursor = { ...level.captain };
 
     const kinds = startingKinds(level);
@@ -361,6 +388,7 @@ export class Simulation {
     });
     this.selected = kinds[0] ?? 'ember';
     if (this.story) {
+      (level.berries ?? []).forEach((berry, index) => spawnBerry(this, berry, index, berry.kind));
       for (const drop of level.dewdrops ?? [])
         this.dewdrops.push(this.nav.nearestWalkable(drop.x, drop.z));
     }
@@ -457,6 +485,14 @@ export class Simulation {
     }
     updateKiln(this, dt);
     updateDewdrops(this);
+    this.brewTimer = Math.max(0, this.brewTimer - dt);
+    // Two Wardens close together merge their squads.
+    if (this.otherWarden) {
+      const { x, z } = this.otherWarden;
+      if (Math.hypot(this.captainTransform.x - x, this.captainTransform.z - z) < ITEM.mergeRange) {
+        for (const [, worker] of this.workers.entries()) worker.party = this.activeWarden;
+      }
+    }
     // The fog lifts round the Warden: a few times a second is plenty.
     if (this.explored && this.tick % 15 === 0) {
       reveal(this.explored, this.level, this.captainTransform.x, this.captainTransform.z);
@@ -521,6 +557,64 @@ export class Simulation {
     this.events.push(kind ? { type, x, z, amount, kind } : { type, x, z, amount });
   }
 
+  /**
+   * Switches to the other Warden: the camera and the controls go to them, and the Warden just
+   * left stands where they are with their squad.
+   */
+  switchWarden(): boolean {
+    const other = this.otherWarden;
+    if (!other) return false;
+    const here = { x: this.captainTransform.x, z: this.captainTransform.z };
+    this.physics.placeCaptain(other);
+    this.captainTransform.x = other.x;
+    this.captainTransform.z = other.z;
+    this.otherWarden = here;
+    this.activeWarden = 1 - this.activeWarden;
+    this.emit('select', other.x, other.z);
+    return true;
+  }
+
+  /** Sends half of the squad (the back half of each kind) over to the other Warden. */
+  splitSquad(): number {
+    if (!this.otherWarden) return 0;
+    const squad = [...this.workers.entries()].filter(
+      ([, w]) => w.state === 'follow' && w.party === this.activeWarden,
+    );
+    let sent = 0;
+    squad.forEach(([, worker], i) => {
+      if (i % 2 === 1) {
+        worker.party = 1 - this.activeWarden;
+        sent++;
+      }
+    });
+    return sent;
+  }
+
+  /** Emberbrew: for 20 seconds the squad walks a third faster and strikes half as hard again. */
+  sprayEmberbrew(): boolean {
+    if (this.items.emberbrew <= 0) return false;
+    this.items.emberbrew--;
+    this.brewTimer = ITEM.brewSeconds;
+    this.emit('sap', this.captainTransform.x, this.captainTransform.z, ITEM.brewSeconds);
+    return true;
+  }
+
+  /** Stillwater: every beast near the Warden stands frozen for 8 seconds. */
+  sprayStillwater(): boolean {
+    if (this.items.stillwater <= 0) return false;
+    this.items.stillwater--;
+    const { x, z } = this.captainTransform;
+    for (const [entity, enemy] of this.enemies.entries()) {
+      if (enemy.shape || enemy.hp <= 0) continue;
+      const at = this.transforms.require(entity);
+      if (Math.hypot(at.x - x, at.z - z) > ITEM.stillRange) continue;
+      enemy.state = 'recover';
+      enemy.timer = Math.max(enemy.timer, ITEM.stillSeconds);
+    }
+    this.emit('splash', x, z);
+    return true;
+  }
+
   /** Looks through the telescope: the treasure it shows appears where it lies. */
   aimTelescope(): boolean {
     if (this.telescopeAimed || !this.level.telescope) return false;
@@ -534,7 +628,7 @@ export class Simulation {
   countWorkers(): WorkerCounts {
     const counts: WorkerCounts = { total: this.workers.size, squad: 0, idle: 0, working: 0 };
     for (const [, worker] of this.workers.entries()) {
-      if (worker.state === 'follow') counts.squad++;
+      if (worker.state === 'follow' && worker.party === this.activeWarden) counts.squad++;
       else if (worker.state === 'idle' || worker.state === 'planted') counts.idle++;
       else counts.working++;
     }

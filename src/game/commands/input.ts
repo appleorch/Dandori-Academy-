@@ -55,7 +55,17 @@ const REST_AIM = 5;
 const REST_AIM_EASE = 6;
 
 /** Actions that happen once per press and wait for the next simulation step to read them. */
-const ONE_SHOTS = ['dismiss', 'charge', 'interact', 'nextKind', 'prevKind'] as const;
+const ONE_SHOTS = [
+  'dismiss',
+  'charge',
+  'interact',
+  'nextKind',
+  'prevKind',
+  'switchWarden',
+  'splitSquad',
+  'emberbrew',
+  'stillwater',
+] as const;
 type OneShot = (typeof ONE_SHOTS)[number];
 const KIND_ACTIONS: readonly Action[] = ['kind1', 'kind2', 'kind3', 'kind4'];
 
@@ -148,6 +158,13 @@ export class InputController {
   /** The on-screen counterpart of the interact key: knock, go down or come back up. */
   queueInteract(): void {
     this.queued.add('interact');
+  }
+
+  /** True once per press of a story action (switch Warden, split, a spray). */
+  take(action: 'switchWarden' | 'splitSquad' | 'emberbrew' | 'stillwater'): boolean {
+    const queued = this.queued.has(action);
+    this.queued.delete(action);
+    return queued;
   }
 
   /** True once per press of the interact key. */
