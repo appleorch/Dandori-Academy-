@@ -376,6 +376,12 @@ camp**, which shows a map of the Quad, the Kiln's stock by kind and the Clock's 
   seconds). The HUD shows them in hand.
 - **The Kiln's plan.** At the base camp, choose how many of each kind go out tomorrow; the rest
   wait. A graph shows the Kiln's stock day by day.
+- **Exploration and secrets.** Every section hides a glade behind a cracked stretch of wall
+  (a `hidden` gate, last in its list so saved stories keep every other gate's place) with a
+  relic found nowhere else (`SECRET_RELICS`). The base camp map shows parts seen through the fog,
+  takes up to 12 pins with a click (`CampaignState.pins`), and lists each section's completion
+  (its treasures and beasts, `sectionCompletion`); a section completed earns its outfit. Hold M
+  in play for a big map.
 - **Stakes** (`endings.ts`). The Clock should strike for the first day of term, 30 days in; the
   base camp counts down. Every part home in time is the golden ending; every part home late is
   another; the limit passing with parts still out is a third, after which the story goes on.

@@ -73,6 +73,8 @@ export interface CampaignState {
   plan: Record<SproutKind, number> | null;
   /** Sproutlings in the Kiln after each day, oldest first: the base camp's graph. */
   history: number[];
+  /** The player's own pins on each section's map, by section id. */
+  pins: Record<string, { x: number; z: number }[]>;
 }
 
 /** A section's own progress, kept while another section is being explored. */
@@ -103,7 +105,48 @@ export function newCampaign(): CampaignState {
     items: { emberbrew: 0, stillwater: 0 },
     plan: null,
     history: [],
+    pins: {},
   };
+}
+
+/** The most pins a section's map takes. */
+export const MAX_PINS = 12;
+
+/** Adds a pin to the current section's map, or takes away one already close by. */
+export function togglePin(state: CampaignState, x: number, z: number): CampaignState {
+  const pins = state.pins[state.section] ?? [];
+  const near = pins.findIndex((pin) => Math.hypot(pin.x - x, pin.z - z) < 4);
+  const next =
+    near >= 0
+      ? pins.filter((_, i) => i !== near)
+      : pins.length >= MAX_PINS
+        ? pins
+        : [...pins, { x: Math.round(x), z: Math.round(z) }];
+  return { ...state, pins: { ...state.pins, [state.section]: next } };
+}
+
+/**
+ * How much of a section is done: every treasure (its caves' too) brought home and every beast
+ * beaten, as a share from 0 to 1.
+ */
+export function sectionCompletion(state: CampaignState, sectionId: string): number {
+  const section = sectionById(sectionId);
+  if (!section) return 0;
+  const done = new Set(
+    sectionId === state.section ? state.done : (state.others[sectionId]?.done ?? []),
+  );
+  const treasures = [
+    ...section.level.treasures,
+    ...(section.caves ?? []).flatMap((cave) => cave.treasures),
+  ];
+  const beasts = section.level.enemies
+    .map((enemy, index) => ({ enemy, index }))
+    .filter(({ enemy }) => enemy.kind !== 'mound');
+  const total = treasures.length + beasts.length;
+  const got =
+    treasures.filter((t) => done.has(`treasure:${t.id}`)).length +
+    beasts.filter(({ index }) => done.has(`enemy:${index}`)).length;
+  return total === 0 ? 0 : got / total;
 }
 
 /** How many log entries the story keeps. */
@@ -544,6 +587,7 @@ export function settleDay(
     items: { emberbrew: sim.items.emberbrew, stillwater: sim.items.stillwater },
     plan: state.plan,
     history: [...state.history, stockTotal(stock)].slice(-LOG_KEPT),
+    pins: state.pins,
     log: [
       ...state.log,
       {
@@ -633,6 +677,26 @@ export function sectionProgress(state: CampaignState): {
   };
 }
 
+/** Reads stored pins, keeping only well-formed ones on known sections. */
+function parsePins(raw: unknown): Record<string, { x: number; z: number }[]> {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {};
+  const out: Record<string, { x: number; z: number }[]> = {};
+  for (const [id, list] of Object.entries(raw as Record<string, unknown>)) {
+    if (!sectionById(id) || !Array.isArray(list)) continue;
+    out[id] = list
+      .filter(
+        (pin): pin is { x: number; z: number } =>
+          typeof pin === 'object' &&
+          pin !== null &&
+          Number.isFinite((pin as Record<string, unknown>).x) &&
+          Number.isFinite((pin as Record<string, unknown>).z),
+      )
+      .slice(0, MAX_PINS)
+      .map((pin) => ({ x: pin.x, z: pin.z }));
+  }
+  return out;
+}
+
 /** Reads a stored story, or null if it is missing or malformed. */
 export function parseCampaign(value: unknown): CampaignState | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
@@ -700,6 +764,7 @@ export function parseCampaign(value: unknown): CampaignState | null {
           ) as Record<SproutKind, number>)
         : null,
     history: Array.isArray(raw.history) ? raw.history.map(count) : [],
+    pins: parsePins(raw.pins),
     log: Array.isArray(raw.log)
       ? raw.log
           .filter(

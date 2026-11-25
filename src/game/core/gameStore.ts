@@ -40,6 +40,7 @@ import {
   sectionOpen,
   settleDay,
   switchSection,
+  togglePin,
   type CampaignReport,
   type CampaignState,
 } from '../campaign/campaign';
@@ -291,6 +292,8 @@ interface GameStore {
   dismissSaveBackup: () => void;
   /** Gives up the story's expedition and starts it again from the first day. */
   restartCampaign: () => void;
+  /** Story: pins a spot on the current section's map, or takes a pin away. */
+  togglePin: (x: number, z: number) => void;
   /** Story: sets how many of each kind go out each morning (null: everyone). */
   setPlan: (plan: Record<SproutKind, number> | null) => void;
   /** Story: explores another (open) section from tomorrow. */
@@ -616,6 +619,11 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     restartCampaign: () => {
       const save = { ...get().save, campaign: newCampaign() };
+      persist(save);
+      set({ save });
+    },
+    togglePin: (x, z) => {
+      const save = { ...get().save, campaign: togglePin(get().save.campaign, x, z) };
       persist(save);
       set({ save });
     },

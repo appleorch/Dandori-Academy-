@@ -60,6 +60,8 @@ const WILD_QUAD: LevelSpec = {
   captain: { x: -78, z: 2 },
   kiln: { x: -82, z: 0 },
   obstacles: [
+    // The secret glade's wall.
+    { x: -92, z: -66, w: 2, d: 8 },
     ...QUAD_TERRACES.walls,
     // The hedge garden: walled on every side, its way in a bramble gate on the south.
     { x: -41, z: -30, w: 18, d: 2 },
@@ -84,6 +86,9 @@ const WILD_QUAD: LevelSpec = {
   gates: [
     { x: -28, z: -30, w: 8, d: 2, hp: 200 },
     { x: 60, z: 6, w: 2, d: 12, hp: 220, style: 'crystal' },
+    // A weak stretch of wall, cracked: the way into the secret glade. Last in the
+    // list, so saved stories keep every other gate's place.
+    { x: -96, z: -62, w: 8, d: 2, hp: 140, style: 'hidden' },
   ],
   water: [
     // The river, with two bridge sites and the ford in the far south.
@@ -152,6 +157,8 @@ const WILD_QUAD: LevelSpec = {
     { x: 70, z: -6 },
   ],
   treasures: [
+    // The secret, in the glade behind the hidden wall.
+    { id: 'secret-quad', x: -96, z: -67, weight: 2 },
     // The Great Clock's twelve parts.
     { id: 'part-mainspring', x: -62, z: -34, weight: 3 },
     { id: 'part-escapement', x: -4, z: -60, weight: 4 },

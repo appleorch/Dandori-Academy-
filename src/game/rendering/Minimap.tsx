@@ -1,5 +1,5 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Vector3 } from 'three';
 import { ENEMY_SPECS } from '../enemies/enemyKinds';
 import type { Box } from '../navigation/NavGrid';
@@ -25,7 +25,20 @@ function makeCanvas(className: string): HTMLCanvasElement {
  * pointing to any Emberling in danger that the camera cannot see. Both are plain
  * canvases laid over the game, drawn from the simulation each frame.
  */
-export function Minimap({ sim, rival }: { sim: Simulation; rival?: string }) {
+export function Minimap({
+  sim,
+  rival,
+  mapHeld,
+}: {
+  sim: Simulation;
+  rival?: string;
+  /** Whether the full-map key is held. */
+  mapHeld?: () => boolean;
+}) {
+  const heldMap = useRef(false);
+  useFrame(() => {
+    heldMap.current = mapHeld?.() ?? false;
+  });
   const gl = useThree((state) => state.gl);
   const { width, depth } = sim.level;
   const scale = MAP_WIDTH / width;
@@ -56,6 +69,9 @@ export function Minimap({ sim, rival }: { sim: Simulation; rival?: string }) {
   }, [gl, map, arrows, height, rival]);
 
   useFrame(({ camera, clock, size }) => {
+    // Held, the map key opens the full map: the same drawing, laid over the middle of the screen.
+    const big = !rival && heldMap.current;
+    if (map.classList.contains('big') !== big) map.classList.toggle('big', big);
     const time = clock.elapsedTime;
     const frame = Math.round(time * 60);
     if (rival) {
@@ -197,7 +213,12 @@ export function Minimap({ sim, rival }: { sim: Simulation; rival?: string }) {
       dot(beacon.x, beacon.z, 3, beacon.lit ? '#ffc06a' : '#6aa8ff');
     for (const [, enemy] of sim.enemies.entries()) {
       if (enemy.shape) {
-        box(enemy.shape, (enemy.shape as GateSpawn).style === 'crystal' ? '#7acaff' : '#4a5a22');
+        const style = (enemy.shape as GateSpawn).style;
+        // A hidden wall looks like any other wall on the map, too.
+        box(
+          enemy.shape,
+          style === 'crystal' ? '#7acaff' : style === 'hidden' ? '#8a8f98' : '#4a5a22',
+        );
       }
     }
     const { descent } = sim.level;

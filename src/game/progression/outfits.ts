@@ -1,6 +1,7 @@
 import { rankValue, type Rank } from '../dandori/scoring';
 import { bestRank, type SaveData } from '../save/saveManager';
 import { CHALLENGE_LEVELS, LEVELS } from '../world/level';
+import { sectionCompletion } from '../campaign/campaign';
 
 /** One look for the Warden. Purely cosmetic; earned, never bought. */
 export interface Outfit {
@@ -118,6 +119,24 @@ export const OUTFITS: readonly Outfit[] = [
     lamp: '#e6f6ff',
     unlocked: (save) => lessonsAtLeast(save, 'Diamond') >= 5,
   },
+  // One for each story section explored to the last relic and beast.
+  ...(
+    [
+      ['quad', 'Quadrangle', '#4a7a3a', '#e8d070', '#7ab04a', 'The Wild Quad'],
+      ['orchard', 'Orchard', '#3a6a7a', '#f0b0a0', '#d8604a', 'the Sunken Orchard'],
+      ['foundry', 'Foundry', '#5a3a2a', '#ffb347', '#3a3030', 'the Clockwork Foundry'],
+      ['observatory', 'Stargazer', '#2a3050', '#b8f0ff', '#e8f4ff', 'the Frostglass Observatory'],
+    ] as const
+  ).map(([section, name, suit, trim, hat, place]): Outfit => ({
+    id: `section-${section}`,
+    name,
+    requirement: `Find everything in ${place}: every relic home and every beast beaten.`,
+    suit,
+    trim,
+    hat,
+    lamp: trim,
+    unlocked: (save) => sectionCompletion(save.campaign, section) >= 1,
+  })),
 ];
 
 /** The outfit to wear: the chosen one if it is unlocked, otherwise the cadet's. */

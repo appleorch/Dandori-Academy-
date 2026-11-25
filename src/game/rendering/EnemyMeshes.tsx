@@ -486,6 +486,38 @@ function MoundBody({ r, glint }: { r: number; glint: string }) {
 }
 
 /** A wall of thorny bramble filling a gate's box. */
+/** A weak stretch of wall: old brick like the rest, but for a crack running through it. */
+function HiddenWallBody({ box }: { box: Box }) {
+  const long = box.w >= box.d;
+  const length = long ? box.w : box.d;
+  return (
+    <>
+      <mesh position={[0, 1.25, 0]} castShadow receiveShadow>
+        <boxGeometry args={[box.w, 2.5, box.d]} />
+        <meshStandardMaterial color="#a8583a" roughness={0.9} />
+      </mesh>
+      {/* The crack: a dark zig-zag on both faces. */}
+      {[-1, 1].map((side) =>
+        [0, 1, 2, 3].map((i) => {
+          const along = (i / 3 - 0.5) * length * 0.3;
+          const y = 0.4 + i * 0.5;
+          const off = side * ((long ? box.d : box.w) / 2 + 0.01);
+          return (
+            <mesh
+              key={`${side}:${i}`}
+              position={[long ? along : off, y, long ? off : along]}
+              rotation={[0, long ? 0 : Math.PI / 2, i % 2 ? 0.7 : -0.7]}
+            >
+              <planeGeometry args={[0.08, 0.6]} />
+              <meshBasicMaterial color="#2a1d14" side={2} />
+            </mesh>
+          );
+        }),
+      )}
+    </>
+  );
+}
+
 function GateBody({ box }: { box: Box }) {
   const stems = Math.max(3, Math.round(Math.max(box.w, box.d) * 1.6));
   const long = box.w >= box.d;
@@ -1413,6 +1445,8 @@ function EnemyMesh({ sim, entity, enemy }: EnemyMeshProps) {
         {enemy.shape &&
           ((enemy.shape as GateSpawn).style === 'crystal' ? (
             <CrystalGateBody box={enemy.shape} />
+          ) : (enemy.shape as GateSpawn).style === 'hidden' ? (
+            <HiddenWallBody box={enemy.shape} />
           ) : (
             <GateBody box={enemy.shape} />
           ))}

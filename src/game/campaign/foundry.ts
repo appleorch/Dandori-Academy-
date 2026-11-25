@@ -50,6 +50,8 @@ export const CLOCKWORK_FOUNDRY: LevelSpec = {
   captain: { x: -84, z: 82 },
   kiln: { x: -88, z: 86 },
   obstacles: [
+    // The secret glade's wall.
+    { x: 92, z: 96, w: 2, d: 8 },
     ...TIERS.walls,
     // Furnaces on the casting floor, each a block of brick.
     { x: -30, z: 40, w: 10, d: 10 },
@@ -72,6 +74,9 @@ export const CLOCKWORK_FOUNDRY: LevelSpec = {
     { x: -20, z: -60, w: 2, d: 12, hp: 220, style: 'crystal' },
     // The tower's iron door at the foot of its ramp, bramble-grown.
     { x: 12, z: -76, w: 2, d: 8, hp: 200 },
+    // A weak stretch of wall, cracked: the way into the secret glade. Last in the
+    // list, so saved stories keep every other gate's place.
+    { x: 96, z: 92, w: 8, d: 2, hp: 140, style: 'hidden' },
   ],
   conveyors: [
     // The long belt home along the south of the casting floor, running west to the Kiln.
@@ -123,6 +128,8 @@ export const CLOCKWORK_FOUNDRY: LevelSpec = {
     { x: 90, z: 56 },
   ],
   treasures: [
+    // The secret, in the glade behind the hidden wall.
+    { id: 'secret-foundry', x: 96, z: 96, weight: 2 },
     // The Great Clock's ten parts in the Foundry: its case and its face.
     { id: 'part-dial-plate', x: -60, z: 60, weight: 2 },
     { id: 'part-chapter-ring', x: -82, z: 8, weight: 3 },

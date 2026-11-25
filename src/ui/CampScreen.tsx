@@ -5,6 +5,7 @@ import {
   currentSection,
   dayParty,
   partsOutOfReach,
+  sectionCompletion,
   sectionOpen,
   sectionProgress,
   stockTotal,
@@ -13,7 +14,7 @@ import {
 } from '../game/campaign/campaign';
 import { CAMPAIGN_SECTIONS } from '../game/campaign/sections';
 import { daysLeft } from '../game/campaign/endings';
-import { decodeFog, explored, FOG_CELL, fogSize } from '../game/campaign/fog';
+import { decodeFog, explored, FOG_CELL, fogSize, isSeen } from '../game/campaign/fog';
 import { CLOCK_UPGRADES, nextUpgrade, type Ability } from '../game/campaign/upgrades';
 import type { MessageKey } from '../i18n/en';
 import { useGameStore } from '../game/core/gameStore';
@@ -60,7 +61,13 @@ const SCALE = 4;
  * The section as the expedition knows it: what stands where, which parts are home and which
  * are still out, what has been opened up, and where the Kiln and the beacons are.
  */
-function SectionMap({ state }: { state: CampaignState }) {
+function SectionMap({
+  state,
+  onPin,
+}: {
+  state: CampaignState;
+  onPin?: (x: number, z: number) => void;
+}) {
   const section = currentSection(state);
   const level = section.level;
   const done = new Set(state.done);
@@ -88,6 +95,13 @@ function SectionMap({ state }: { state: CampaignState }) {
       viewBox={`0 0 ${w} ${h}`}
       role="img"
       aria-label={t('camp.mapLabel', { section: sectionName(section) })}
+      onClick={(event) => {
+        if (!onPin) return;
+        const box = event.currentTarget.getBoundingClientRect();
+        const x = ((event.clientX - box.left) / box.width) * level.width - level.width / 2;
+        const z = ((event.clientY - box.top) / box.height) * level.depth - level.depth / 2;
+        onPin(x, z);
+      }}
     >
       <rect x={0} y={0} width={w} height={h} className="camp-ground" />
       {(level.plateaus ?? []).map((p, i) => rect(p, `p${i}`, 'camp-plateau'))}
@@ -99,7 +113,15 @@ function SectionMap({ state }: { state: CampaignState }) {
       {(level.gates ?? []).map((gate, i) =>
         done.has(`gate:${i}`)
           ? null
-          : rect(gate, `g${i}`, gate.style === 'crystal' ? 'camp-gate crystal' : 'camp-gate'),
+          : rect(
+              gate,
+              `g${i}`,
+              gate.style === 'crystal'
+                ? 'camp-gate crystal'
+                : gate.style === 'hidden'
+                  ? 'camp-wall'
+                  : 'camp-gate',
+            ),
       )}
       {(level.beacons ?? []).map((beacon, i) => (
         <circle
@@ -119,8 +141,9 @@ function SectionMap({ state }: { state: CampaignState }) {
         const part = level.treasures.find((t) => t.id === id);
         if (!part) return null;
         const home = state.parts[id] !== undefined;
-        // Parts still out show only once the Clock can chime for them (the first gift).
-        if (!home && !radar) return null;
+        // Parts still out show once the Clock can chime for them (the first gift), or once
+        // the Warden has seen where they lie.
+        if (!home && !radar && !isSeen(seen, level, part.x, part.z)) return null;
         return (
           <g key={id} transform={`translate(${px(part.x)} ${pz(part.z)})`}>
             <title>
@@ -152,6 +175,12 @@ function SectionMap({ state }: { state: CampaignState }) {
           ),
         ),
       )}
+      {(state.pins[state.section] ?? []).map((pin, i) => (
+        <g key={`pin${i}`} transform={`translate(${px(pin.x)} ${pz(pin.z)})`} className="camp-pin">
+          <path d="M0 0 L-6 -14 A7 7 0 1 1 6 -14 Z" />
+          <circle cy={-16} r={3} />
+        </g>
+      ))}
       <circle cx={px(level.kiln.x)} cy={pz(level.kiln.z)} r={12} className="camp-kiln" />
       <text
         x={px(level.kiln.x)}
@@ -176,6 +205,7 @@ export function CampScreen() {
   const dismissEnding = useGameStore((store) => store.dismissEnding);
   const relaxed = useGameStore((store) => store.settings.relaxedStory);
   const setPlan = useGameStore((store) => store.setPlan);
+  const pinAt = useGameStore((store) => store.togglePin);
   const restartCampaign = useGameStore((store) => store.restartCampaign);
   const [confirming, setConfirming] = useState(false);
   const section = currentSection(state);
@@ -222,7 +252,10 @@ export function CampScreen() {
           </span>
         </p>
         <div className="story-map">
-          <SectionMap state={state} />
+          <div>
+            <SectionMap state={state} onPin={pinAt} />
+            <p className="note">{t('camp.pinHint')}</p>
+          </div>
           <aside className="map-panel" aria-live="polite">
             <p className="eyebrow">{t('camp.eyebrow')}</p>
             <h2>{sectionName(section)}</h2>
@@ -291,7 +324,12 @@ export function CampScreen() {
               const here = other.id === state.section;
               return (
                 <li key={other.id} className={here ? 'home' : undefined}>
-                  <strong>{sectionName(other)}</strong>
+                  <strong>
+                    {sectionName(other)}{' '}
+                    {t('camp.complete', {
+                      percent: Math.floor(sectionCompletion(state, other.id) * 100),
+                    })}
+                  </strong>
                   {here ? (
                     <small>{t('camp.sectionHere')}</small>
                   ) : open ? (

@@ -57,6 +57,8 @@ export const SUNKEN_ORCHARD: LevelSpec = {
   kiln: { x: -96, z: 0 },
   descent: { x: 72, z: -40, to: 'campaign-orchard-roots' },
   obstacles: [
+    // The secret glade's wall.
+    { x: -102, z: 75, w: 2, d: 10 },
     ...CRATE,
     ...ROOTS,
     // Old fruit trees standing in rows on the meadow and the south road.
@@ -77,6 +79,9 @@ export const SUNKEN_ORCHARD: LevelSpec = {
     { x: -37, z: -36, w: 2, d: 6, hp: 120 },
     // The shortcut through the hedge, from the Root Hollow to the south road.
     { x: 54, z: 58, w: 2, d: 12, hp: 160 },
+    // A weak stretch of wall, cracked: the way into the secret glade. Last in the
+    // list, so saved stories keep every other gate's place.
+    { x: -106, z: 70, w: 8, d: 2, hp: 140, style: 'hidden' },
   ],
   water: [
     // The ring of water round Watering Can Island.
@@ -141,6 +146,8 @@ export const SUNKEN_ORCHARD: LevelSpec = {
     { x: 96, z: 14 },
   ],
   treasures: [
+    // The secret, in the glade behind the hidden wall.
+    { id: 'secret-orchard', x: -106, z: 75, weight: 2 },
     // The Great Clock's ten parts in the Orchard.
     { id: 'part-click-spring', x: -80, z: -28, weight: 2 },
     { id: 'part-third-wheel', x: -30, z: -48, weight: 3 },

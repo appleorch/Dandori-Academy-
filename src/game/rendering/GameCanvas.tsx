@@ -300,7 +300,7 @@ export function GameCanvas({ level, input }: GameCanvasProps) {
             <EnemyMeshes sim={sim} />
             <WaterAndBridges sim={sim} />
             <Beacons sim={sim} />
-            <Minimap sim={sim} />
+            <Minimap sim={sim} mapHeld={() => input.held('map')} />
             {battle && <Minimap sim={battle.rival} rival={RIVAL_NAMES[battle.rivalLevel]} />}
             <HazardMeshes sim={sim} />
             <AimArc sim={sim} />

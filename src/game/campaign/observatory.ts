@@ -44,6 +44,8 @@ export const FROSTGLASS_OBSERVATORY: LevelSpec = {
     reveals: ['relic-24', 'relic-25', 'relic-26'],
   },
   obstacles: [
+    // The secret glade's wall.
+    { x: 112, z: -76, w: 2, d: 8 },
     ...GALLERIES.walls,
     // The glass halls: the west hall, the middle hall (with the telescope), and their walls.
     { x: -60, z: -46, w: 2, d: 52 },
@@ -68,6 +70,9 @@ export const FROSTGLASS_OBSERVATORY: LevelSpec = {
     // The north and south stores of the west hall.
     { x: -100, z: -70, w: 18, d: 2, hp: 160 },
     { x: -100, z: 70, w: 18, d: 2, hp: 160, style: 'crystal' },
+    // A weak stretch of wall, cracked: the way into the secret glade. Last in the
+    // list, so saved stories keep every other gate's place.
+    { x: 116, z: -72, w: 8, d: 2, hp: 140, style: 'hidden' },
   ],
   coils: [
     { a: { x: -50, z: -24 }, b: { x: -50, z: -12 }, period: 4, offset: 0 },
@@ -113,6 +118,8 @@ export const FROSTGLASS_OBSERVATORY: LevelSpec = {
     { x: 100, z: 50 },
   ],
   treasures: [
+    // The secret, in the glade behind the hidden wall.
+    { id: 'secret-observatory', x: 116, z: -76, weight: 2 },
     // The Great Clock's ten parts in the Observatory: its heart and its hands.
     { id: 'part-star-wheel', x: -90, z: -30, weight: 2 },
     { id: 'part-regulator', x: -100, z: -78, weight: 3 },

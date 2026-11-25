@@ -86,6 +86,8 @@ export const EN = {
   'camp.startOverAsk': 'Start over…',
   'camp.daysLeft': '{days} days until term',
   'camp.plan': 'Who goes out',
+  'camp.complete': '({percent}% done)',
+  'camp.pinHint': 'Click the map to pin a spot; click a pin to take it away.',
   'camp.planNote': 'How many of each kind to take tomorrow; the rest wait in the Kiln.',
   'camp.planEveryone': 'Send everyone',
   'camp.history': 'The Kiln, day by day',

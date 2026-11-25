@@ -678,7 +678,44 @@ export const BOSS_RELICS: Readonly<Record<string, Relic>> = {
  * The relic a treasure is. Shards dropped by bosses and mounds are not in any lesson's list;
  * they take one from the common pool by their id.
  */
+/** Each section's secret: a relic found nowhere else, behind a hidden wall. */
+export const SECRET_RELICS: Readonly<Record<string, Relic>> = {
+  'secret-quad': {
+    id: 'secret-quad',
+    name: 'The Groundskeeper’s Spectacles',
+    shape: 'compass',
+    material: 'silver',
+    description:
+      'Left on a ledge in a walled corner of the Quad. Through them every weed looks guilty.',
+  },
+  'secret-orchard': {
+    id: 'secret-orchard',
+    name: 'The First Apple Core',
+    shape: 'acorn',
+    material: 'gold',
+    description:
+      'From the orchard’s very first harvest, gilded by someone sentimental. Do not eat it.',
+  },
+  'secret-foundry': {
+    id: 'secret-foundry',
+    name: 'The Founder’s Thimble',
+    shape: 'thimble',
+    material: 'brass',
+    description:
+      'Worn while casting the Clock’s first wheel. It has a dent the exact shape of a hammer.',
+  },
+  'secret-observatory': {
+    id: 'secret-observatory',
+    name: 'The Star That Fell In',
+    shape: 'crystal',
+    material: 'crystal',
+    description: 'Found behind a cracked pane. It still faintly hums the note the stars sing.',
+  },
+};
+
 export function relicFor(levelId: string, treasureId: string, variant?: ShardVariant): Relic {
+  const secret = SECRET_RELICS[treasureId];
+  if (levelId.startsWith('campaign-') && secret) return secret;
   if (levelId.startsWith('campaign-') && CLOCK_PARTS[treasureId]) return CLOCK_PARTS[treasureId];
   const boss = BOSS_RELICS[treasureId];
   if (boss) return boss;

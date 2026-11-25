@@ -8,6 +8,15 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.35.0',
+    date: '2026-11-25',
+    changes: [
+      'Story: every section hides a secret glade behind a cracked stretch of wall. Break through to find a relic found nowhere else.',
+      'Story: the base camp map shows parts you have seen, and you can pin up to 12 spots on it with a click. Each section shows how much of it you have completed, and completing one earns an outfit.',
+      'Hold M in play for a big map.',
+    ],
+  },
+  {
     version: '0.34.0',
     date: '2026-11-25',
     changes: [
