@@ -461,6 +461,14 @@ opens with a medal on the one before. Challenges are always played on the Normal
 | Dandori Challenge | Yes   | When everything is in     | 10 per point of weight home; 1 per second left once everything is collected                                                   | Gates, bridges, beacons, ledges: jobs that unlock jobs  |
 | Lean Squad Trial  | No    | When every Sunshard is in | 10 per point of Sunshard weight home; once every Sunshard is home, 50 per Sproutling alive. The Kiln grows nothing            | Hazards that punish the wrong kind, beasts on the prize |
 
+**The design pass** (0.45.0, `levels/challenges/rework.ts`), applied alike to every hand-built
+field: one smaller than 3,600 square units grows evenly, up to 1.3 times each way (every place
+and wall's size; its day is written in its file); a field that scores treasure gets a Glowcap on
+the farthest open ground from the Kiln, sprouting a quarter of the way into the day; and each
+challenge's fields are ordered by how hard the test player found them (time for the timed ones,
+losses then weight for the Trial, size for the Growing Season). Fields with vents or coils, and
+four whose trick hangs on exact distances (`AS_LAID_OUT`), are kept as laid out.
+
 Every challenge field is dressed for its setting: fields written without dressing of their own
 get their setting's walls and a giant object at each corner and side (`dressField` in
 `src/game/world/levels/challenges/field.ts`), art only, so no board ever resets for it.

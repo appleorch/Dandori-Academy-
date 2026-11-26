@@ -1,6 +1,5 @@
-import { SIM_DT } from '../core/config';
 import type { Expedition } from '../simulation/expedition';
-import { PhysicsWorld } from '../simulation/physics';
+import type { PhysicsWorld } from '../simulation/physics';
 import { Simulation } from '../simulation/Simulation';
 
 /**
@@ -9,9 +8,8 @@ import { Simulation } from '../simulation/Simulation';
  *
  * The copy is deep and keeps each object's class, so the copied simulation works as the
  * original did; shared references stay shared within the copy. Two things are not copied: the
- * level (never changed in play, so it is shared) and the physics world, which lives in WASM and
- * holds only the Warden's body among the walls: it is built afresh from the copy's walls with
- * the Warden where they stand.
+ * level (never changed in play, so it is shared) and the physics world, which lives in WASM: it
+ * is copied from Rapier's own snapshot of it (`PhysicsWorld.clone`).
  */
 
 type Memo = Map<object, unknown>;
@@ -60,24 +58,18 @@ function copy(value: unknown, memo: Memo): unknown {
   return out;
 }
 
-/** Builds a fresh physics world for a copied simulation: its walls, the Warden where they are. */
-function rebuildPhysics(sim: Simulation): void {
-  const walls = (sim as unknown as { walls: { x: number; z: number; w: number; d: number }[] })
-    .walls;
-  const physics = new PhysicsWorld(
-    sim.level.width,
-    sim.level.depth,
-    walls,
-    sim.captainTransform,
-    SIM_DT,
-  );
-  (sim as unknown as { physics: PhysicsWorld }).physics = physics;
+/** Gives a copied simulation an exact copy of the original's physics world. */
+function clonePhysics(original: Simulation, made: Simulation, memo: Memo): void {
+  const physics = original.physics.clone((box) => (memo.get(box) as typeof box) ?? box);
+  (made as unknown as { physics: PhysicsWorld }).physics = physics;
 }
 
 /** A copy of an expedition (and every simulation in it), ready to be played on. */
 export function snapshotExpedition(expedition: Expedition): Expedition {
   const memo: Memo = new Map();
   const out = copy(expedition, memo) as Expedition;
-  for (const made of memo.values()) if (made instanceof Simulation) rebuildPhysics(made);
+  for (const [original, made] of memo) {
+    if (made instanceof Simulation) clonePhysics(original as Simulation, made, memo);
+  }
   return out;
 }

@@ -8,6 +8,14 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.45.0',
+    date: '2026-11-26',
+    changes: [
+      'The challenge fields have been reworked: the small ones are bigger, each challenge now runs from its easiest field to its hardest, and fields that score treasure have a Glowcap sprouting on the far side, worth points of its own but a detour that costs time. Medal times are measured afresh, so the challenge boards start over.',
+      'Scrubbing back in a replay now plays on exactly as the day went, even with the Warden pressed against a wall.',
+    ],
+  },
+  {
     version: '0.44.0',
     date: '2026-11-25',
     changes: [

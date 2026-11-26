@@ -68,7 +68,8 @@ test('a challenge can be played and ended for a result', async ({ page }) => {
   const errors = await freshPlayer(page);
   await page.locator('.mode-card', { hasText: 'Challenges' }).click();
   await page.getByRole('button', { name: 'Treasure Hunt' }).click();
-  await page.getByRole('button', { name: /Scattered Light/ }).click();
+  // The first field of the challenge: always open.
+  await page.locator('button.lesson:not(.locked)').first().click();
   await inDay(page);
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: /End the day now/ }).click();
@@ -80,7 +81,8 @@ test('a challenge day can be watched again as a replay', async ({ page }) => {
   const errors = await freshPlayer(page);
   await page.locator('.mode-card', { hasText: 'Challenges' }).click();
   await page.getByRole('button', { name: 'Treasure Hunt' }).click();
-  await page.getByRole('button', { name: /Scattered Light/ }).click();
+  // The first field of the challenge: always open.
+  await page.locator('button.lesson:not(.locked)').first().click();
   await inDay(page);
   await page.waitForTimeout(3000);
   await page.keyboard.press('Escape');
@@ -127,7 +129,8 @@ test('once opened, the game loads and starts a day offline', async ({ page, cont
   await passTitle(page);
   await page.locator('.mode-card', { hasText: 'Challenges' }).click();
   await page.getByRole('button', { name: 'Treasure Hunt' }).click();
-  await page.getByRole('button', { name: /Scattered Light/ }).click();
+  // The first field of the challenge: always open.
+  await page.locator('button.lesson:not(.locked)').first().click();
   await inDay(page);
 });
 

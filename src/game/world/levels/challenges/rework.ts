@@ -11,7 +11,8 @@ import { challengeFields, type FieldSpec } from './field';
  * round them are measured by hand.
  *
  * - Small fields grow: one written smaller than `ROOMY` square units is scaled up evenly (every
- *   place and every wall's size, up to `MOST_GROWTH` each way), and a timed one's day with it.
+ *   place and every wall's size, up to `MOST_GROWTH` each way). Each field's day is written in
+ *   its file, long enough for the bigger field: at least half as long again as its pace.
  * - Risk and reward: a field that scores treasure gets a Glowcap on the farthest open ground
  *   from the Kiln, sprouting partway through the day. It is worth points of its own but never
  *   counts for a medal, so going for it is a detour that costs pace.
@@ -35,7 +36,8 @@ function scaled<T>(value: T, by: number): T {
   const out: Record<string, unknown> = {};
   for (const [key, item] of Object.entries(value)) {
     if (NOT_SPATIAL.has(key)) out[key] = item;
-    else if (SPATIAL.has(key) && typeof item === 'number') out[key] = Math.round(item * by * 1000) / 1000;
+    else if (SPATIAL.has(key) && typeof item === 'number')
+      out[key] = Math.round(item * by * 1000) / 1000;
     else out[key] = scaled(item, by);
   }
   return out as T;
@@ -54,15 +56,13 @@ export function growthOf(spec: Pick<FieldSpec, 'width' | 'depth' | 'vents' | 'co
 }
 
 /** A field grown evenly by `by`: its size, every place on it and every wall's size. */
-export function grow(spec: FieldSpec, by: number, timed: boolean): FieldSpec {
+export function grow(spec: FieldSpec, by: number): FieldSpec {
   if (by === 1) return spec;
   const grown = scaled(spec, by);
   return {
     ...grown,
     width: Math.round(spec.width * by),
     depth: Math.round(spec.depth * by),
-    // Walking takes longer on a bigger field; a timed day lengthens with it.
-    dayLength: timed ? Math.round((spec.dayLength * by * 1.1) / 5) * 5 : spec.dayLength,
   };
 }
 
@@ -114,12 +114,13 @@ export function farthestOpen(spec: FieldSpec): Point | null {
 /** The rules that score treasure, where a Glowcap tempts. */
 const TEMPTED: ReadonlySet<ChallengeId> = new Set(['hunt', 'mission', 'dandori', 'trial']);
 
-/** A Glowcap for a field, sprouting about a third of the way into its day, or none. */
+/** A Glowcap for a field, sprouting a quarter of the way into its day, or none. */
 export function glowcapFor(spec: FieldSpec, mode: ChallengeId): BloomSpawn | null {
   if (!TEMPTED.has(mode) || (spec.blooms ?? []).length > 0 || hazardous(spec)) return null;
   const spot = farthestOpen(spec);
   if (!spot) return null;
-  const at = mode === 'trial' ? 60 : Math.max(20, Math.round(spec.pace * 0.35));
+  // By the day, never by the pace, so measuring a field again never moves its Glowcap.
+  const at = mode === 'trial' ? 60 : Math.max(20, Math.round(spec.dayLength * 0.25));
   return { ...spot, weight: 3, at, lifetime: 70 };
 }
 
@@ -137,11 +138,23 @@ export function difficulty(mode: ChallengeId, spec: FieldSpec): number {
   return spec.pace;
 }
 
+/**
+ * Fields kept exactly as laid out: their trick depends on distances the pass would change (a
+ * bramble wall's reach, a pond's banks, a drip's timing), and the test player cannot finish
+ * them grown.
+ */
+const AS_LAID_OUT: ReadonlySet<string> = new Set([
+  'behind-brambles',
+  'sunken-hoard',
+  'the-mire',
+  'drip-corridor',
+]);
+
 /** A challenge's hand-built fields with the design pass applied, easiest first. */
 export function handmadeFields(mode: ChallengeId, specs: readonly FieldSpec[]) {
-  const timed = mode !== 'growing' && mode !== 'trial';
   const reworked = specs.map((spec) => {
-    const grown = grow(spec, growthOf(spec), timed);
+    if (AS_LAID_OUT.has(spec.id)) return spec;
+    const grown = grow(spec, growthOf(spec));
     const glowcap = glowcapFor(grown, mode);
     return glowcap ? { ...grown, blooms: [glowcap] } : grown;
   });

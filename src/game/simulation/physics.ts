@@ -66,6 +66,24 @@ export class PhysicsWorld {
     this.world.step();
   }
 
+  /**
+   * An exact copy of this world, from Rapier's own snapshot, so it steps on just as this one
+   * would (a world built afresh can differ in the last digits, its contacts made in another
+   * order). `boxOf` maps each wall to its counterpart in the copied simulation.
+   */
+  clone(boxOf: (box: Box) => Box): PhysicsWorld {
+    const world = rapier().World.restoreSnapshot(this.world.takeSnapshot());
+    const out = Object.create(PhysicsWorld.prototype) as Record<string, unknown>;
+    out.world = world;
+    out.body = world.getRigidBody(this.body.handle);
+    out.collider = world.getCollider(this.collider.handle);
+    out.controller = world.createCharacterController(0.02);
+    out.walls = new Map(
+      [...this.walls].map(([box, collider]) => [boxOf(box), world.getCollider(collider.handle)]),
+    );
+    return out as unknown as PhysicsWorld;
+  }
+
   /** Adds a solid box the captain cannot walk through. */
   addWall(box: Box): void {
     const collider = this.world.createCollider(
