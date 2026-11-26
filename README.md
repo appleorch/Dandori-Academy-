@@ -461,13 +461,22 @@ opens with a medal on the one before. Challenges are always played on the Normal
 | Dandori Challenge | Yes   | When everything is in     | 10 per point of weight home; 1 per second left once everything is collected                                                   | Gates, bridges, beacons, ledges: jobs that unlock jobs  |
 | Lean Squad Trial  | No    | When every Sunshard is in | 10 per point of Sunshard weight home; once every Sunshard is home, 50 per Sproutling alive. The Kiln grows nothing            | Hazards that punish the wrong kind, beasts on the prize |
 
-**The design pass** (0.45.0, `levels/challenges/rework.ts`), applied alike to every hand-built
-field: one smaller than 3,600 square units grows evenly, up to 1.3 times each way (every place
-and wall's size; its day is written in its file); a field that scores treasure gets a Glowcap on
-the farthest open ground from the Kiln, sprouting a quarter of the way into the day; and each
-challenge's fields are ordered by how hard the test player found them (time for the timed ones,
-losses then weight for the Trial, size for the Growing Season). Fields with vents or coils, and
-four whose trick hangs on exact distances (`AS_LAID_OUT`), are kept as laid out.
+**The field composer** (0.46.0, `src/game/world/fieldKit.ts`). The Treasure Hunt, Mission,
+Dandori Challenge, Lean Squad Trial and Growing Season fields are composed rather than drawn: a
+field is a grid of walled gardens (six to twelve), joined to the Kiln's garden by a random tree
+with extra ways through that make loops, so there is a route to plan rather than one path. The
+Kiln stands in a corner, on an edge or in the centre. Each way through is a gap, a bramble gate,
+a crystal door (Stonelings) or a stream with a bridge to build from logs (or wade with Dewlings).
+Each garden holds one idea: a scatter of shards, a guarded hoard (sometimes a Lodestone), a raised
+shelf, a pond only Dewlings work, a flame-vent or coil nook in a dead end for Emberlings or
+Sparklings, a den of beasts, a garden of pods and mounds, twins far apart, Dewglass, and at the top
+of the Mission and Dandori ramps a Gravelmaw. Far gardens may have a beacon; treasure fields have a
+Glowcap in the farthest garden. A tier (1 to 12) sets the size and how much is combined, and the
+squad is kept lean, so a field takes the test player from about two minutes to ten. Each brief is
+written from what is in the field (`briefFor`). Candidates are searched with `VITE_KIT=<rule> npx
+vitest run src/game/world/fieldKit.report.test.ts --silent=false`: a field is kept only if every
+spawn is reachable and the test player finishes it in fair time; the seeds, tiers, names and paces
+are listed in each challenge's file (`composedFields`).
 
 Every challenge field is dressed for its setting: fields written without dressing of their own
 get their setting's walls and a giant object at each corner and side (`dressField` in

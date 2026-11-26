@@ -92,7 +92,8 @@ interface Zone {
 
 /** A field composed for a challenge at a tier, from a seed. Its id is the caller's. */
 export function composeField(seed: number, mode: ChallengeId, tier: number, id: string): Composed {
-  const random = seeded(seed * 7919 + tier * 104729);
+  // Each rule draws its own fields: a Mission and a Dandori Challenge on the same seed differ.
+  const random = seeded(seed * 7919 + tier * 104729 + (mode === 'dandori' ? 31337 : 0));
   const pick = <T>(list: readonly T[]): T => list[Math.floor(random() * list.length)];
   const between = (lo: number, hi: number) => lo + random() * (hi - lo);
   const chance = (p: number) => random() < p;
@@ -318,6 +319,8 @@ export function composeField(seed: number, mode: ChallengeId, tier: number, id: 
     const list: Module[] = ['scatter', 'hoard'];
     if (mode === 'hunt') list.push('scatter', 'twins', 'dewglass', 'hoard');
     if (fights) list.push('den', 'den', 'hoard');
+    // A Dandori Challenge weighs everything home, beasts too: more of them to carry.
+    if (mode === 'dandori') list.push('den', 'scatter');
     if (tier >= 2) list.push('shelf');
     if (tier >= 3) list.push('pond');
     // A hazard nook only where nothing else passes through: a dead end.
