@@ -25,6 +25,8 @@ import {
 } from './board';
 import oldBoard from './fixtures/board-0.17.0.json';
 import { challengeFacts } from '../modes/facts';
+import { HUNT_FIELDS } from '../world/levels/challenges/hunt';
+import { TRIAL_FIELDS } from '../world/levels/challenges/trial';
 import { MODES, scoreChallenge } from '../modes/modes';
 import {
   checkRun,
@@ -342,7 +344,7 @@ describe('runs on the challenge fields', () => {
   }
 
   it('checks out a Lean Squad Trial, which has no clock, and catches one that claims time left', () => {
-    const run = fieldRun('trial-careful-steps');
+    const run = fieldRun(TRIAL_FIELDS[0].id);
     expect(run.timeLeft).toBe(0);
     expect(checkRun(run)).toBeNull();
     expect(checkRun({ ...run, timeLeft: 30 })).not.toBeNull();
@@ -350,7 +352,7 @@ describe('runs on the challenge fields', () => {
   });
 
   it('checks out a timed challenge field, and refuses it on another challenge’s board', () => {
-    const run = fieldRun('hunt-scattered-light');
+    const run = fieldRun(HUNT_FIELDS[0].id);
     expect(checkRun(run)).toBeNull();
     expect(checkRun({ ...run, mode: 'mission' })).not.toBeNull();
   });

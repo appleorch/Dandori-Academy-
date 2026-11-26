@@ -8,6 +8,15 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.46.0',
+    date: '2026-11-26',
+    changes: [
+      'New fields for the Treasure Hunt, Mission, Dandori Challenge, Lean Squad Trial and Growing Season: sixty in all, each a set of six to twelve walled gardens with more than one way round. Break bramble gates, crack crystal doors with Stonelings, bridge streams with logs (or wade them with Dewlings), and plan a route past hoards, raised shelves, ponds, flame and coil nooks, beast dens, seed-pod gardens and, at the top, a Gravelmaw.',
+      'Challenge days are longer and leaner: from about two minutes on the first field to ten on the last, with a smaller squad, so every throw counts.',
+      'Every field’s brief now says what is in it: its shape, its ways through, and what stands out.',
+    ],
+  },
+  {
     version: '0.45.0',
     date: '2026-11-26',
     changes: [
