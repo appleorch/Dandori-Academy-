@@ -1,5 +1,6 @@
 import { terrace, terraces } from '../../course';
-import { challengeFields, type FieldSpec } from './field';
+import type { FieldSpec } from './field';
+import { handmadeFields } from './rework';
 
 /**
  * Dandori Challenge fields. Every point of weight home scores and the seconds left count once
@@ -501,4 +502,4 @@ const FIELDS: FieldSpec[] = [
   },
 ];
 
-export const DANDORI_FIELDS = challengeFields('dandori', FIELDS);
+export const DANDORI_FIELDS = handmadeFields('dandori', FIELDS);

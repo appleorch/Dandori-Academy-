@@ -1,5 +1,6 @@
 import { terrace, terraces } from '../../course';
-import { challengeFields, type FieldSpec } from './field';
+import type { FieldSpec } from './field';
+import { handmadeFields } from './rework';
 
 /**
  * Treasure Hunt fields. The day ends with the last Sunshard, and treasure, survivors and time
@@ -509,4 +510,4 @@ const FIELDS: FieldSpec[] = [
   },
 ];
 
-export const HUNT_FIELDS = challengeFields('hunt', FIELDS);
+export const HUNT_FIELDS = handmadeFields('hunt', FIELDS);

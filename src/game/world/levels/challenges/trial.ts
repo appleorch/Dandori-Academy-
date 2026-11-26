@@ -1,4 +1,5 @@
-import { challengeFields, type FieldSpec } from './field';
+import type { FieldSpec } from './field';
+import { handmadeFields } from './rework';
 
 /**
  * Lean Squad Trial fields. There is no clock and the Kiln grows nothing, so the only cost is a
@@ -408,4 +409,4 @@ const FIELDS: FieldSpec[] = [
   },
 ];
 
-export const TRIAL_FIELDS = challengeFields('trial', FIELDS);
+export const TRIAL_FIELDS = handmadeFields('trial', FIELDS);

@@ -1,4 +1,5 @@
-import { challengeFields, type FieldSpec } from './field';
+import type { FieldSpec } from './field';
+import { handmadeFields } from './rework';
 
 /**
  * Mission fields. Carcasses are worth far more than treasure here and the time bonus is paid
@@ -573,4 +574,4 @@ const FIELDS: FieldSpec[] = [
   },
 ];
 
-export const MISSION_FIELDS = challengeFields('mission', FIELDS);
+export const MISSION_FIELDS = handmadeFields('mission', FIELDS);

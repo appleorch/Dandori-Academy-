@@ -1,5 +1,6 @@
 import { terrace, terraces } from '../../course';
-import { challengeFields, type FieldSpec } from './field';
+import type { FieldSpec } from './field';
+import { handmadeFields } from './rework';
 
 /**
  * Growing Season fields. The day always runs to sunset and only the headcount counts, so every
@@ -483,4 +484,4 @@ const FIELDS: FieldSpec[] = [
   },
 ];
 
-export const GROWING_FIELDS = challengeFields('growing', FIELDS);
+export const GROWING_FIELDS = handmadeFields('growing', FIELDS);
