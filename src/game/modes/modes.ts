@@ -1,4 +1,4 @@
-import { ENEMY_SPECS } from '../enemies/enemyKinds';
+import { ENEMY, ENEMY_SPECS } from '../enemies/enemyKinds';
 import { rankFor, rankScore, type Par, type Rank } from '../dandori/scoring';
 import {
   DIAMOND_SHARE,
@@ -260,7 +260,7 @@ export function shardWeight(
 
 /** Weight of the carcasses of every beast placed in a lesson. */
 export function carcassWeight(
-  level: Pick<LevelDefinition, 'enemies' | 'roots' | 'floors'>,
+  level: Pick<LevelDefinition, 'enemies' | 'roots' | 'floors' | 'challenge'>,
 ): number {
   let weight = (level.floors ?? []).reduce((sum, floor) => sum + carcassWeight(floor), 0);
   for (const enemy of level.enemies) {
@@ -269,6 +269,23 @@ export function carcassWeight(
   for (let i = 0; i < (level.roots ?? []).length; i++) {
     weight += ENEMY_SPECS.lanternroot.carcassWeight;
   }
+  // On a challenge field, what a boss summons is carried home too: the Snuffer's Skitters at
+  // each phase, and the Bogspitters a Lanternroot sprouts. (Lessons' closed boards keep the
+  // count they were ranked by.)
+  if (level.challenge) weight += summonedWeight(level);
+  return weight;
+}
+
+/** Carcass weight of the beasts a field's bosses summon in a fight. */
+function summonedWeight(level: Pick<LevelDefinition, 'enemies' | 'roots'>): number {
+  let weight = 0;
+  for (const enemy of level.enemies) {
+    if (enemy.kind === 'snuffer') {
+      weight +=
+        ENEMY_SPECS.snuffer.phases.length * ENEMY.snuffBrood * ENEMY_SPECS.skitter.carcassWeight;
+    }
+  }
+  weight += (level.roots ?? []).length * 2 * ENEMY_SPECS.spitter.carcassWeight;
   return weight;
 }
 
