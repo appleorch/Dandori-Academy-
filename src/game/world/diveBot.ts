@@ -4,7 +4,7 @@ import { MODES, type ModeId } from '../modes/modes';
 import { Expedition } from '../simulation/expedition';
 import { Simulation } from '../simulation/Simulation';
 import { shardCount, type LevelDefinition } from './level';
-import { BOT_STYLES, greedyPlayer, playGreedy, type BotStyle, type GreedyPlayer } from './testBot';
+import { BOT_STYLES, greedyPlayer, type BotStyle, type GreedyPlayer } from './testBot';
 
 /** How near a way down (or the foot of the stair) the Warden must stand to take it. */
 export const STAIR_REACH = 2.6;
@@ -143,14 +143,15 @@ export function playDive(
 
 /**
  * A challenge day played whole by the test player under its rules: an Expedition dived to the
- * bottom, any other field played on its own. The caller disposes of the day.
+ * bottom, any other field played through the same way. The caller disposes of the day.
  */
 export function playChallengeDay(level: LevelDefinition, mode: ModeId): Expedition {
   const rules = MODES[mode];
   const day = new Expedition(
     new Simulation(level, { endsWhen: rules.endsWhen, growth: rules.growth }),
   );
-  if (level.floors) playDive(day);
-  else playGreedy(day.surface);
+  // The diver is the greedy player wherever there are no stairs, with its sidestep for a Warden
+  // pinned on a wall's corner, which hand-built walls make likely.
+  playDive(day);
   return day;
 }

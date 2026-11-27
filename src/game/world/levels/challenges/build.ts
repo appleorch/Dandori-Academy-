@@ -176,6 +176,15 @@ export class Field {
     return this;
   }
 
+  /** Terraces built elsewhere (`sparkLedge`, `cornerLedge` in course.ts), added whole. */
+  ledgeSet(set: { plateaus: Plateau[]; ramps: Ramp[]; ledges: Ledge[]; walls: Wall[] }): this {
+    this.plateaus.push(...set.plateaus);
+    this.ramps.push(...set.ramps);
+    this.ledges.push(...set.ledges);
+    this.obstacles.push(...set.walls);
+    return this;
+  }
+
   conveyor(rect: R, dx: number, dz: number): this {
     this.conveyorBoxes.push({ ...box(rect), dx, dz });
     return this;
