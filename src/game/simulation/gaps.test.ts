@@ -102,7 +102,7 @@ describe('arena pillars', () => {
 });
 
 describe('sprays on challenge fields', () => {
-  it('are granted on the last two Escort fields, and nowhere else outside the story', () => {
+  it('are granted on two Escort fields, and nowhere else outside the story', () => {
     const granted = ESCORT_FIELDS.filter((f) => f.items);
     expect(granted).toHaveLength(2);
     const sim = new Simulation(defineLevel(granted[0]));

@@ -22,7 +22,8 @@ import type {
   WallLook,
 } from '../../levelTypes';
 import type { Box } from '../../../navigation/NavGrid';
-import type { FieldSpec } from './field';
+import type { LevelSpec } from '../../levelTypes';
+import { dressField, type FieldSpec } from './field';
 
 /**
  * A small kit for writing challenge fields by hand: every piece is placed by its corners, so a
@@ -54,6 +55,8 @@ export interface FieldMeta {
   captain?: Point;
   /** How walls are drawn unless one says otherwise. */
   look?: WallLook;
+  /** Sprays to start the day with. */
+  items?: { emberbrew: number; stillwater: number };
 }
 
 export class Field {
@@ -78,6 +81,8 @@ export class Field {
   private readonly ledges: Ledge[] = [];
   private readonly ambushSpawns: (EnemySpawn & { at: number })[] = [];
   private telescopeSpot: (Point & { reveals: string[] }) | null = null;
+  private descentSpot: (Point & { to: string }) | null = null;
+  private floorSpecs: LevelSpec[] = [];
   private shardNo = 0;
 
   constructor(private readonly meta: FieldMeta) {}
@@ -266,6 +271,18 @@ export class Field {
     return this;
   }
 
+  /** A way down to the floor `to` (an Expedition's next cave). */
+  descent(x: number, z: number, to: string): this {
+    this.descentSpot = { x, z, to };
+    return this;
+  }
+
+  /** An Expedition's caves, shallowest first (see `floor`). */
+  floors(...floors: LevelSpec[]): this {
+    this.floorSpecs.push(...floors);
+    return this;
+  }
+
   telescope(x: number, z: number, reveals: readonly string[]): this {
     this.telescopeSpot = { x, z, reveals: [...reveals] };
     return this;
@@ -294,6 +311,7 @@ export class Field {
       enemies: this.enemies,
       pace,
       ...(m.look ? { wallLook: m.look } : {}),
+      ...(m.items ? { items: m.items } : {}),
       ...(this.waterBoxes.length ? { water: this.waterBoxes } : {}),
       ...(this.bridgeSpawns.length ? { bridges: this.bridgeSpawns, logs: this.logSpots } : {}),
       ...(this.gateSpawns.length ? { gates: this.gateSpawns } : {}),
@@ -309,6 +327,8 @@ export class Field {
       ...(this.ledges.length ? { ledges: this.ledges } : {}),
       ...(this.ambushSpawns.length ? { ambushes: this.ambushSpawns } : {}),
       ...(this.telescopeSpot ? { telescope: this.telescopeSpot } : {}),
+      ...(this.descentSpot ? { descent: this.descentSpot } : {}),
+      ...(this.floorSpecs.length ? { floors: this.floorSpecs } : {}),
     };
   }
 }
@@ -316,4 +336,52 @@ export class Field {
 /** Fields easiest first, by the test player's pace (a time, a headcount or a loss count). */
 export function byPace(specs: readonly FieldSpec[], descending = false): FieldSpec[] {
   return [...specs].sort((a, b) => (descending ? b.pace - a.pace : a.pace - b.pace));
+}
+
+/**
+ * A cave floor of an Expedition, from a field written with this kit: no clock, nobody starting
+ * there (whoever comes down is the squad), dressed for its look.
+ */
+export function floor(field: Field): LevelSpec {
+  const { pace: _pace, ...spec } = field.done(0);
+  void _pace;
+  return {
+    ...dressField(spec),
+    ...spec,
+    stage: 0,
+    platinumTime: 0,
+    dayLength: 0,
+    untimed: true,
+    startingWorkers: 0,
+  };
+}
+
+/** Properties that are places or sizes on the ground; directions, heights and dressing are not. */
+const SPATIAL = new Set(['x', 'z', 'w', 'd']);
+const NOT_SPATIAL = new Set(['dx', 'dz', 'props', 'challenge']);
+
+function scaled<T>(value: T, by: number): T {
+  if (Array.isArray(value)) return value.map((item) => scaled(item, by)) as T;
+  if (value === null || typeof value !== 'object') return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (NOT_SPATIAL.has(key)) out[key] = item;
+    else if (SPATIAL.has(key) && typeof item === 'number')
+      out[key] = Math.round(item * by * 1000) / 1000;
+    else out[key] = scaled(item, by);
+  }
+  return out as T;
+}
+
+/**
+ * A field written small and scaled up evenly: every place on it and every wall's size by `by`,
+ * its width and depth with them. For fields whose idea is a long road (the Escort's): written at
+ * a size that reads easily, played at a size that takes a while.
+ */
+export function enlarge(spec: FieldSpec, by: number): FieldSpec {
+  return {
+    ...scaled(spec, by),
+    width: Math.round(spec.width * by),
+    depth: Math.round(spec.depth * by),
+  };
 }

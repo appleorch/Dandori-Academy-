@@ -4,7 +4,7 @@ import { Simulation, startingKinds } from '../simulation/Simulation';
 import { HAZARDS } from '../enemies/enemyKinds';
 import type { Point } from '../navigation/NavGrid';
 import type { SproutKind } from '../workers/sprouts';
-import { CHALLENGE_LEVELS, LEVELS } from './level';
+import { CHALLENGE_LEVELS, defineLevel, LEVELS } from './level';
 
 /** Most of a kind's starting number that a shard only that kind can lift may need. */
 const KIND_SHARE = 0.6;
@@ -25,7 +25,19 @@ beforeAll(async () => {
 });
 
 // Every field, lessons and challenge fields alike, is checked for a sound layout.
-describe.each([...LEVELS, ...CHALLENGE_LEVELS])('$id', (level) => {
+/**
+ * An Expedition's floors, checked like any field: each with the squad of the field above it, as
+ * whoever comes down the stair is the squad.
+ */
+const FLOORS = CHALLENGE_LEVELS.flatMap((level) =>
+  (level.floors ?? []).map((spec) => ({
+    ...defineLevel(spec),
+    squad: level.squad,
+    startingWorkers: level.startingWorkers,
+  })),
+);
+
+describe.each([...LEVELS, ...CHALLENGE_LEVELS, ...FLOORS])('$id', (level) => {
   it('has every spawn on walkable ground', () => {
     const sim = new Simulation(level);
     // Every spot must be reachable once the gates are broken and bridges built.
