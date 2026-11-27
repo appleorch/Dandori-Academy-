@@ -8,6 +8,14 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.47.0',
+    date: '2026-11-27',
+    changes: [
+      'Sixty new challenge fields, every one written by hand around its own idea, and no two alike across any challenge: a sundial’s shadow-walls, a lake of stepping stones, library aisles with a secret panel, a scullery of moving belts, a hedge maze, a moated keep, a spiral, a night market of Glowcaps, a clock face; herds in pens, a Ramhorn run, a wasp orchard, moths over lanterns, a burrow of Grubs and four boss arenas; a river to bridge, sap works, a ring of gates, chasms to throw across, a bailey and keep, the clockworks; causeways over chasms, ember alcoves, a flooded crypt, sleeping giants; raised beds, pod islands, a kind garden, a far nursery of beacons, and more.',
+      'Every field’s brief now names the trick it is built around.',
+    ],
+  },
+  {
     version: '0.46.0',
     date: '2026-11-26',
     changes: [

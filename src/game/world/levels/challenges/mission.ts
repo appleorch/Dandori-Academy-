@@ -10,17 +10,17 @@ import { challengeFields } from './field';
 /** Measured by the test player (`npm run paces`): its finishing time, which is Platinum. */
 const PACE: Record<string, number> = {
   'the-pens': 137,
-  'ramhorn-run': 186,
+  'ramhorn-run': 180,
   'wasp-orchard': 145,
   'shellback-shore': 134,
   'moth-lanterns': 93,
   'spitter-ridge': 217,
-  'the-burrow': 235,
+  'the-burrow': 260,
   'mimic-bazaar': 146,
-  'bellwether-pasture': 307,
+  'bellwether-pasture': 283,
   'root-cellar': 279,
-  'snuffers-hall': 125,
-  'gravel-summit': 262,
+  'snuffers-hall': 113,
+  'gravel-summit': 299,
 };
 
 /** Four fenced pens, each with its herd and its gate on a different side. */
@@ -544,7 +544,7 @@ function snuffersHall() {
     depth: 60,
     dayLength: 540,
     seed: 1211,
-    squad: { ember: 12, stone: 10, spark: 4 },
+    squad: { ember: 14, stone: 14, spark: 6 },
     kiln: { x: -42, z: 0 },
   })
     .hline(-12, -32, 48, [
@@ -560,6 +560,7 @@ function snuffersHall() {
     .beacon(-14, 0)
     .beacon(10, 0)
     .beacon(34, 0)
+    .beacon(22, -6)
     .beast('snuffer', 22, 0, { drop: 6 })
     .beast('skitter', -10, -22)
     .beast('skitter', 20, 22)

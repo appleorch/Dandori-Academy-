@@ -461,22 +461,25 @@ opens with a medal on the one before. Challenges are always played on the Normal
 | Dandori Challenge | Yes   | When everything is in     | 10 per point of weight home; 1 per second left once everything is collected                                                   | Gates, bridges, beacons, ledges: jobs that unlock jobs  |
 | Lean Squad Trial  | No    | When every Sunshard is in | 10 per point of Sunshard weight home; once every Sunshard is home, 50 per Sproutling alive. The Kiln grows nothing            | Hazards that punish the wrong kind, beasts on the prize |
 
-**The field composer** (0.46.0, `src/game/world/fieldKit.ts`). The Treasure Hunt, Mission,
-Dandori Challenge, Lean Squad Trial and Growing Season fields are composed rather than drawn: a
-field is a grid of walled gardens (six to twelve), joined to the Kiln's garden by a random tree
-with extra ways through that make loops, so there is a route to plan rather than one path. The
-Kiln stands in a corner, on an edge or in the centre. Each way through is a gap, a bramble gate,
-a crystal door (Stonelings) or a stream with a bridge to build from logs (or wade with Dewlings).
-Each garden holds one idea: a scatter of shards, a guarded hoard (sometimes a Lodestone), a raised
-shelf, a pond only Dewlings work, a flame-vent or coil nook in a dead end for Emberlings or
-Sparklings, a den of beasts, a garden of pods and mounds, twins far apart, Dewglass, and at the top
-of the Mission and Dandori ramps a Gravelmaw. Far gardens may have a beacon; treasure fields have a
-Glowcap in the farthest garden. A tier (1 to 12) sets the size and how much is combined, and the
-squad is kept lean, so a field takes the test player from about two minutes to ten. Each brief is
-written from what is in the field (`briefFor`). Candidates are searched with `VITE_KIT=<rule> npx
-vitest run src/game/world/fieldKit.report.test.ts --silent=false`: a field is kept only if every
-spawn is reachable and the test player finishes it in fair time; the seeds, tiers, names and paces
-are listed in each challenge's file (`composedFields`).
+**Hand-written fields** (0.47.0). The Treasure Hunt, Mission, Dandori Challenge, Lean Squad Trial
+and Growing Season fields are each written by hand around an idea of their own, with a small kit
+(`levels/challenges/build.ts`: walls by their corners with a look of their own, lines of wall
+with gaps, pens, streams, bridge sites, gates, terraces, belts, vents, coils, drips, beacons,
+saps, Glowcaps, beasts and pods). No two fields share a layout or a set piece, across every
+challenge: a picnic blanket's cross, a sundial's wedges, an island lake, library aisles with a
+hidden panel, flowerpot terraces, a scullery of belts, a hedge maze, a drip grotto, a moated keep,
+a spiral, a night market and a clock face (Treasure Hunt); pens, a Ramhorn run, a wasp orchard,
+a Shellback shore, moth lanterns, a Spitter ridge, a burrow, a mimic bazaar and four boss fields
+(Mission); a split river, sap works, a gate ring, herds and hedgerows, twin kitchens, a mound
+field, waterworks, a beacon chain, chasms, a bailey and keep, the clockworks and a bazaar
+(Dandori); causeways, ember alcoves, a spark cloister, a flooded crypt, sleeping giants, a drip
+hall, a bridge watch, a skitter warren, the crucible, shellback shallows, a wasp grove and two
+roads (Trial); and raised beds, a mound meadow, pod islands, a kind garden, beast country, a far
+nursery, a seed belt, glasshouse aisles, a grub garden, an orchard ring, a rainy allotment and a
+harvest festival (Growing Season). Each challenge is ordered by the test player's pace (losses,
+for the Trial). Pace tables sit at the top of each file; `npm run paces` measures them. The test
+player plays every challenge day with the diver (`world/diveBot.ts`), whose sidestep frees a
+Warden pinned on a wall's corner.
 
 Every challenge field is dressed for its setting: fields written without dressing of their own
 get their setting's walls and a giant object at each corner and side (`dressField` in

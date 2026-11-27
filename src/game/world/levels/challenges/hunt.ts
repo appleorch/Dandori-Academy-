@@ -16,7 +16,7 @@ const PACE: Record<string, number> = {
   'flowerpot-terraces': 238,
   'the-scullery': 150,
   'hedge-maze': 248,
-  'drip-grotto': 164,
+  'drip-grotto': 159,
   'island-keep': 298,
   'the-spiral': 344,
   'night-market': 119,
