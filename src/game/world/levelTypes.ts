@@ -3,7 +3,7 @@ import type { Box, Ledge, Point } from '../navigation/NavGrid';
 import type { ShardVariant } from '../simulation/components';
 import type { Difficulty } from '../core/difficulty';
 import type { Squad, SproutKind } from '../workers/sprouts';
-import type { ChallengeId } from '../modes/modes';
+import type { BattleId, ChallengeId } from '../modes/modes';
 
 /**
  * A field built for one challenge: which, its place in that challenge's list, and the test
@@ -278,6 +278,8 @@ export interface LevelDefinition {
   props?: PropSpawn[];
   /** A challenge's own field; see `ChallengeField`. Lessons have none. */
   challenge?: ChallengeField;
+  /** A battle arena: the battle it is built for (Marble Race, Bingo Race or Dandori Duel). */
+  arena?: BattleId;
   /** No clock: the day lasts until its goal is met, or the player calls it. `dayLength` is 0. */
   untimed?: boolean;
   /**

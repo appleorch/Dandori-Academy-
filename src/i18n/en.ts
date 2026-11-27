@@ -334,7 +334,7 @@ export const EN = {
   'ui.battleSelect.lost': 'lost,',
   'ui.battleSelect.drawn': 'drawn.',
   'ui.battleSelect.rival': 'Rival',
-  'ui.battleSelect.noLessonTimeAttack': 'No lesson Time Attack has opened suits this race yet.',
+  'ui.battleSelect.noLessonTimeAttack': 'No arena is set out for this battle yet.',
   'ui.battleSelect.onTheClock': 'on the clock',
 
   // Briefing (moved out of the JSX).

@@ -11,8 +11,8 @@ import {
   type RivalLevel,
 } from '../game/modes/battle';
 import { BATTLE_IDS, isBattle, MODES, type BattleId } from '../game/modes/modes';
+import { BATTLE_LEVELS } from '../game/world/level';
 import { formatTime } from './format';
-import { openLessons } from './lessonAccess';
 import { MenuNav } from './MenuNav';
 
 const RIVAL_BLURB: Record<RivalLevel, string> = {
@@ -159,7 +159,8 @@ export function BattleSelect() {
   const hostReady = online.state === 'ready' && online.host ? online : null;
   const guestWaiting = online.state === 'ready' && !online.host;
   const spec = MODES[mode];
-  const lessons = openLessons(save).filter((level) => battleOpen(mode, level));
+  // Each battle has arenas of its own.
+  const lessons = BATTLE_LEVELS.filter((level) => level.arena === mode && battleOpen(mode, level));
   const record = save.battles[mode] ?? { won: 0, lost: 0, drawn: 0 };
 
   return (
@@ -227,7 +228,7 @@ export function BattleSelect() {
                     } else startDay(level.id, mode, rival);
                   }}
                 >
-                  <span className="lesson-number">{level.side ? '▼' : level.stage}</span>
+                  <span className="lesson-number">{lessons.indexOf(level) + 1}</span>
                   <span className="lesson-text">
                     <strong>{level.name}</strong>
                     <span>

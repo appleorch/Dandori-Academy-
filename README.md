@@ -501,7 +501,12 @@ checked by the rules they were played under (`src/game/modes/paceTimes.ts`), clo
 
 **Battles.** Race a CPU rival who works their own copy of the same field at the same time; the
 rival's field shows on a second map in the top left, and a race panel shows both tallies
-(`src/game/modes/battle.ts`). Battle days are shorter (1.2 times the Platinum time at most).
+(`src/game/modes/battle.ts`). Each battle has five arenas of its own, written by hand for it
+(`src/game/world/levels/battles.ts`, a field's `arena`), not copies of the lessons: Four Corners,
+the Velodrome, Snakes and Ladders, Marble Run and Pinball Garden (Marble Race); Village Fete, Lost
+Property, the Menagerie, Treasure Map and Jumble Sale (Bingo Race); Tug of War, the Colosseum, the
+Quarry, Two Rivers and Night Harvest (Dandori Duel). An arena's day is its battle day. The slow
+suite races the hard rival on every arena against a Warden who does nothing.
 
 - **Marble Race**: the four Sunshards farthest from the Kiln are marbles, ringed in gold. The
   first to bring all four home wins; at sunset, the most marbles home.
@@ -548,8 +553,9 @@ Before and after: `docs-design/art/ui-*-before.jpg` and `ui-*-after.jpg`.
 ## Long-term play
 
 - **The daily challenge** (top of the Challenges screen). A Treasure Hunt field made fresh each
-  day from the UTC date by the field kit's generator (`world/generator.ts`: a seeded layout of
-  wall pieces, rocks, a pond, shards, pods and beasts from templates). Before it is offered the
+  day from the UTC date by the field kit's generator (`world/generator.ts`): one of six layout
+  families (open rocks, a cross, winding aisles, pens, a ring round the field, a channel with
+  fords), then shards, pods and beasts placed clear of every wall and pond. Before it is offered the
   test player plays it through in the browser (about a second); a field it cannot finish is
   thrown away and the next seed tried, and its time becomes the field's pace, medals and day
   (`world/daily.ts`). Every player gets the same field, registered by id at run time, so it has
@@ -557,8 +563,10 @@ Before and after: `docs-design/art/ui-*-before.jpg` and `ui-*-after.jpg`.
   suite checks two months of dailies.
 - **Escort**, a sixth challenge: one crawling Lodestone relic at the far end of a long field,
   beasts waiting on the way and ambush waves arriving during the day (`ambushes`, spawned by the
-  simulation on time), scored like a Treasure Hunt. Its twelve fields are made by the same
-  generator from fixed seeds, with paces measured by the test player.
+  simulation on time), scored like a Treasure Hunt. Its twelve fields are written by hand, each a
+  different road home (a gated yard, a footbridge to build, flowerpot steps, a scullery belt, two
+  paths, a crossroads, a lantern way, a moat, a spitter gauntlet, a burrow road, a labyrinth and
+  the long haul), written at a size that reads easily and played half as large again.
 - **Relics**: 150 in all, with eight themed sets of eight (`story/relicSets.ts`) found in the
   Escort fields and the daily fields. The Field Guide shows each set's progress; a completed set
   earns its outfit.
@@ -579,16 +587,18 @@ Before and after: `docs-design/art/ui-*-before.jpg` and `ui-*-after.jpg`.
   your fastest clear, replayed up to there; practice runs are never kept.
 - **Arena pillars**: gates of style `pillar` that only a charging beast can crack, two charges
   each (the Bellwether's arena).
-- **Sprays on challenge fields**: a field may grant sprays (`items`); the last two Escort fields
-  do. Using one is noted in the replay.
+- **Sprays on challenge fields**: a field may grant sprays (`items`); two Escort fields do (the
+  Spitter Gauntlet and the Long Haul). Using one is noted in the replay.
 - **Expedition** (a seventh challenge): no clock, a small field with a way down at its far end,
   and two or three floors of caves beneath it (`floors` on the field), each with a Kiln by the
   foot of its stair and, but the last, a way down of its own. Deeper floors hold heavier
   Sunshards and fiercer beasts. What is found below counts with the field's own once it comes up
   the stair (`Expedition.pooled`); the day ends when every floor is emptied. Score: treasure plus
   20 a Sproutling alive at the end; Platinum is the test player's headcount and needs every floor
-  emptied. Its twelve fields are made by `generateDive` from fixed seeds and dived to the bottom
-  by the test player (`world/diveBot.ts`: the greedy player on each floor, down the stairs once a
+  emptied. Its twelve fields are written by hand, each over two or three caves of its own (a
+  cistern, burrows, an ore gallery, an ossuary, library stacks, a boiler room, fungus caves, the
+  clock's works, an ant hill's larder, crystal caverns, a flooded vault, a Gravelmaw's den, and
+  more; thirty floors in all, `floor` in `build.ts`), and dived to the bottom by the test player (`world/diveBot.ts`: the greedy player on each floor, down the stairs once a
   floor's own Sunshards are home, and back up once everything below is emptied).
 
 ## Playing together

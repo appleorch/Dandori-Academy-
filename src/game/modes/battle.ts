@@ -102,11 +102,15 @@ export interface BingoCard {
 
 /** Everything in a lesson a bingo square can ask for. */
 export function bingoTargets(level: LevelDefinition): BingoSquare[] {
-  const squares: BingoSquare[] = level.treasures.map((shard) => ({
-    key: `treasure:${shard.id}`,
-    label: relicFor(level.id, shard.id, shard.variant).name,
-    match: { kind: 'treasure', id: shard.id },
-  }));
+  // Two shards can turn out to be the same relic: a card asks for each relic once.
+  const named = new Set<string>();
+  const squares: BingoSquare[] = [];
+  for (const shard of level.treasures) {
+    const label = relicFor(level.id, shard.id, shard.variant).name;
+    if (named.has(label)) continue;
+    named.add(label);
+    squares.push({ key: `treasure:${shard.id}`, label, match: { kind: 'treasure', id: shard.id } });
+  }
   if (level.pods.length > 0)
     squares.push({ key: 'pod', label: 'A seed pod', match: { kind: 'pod' } });
   if ((level.blooms ?? []).length > 0) {

@@ -18,6 +18,10 @@ import type { EnemySpawn, PodSpawn, TreasureSpawn } from './levelTypes';
 
 export type FieldTemplate = 'hunt' | 'escort';
 
+/** The daily field's layout families: open rocks, a cross, aisles, pens, a ring, a channel. */
+export const DAILY_LAYOUTS = ['rocks', 'cross', 'aisles', 'pens', 'ring', 'channel'] as const;
+export type DailyLayout = (typeof DAILY_LAYOUTS)[number];
+
 /** A small seeded generator (mulberry32), so the same seed always makes the same field. */
 export function seeded(seed: number): () => number {
   let state = seed >>> 0;
@@ -74,10 +78,18 @@ export function generateField(
   const kiln = { x: -hw + 6, z: Math.round(between(-hd / 3, hd / 3)) };
   const captain = { x: kiln.x + 3, z: kiln.z + 1 };
   const taken: Placed[] = [{ x: kiln.x, z: kiln.z, r: 6 }];
+  const obstacles: Box[] = [];
+  const water: Box[] = [];
+  /** Clear of every wall and pond placed so far, by `r` and a little more. */
+  const clear = (x: number, z: number, r: number) =>
+    [...obstacles, ...water].every(
+      (b) => Math.abs(x - b.x) > b.w / 2 + r + 1 || Math.abs(z - b.z) > b.d / 2 + r + 1,
+    );
   const free = (x: number, z: number, r: number) =>
     Math.abs(x) < hw - 3 - r &&
     Math.abs(z) < hd - 3 - r &&
-    taken.every((p) => Math.hypot(p.x - x, p.z - z) > p.r + r);
+    taken.every((p) => Math.hypot(p.x - x, p.z - z) > p.r + r) &&
+    clear(x, z, r);
   /** Somewhere free in a band of the field (shares of its width from the west), or null. */
   const spot = (from: number, to: number, r: number): { x: number; z: number } | null => {
     for (let tries = 0; tries < 40; tries++) {
@@ -91,9 +103,70 @@ export function generateField(
     return null;
   };
 
-  // Walls and rocks: short pieces across the field, never closing a way through.
-  const obstacles: Box[] = [];
-  const pieces = escort ? 5 : Math.round(between(3, 6));
+  // The daily field's layout: one of several families, so no two days look alike.
+  const layout: DailyLayout = escort ? 'rocks' : pick(DAILY_LAYOUTS);
+  /** A wall along z from x0 to x1 (or along x, `vertical`), with gaps of six. */
+  const line = (vertical: boolean, at: number, from: number, to: number, gaps: number[]) => {
+    let start = from;
+    for (const gap of [...gaps].sort((p, q) => p - q)) {
+      if (gap > start)
+        obstacles.push(
+          vertical
+            ? { x: at, z: (start + gap) / 2, w: 2, d: gap - start }
+            : { x: (start + gap) / 2, z: at, w: gap - start, d: 2 },
+        );
+      start = gap + 6;
+    }
+    if (start < to)
+      obstacles.push(
+        vertical
+          ? { x: at, z: (start + to) / 2, w: 2, d: to - start }
+          : { x: (start + to) / 2, z: at, w: to - start, d: 2 },
+      );
+  };
+  const gapIn = (from: number, to: number) => Math.round(between(from + 3, to - 9));
+  if (layout === 'cross') {
+    const cx = Math.round(between(-hw * 0.1, hw * 0.25));
+    line(false, 0, -hw * 0.45, hw, [gapIn(-hw * 0.45, cx), gapIn(cx, hw)]);
+    line(true, cx, -hd, hd, [gapIn(-hd, 0), gapIn(0, hd)]);
+  } else if (layout === 'aisles') {
+    const n = 3;
+    for (let i = 0; i < n; i++) {
+      const x = Math.round(-hw * 0.35 + (i * hw * 1.2) / n);
+      // Open at alternate ends, so the aisles wind.
+      if (i % 2 === 0) line(true, x, -hd, hd - 8, []);
+      else line(true, x, -hd + 8, hd, []);
+    }
+  } else if (layout === 'pens') {
+    for (let i = 0; i < 4; i++) {
+      const at = spot(0.3, 0.9, 9);
+      if (!at) continue;
+      const side = pick(['n', 's', 'e', 'w'] as const);
+      const [x0, z0, x1, z1] = [at.x - 7, at.z - 6, at.x + 7, at.z + 6];
+      line(false, z0, x0, x1, side === 'n' ? [at.x - 3] : []);
+      line(false, z1, x0, x1, side === 's' ? [at.x - 3] : []);
+      line(true, x0, z0 + 1, z1 - 1, side === 'w' ? [at.z - 3] : []);
+      line(true, x1, z0 + 1, z1 - 1, side === 'e' ? [at.z - 3] : []);
+      // The pen's inside is left free for what goes in it.
+      taken.pop();
+    }
+  } else if (layout === 'ring') {
+    const [x0, z0, x1, z1] = [-hw * 0.2, -hd * 0.55, hw * 0.65, hd * 0.55].map(Math.round);
+    line(false, z0, x0, x1, [gapIn(x0, x1)]);
+    line(false, z1, x0, x1, [gapIn(x0, x1)]);
+    line(true, x0, z0 + 1, z1 - 1, [gapIn(z0, z1)]);
+    line(true, x1, z0 + 1, z1 - 1, [gapIn(z0, z1)]);
+  } else if (layout === 'channel') {
+    const x = Math.round(between(-hw * 0.1, hw * 0.3));
+    const fords = [gapIn(-hd, 0), gapIn(0, hd)];
+    let start = -hd;
+    for (const ford of fords) {
+      water.push({ x, z: (start + ford) / 2, w: 4, d: ford - start });
+      start = ford + 6;
+    }
+    water.push({ x, z: (start + hd) / 2, w: 4, d: hd - start });
+  }
+  const pieces = layout === 'rocks' ? (escort ? 5 : Math.round(between(3, 6))) : 0;
   for (let i = 0; i < pieces; i++) {
     const across = random() < 0.5;
     const long = Math.round(between(6, 12));
@@ -108,8 +181,7 @@ export function generateField(
     if (at) obstacles.push({ x: at.x, z: at.z, w: 3, d: 3 });
   }
   // A pond, now and then, off to one side.
-  const water: Box[] = [];
-  if (random() < 0.4) {
+  if (layout !== 'channel' && random() < 0.4) {
     const at = spot(0.35, 0.8, 6);
     if (at)
       water.push({ x: at.x, z: at.z, w: Math.round(between(8, 12)), d: Math.round(between(6, 9)) });

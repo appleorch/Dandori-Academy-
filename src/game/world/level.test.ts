@@ -4,7 +4,7 @@ import { Simulation, startingKinds } from '../simulation/Simulation';
 import { HAZARDS } from '../enemies/enemyKinds';
 import type { Point } from '../navigation/NavGrid';
 import type { SproutKind } from '../workers/sprouts';
-import { CHALLENGE_LEVELS, defineLevel, LEVELS } from './level';
+import { BATTLE_LEVELS, CHALLENGE_LEVELS, defineLevel, LEVELS } from './level';
 
 /** Most of a kind's starting number that a shard only that kind can lift may need. */
 const KIND_SHARE = 0.6;
@@ -37,7 +37,7 @@ const FLOORS = CHALLENGE_LEVELS.flatMap((level) =>
   })),
 );
 
-describe.each([...LEVELS, ...CHALLENGE_LEVELS, ...FLOORS])('$id', (level) => {
+describe.each([...LEVELS, ...CHALLENGE_LEVELS, ...FLOORS, ...BATTLE_LEVELS])('$id', (level) => {
   it('has every spawn on walkable ground', () => {
     const sim = new Simulation(level);
     // Every spot must be reachable once the gates are broken and bridges built.

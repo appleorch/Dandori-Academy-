@@ -16,6 +16,7 @@ import { KINDLING } from './levels/kindling';
 import { LONG_ROAD } from './levels/longRoad';
 import { WILD_MARCHES } from './levels/wildMarches';
 import { dressField } from './levels/challenges/field';
+import { BATTLE_SPECS } from './levels/battles';
 import { CHALLENGE_SPECS } from './levels/challenges';
 
 export type * from './levelTypes';
@@ -190,8 +191,14 @@ export const CHALLENGE_LEVELS: readonly LevelDefinition[] = CHALLENGE_SPECS.map(
   withPar(spec),
 );
 
+/**
+ * The battle arenas, each built for one battle (`arena`): fields of their own, not copies of the
+ * lessons. Every one is open from the start.
+ */
+export const BATTLE_LEVELS: readonly LevelDefinition[] = BATTLE_SPECS.map((spec) => withPar(spec));
+
 const BY_ID = new Map<string, LevelDefinition>(
-  [...LEVELS, ...CHALLENGE_LEVELS].map((level) => [level.id, level]),
+  [...LEVELS, ...CHALLENGE_LEVELS, ...BATTLE_LEVELS].map((level) => [level.id, level]),
 );
 
 /** A lesson or challenge field by id, or undefined. */

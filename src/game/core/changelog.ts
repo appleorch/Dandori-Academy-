@@ -8,6 +8,17 @@ export interface Release {
 /** Every release, newest first. The first entry is the running version. */
 export const CHANGELOG: readonly Release[] = [
   {
+    version: '0.48.0',
+    date: '2026-11-27',
+    changes: [
+      'Twelve new Escort roads, each written by hand: a gated yard, a footbridge to build, flowerpot steps, a scullery belt, a crossroads, a lantern way, a moat, a labyrinth and more, all longer than before.',
+      'Twelve new Expeditions, each with caves of its own: thirty floors, from a flooded cistern and an ossuary to a library’s stacks, the clock’s works, an ant hill’s larder and a Gravelmaw’s den.',
+      'Battles now have arenas of their own, five for each: Four Corners, the Velodrome, Snakes and Ladders, Marble Run, Pinball Garden, the Village Fete, Lost Property, the Menagerie, Treasure Map, the Jumble Sale, Tug of War, the Colosseum, the Quarry, Two Rivers and Night Harvest.',
+      'The daily challenge comes in six layouts now: open rocks, a cross, winding aisles, pens, a ring and a channel with fords.',
+      'A bingo card never asks for the same relic twice.',
+    ],
+  },
+  {
     version: '0.47.0',
     date: '2026-11-27',
     changes: [
